@@ -1,0 +1,22 @@
+# Shadowgain fast-deploy override. Layers on top of docker-compose.yml and only
+# changes WHERE the server image comes from - build from pre-published output
+# (Dockerfile.fast) instead of compiling from source on the droplet.
+#
+# Everything else - db, env, ports, volumes, restart policy - is inherited unchanged.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.fast.yml up -d --build
+#
+# Note this file also carries the localhost-only MySQL binding. The stock
+# docker-compose.yml publishes 3306 on 0.0.0.0, and Docker's DNAT bypasses UFW,
+# which would expose MySQL to the internet on a public host. Kept here so the fast
+# path is safe standalone; docker-compose.override.yml does the same for the
+# stock path.
+services:
+  ace-db:
+    ports: !override
+      - "127.0.0.1:3306:3306/tcp"
+
+  ace-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.fast

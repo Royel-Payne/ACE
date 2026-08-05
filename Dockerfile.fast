@@ -1,0 +1,42 @@
+# Shadowgain fast-deploy image.
+#
+# The stock ./Dockerfile compiles from source inside the container. That is correct
+# and portable, but on the 1 vCPU / 2GB droplet it takes minutes and once OOM'd the
+# box hard enough to need an API reboot. This image instead expects ./publish-linux
+# to have been produced on the dev machine (dotnet publish -r linux-x64, ~10s) and
+# shipped up, so the droplet only does a COPY.
+#
+# Runtime base, net-tools install, workdir, entrypoint, ports and healthcheck are all
+# kept identical to ./Dockerfile so the two produce equivalent containers.
+# ./Dockerfile is deliberately left in place as the known-good fallback.
+#
+# Use via: docker compose -f docker-compose.yml -f docker-compose.fast.yml ...
+# or just run tools/deploy.sh from the dev machine, which does the whole loop.
+
+FROM mcr.microsoft.com/dotnet/runtime:10.0-noble
+ARG DEBIAN_FRONTEND="noninteractive"
+WORKDIR /ace
+
+# install net-tools (netstat for health check) & cleanup
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+    net-tools && \
+    apt-get clean && \
+    rm -rf \
+    /tmp/* \
+    /var/lib/apt/lists/* \
+    /var/tmp/*
+
+# add pre-published app (built on the dev machine, not here)
+COPY ./publish-linux .
+
+# run app
+ENTRYPOINT ["dotnet", "ACE.Server.dll"]
+
+# ports and volumes
+EXPOSE 9000-9001/udp
+VOLUME /ace/Config /ace/Content /ace/Dats /ace/Logs /ace/Mods
+
+# health check
+HEALTHCHECK --start-period=5m --interval=1m --timeout=3s \
+  CMD netstat -an | grep 9000 > /dev/null; if [ 0 != $? ]; then exit 1; fi;

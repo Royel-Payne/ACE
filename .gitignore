@@ -302,3 +302,6 @@ Database/tools/password.txt
 docker.env
 docker-compose.yml
 docker-compose.arm64
+
+# Shadowgain: local linux publish output, shipped to the droplet not committed
+publish-linux/
