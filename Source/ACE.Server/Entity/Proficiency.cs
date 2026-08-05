@@ -2,6 +2,7 @@ using System;
 using log4net;
 using ACE.Common;
 using ACE.Entity.Enum;
+using ACE.Server.Managers;
 using ACE.Server.WorldObjects;
 using ACE.Server.WorldObjects.Entity;
 
@@ -23,12 +24,24 @@ namespace ACE.Server.Entity
             // ie., can monsters still level up from skill usage, or killing players?
             // it was possible on release, but i think they might have removed that feature?
 
+            // Shadowgain: opt-in per-award instrumentation. p_p / ExperienceSpent is written by both
+            // this method and manual HandleActionRaiseSkill spending, so diffing the DB cannot tell
+            // passive gain from a player spending unassigned XP. These lines are the only unambiguous
+            // record of what proficiency actually awarded. Off by default; enable with
+            // /modifybool proficiency_debug_logging true
+            var debug = PropertyManager.GetBool("proficiency_debug_logging").Item;
+
             if (player.IsOlthoiPlayer)
                 return;
 
             // ensure skill is at least trained
             if (skill.AdvancementClass < SkillAdvancementClass.Trained)
+            {
+                if (debug)
+                    log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | BLOCKED=untrained | sac={skill.AdvancementClass} | difficulty={difficulty}");
+
                 return;
+            }
 
             var last_difficulty = skill.PropertiesSkill.ResistanceAtLastCheck;
             var last_used_time = skill.PropertiesSkill.LastUsedTime;
@@ -47,6 +60,13 @@ namespace ACE.Server.Entity
 
             var difficulty_check = difficulty > last_difficulty;
             var time_check = timeDiff >= FullTime.TotalSeconds;
+
+            if (debug && !difficulty_check && !time_check)
+            {
+                // The gate denied an award. Logging these is as valuable as logging the grants -
+                // it measures how often the repeat-use gate suppresses gain during real play.
+                log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | BLOCKED=gate | difficulty={difficulty} <= lastDifficulty={last_difficulty} | timeDiff={timeDiff:N1}s < {FullTime.TotalSeconds}s | rank={skill.Ranks} xp={skill.ExperienceSpent}");
+            }
 
             if (difficulty_check || time_check)
             {
@@ -67,7 +87,13 @@ namespace ACE.Server.Entity
 
                 player.ChangesDetected = true;
 
-                if (player.IsMaxLevel) return;
+                if (player.IsMaxLevel)
+                {
+                    if (debug)
+                        log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | BLOCKED=maxLevel | difficulty={difficulty} | gate passed but no XP awarded");
+
+                    return;
+                }
 
                 var pp = (uint)Math.Round(difficulty * timeScale);
                 var totalXPGranted = (long)Math.Round(pp * 1.1f);   // give additional 10% of proficiency XP to unassigned XP
@@ -99,6 +125,9 @@ namespace ACE.Server.Entity
 
                 //Console.WriteLine($"Earned {pp} PP ({skill.Skill})");
 
+                var prevRank = skill.Ranks;
+                var prevXP = skill.ExperienceSpent;
+
                 // send CP to player as unassigned XP
                 player.GrantXP(totalXPGranted, XpType.Proficiency, ShareType.None);
 
@@ -106,6 +135,16 @@ namespace ACE.Server.Entity
                 if (pp > 0)
                 {
                     player.HandleActionRaiseSkill(skill.Skill, pp);
+                }
+
+                if (debug)
+                {
+                    log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | AWARD" +
+                             $" | difficulty={difficulty} (lastDifficulty={last_difficulty})" +
+                             $" | trigger={(difficulty_check ? "harderTarget" : "15minTimer")}" +
+                             $" | timeDiff={timeDiff:N1}s timeScale={timeScale:N3}" +
+                             $" | pp={pp} grantedXP={totalXPGranted}" +
+                             $" | rank {prevRank}->{skill.Ranks} xp {prevXP}->{skill.ExperienceSpent}");
                 }
             }
         }

@@ -577,6 +577,7 @@ namespace ACE.Server.Managers
                 ("pet_stow_replace", new Property<bool>(false, "pet stowing for different pet devices becomes a stow and replace. defaults to retail value of false")),
                 ("player_config_command", new Property<bool>(false, "If enabled, players can use /config to change their settings via text commands")),
                 ("player_receive_immediate_save", new Property<bool>(false, "if enabled, when the player receives items from an NPC, they will be saved immediately")),
+                ("proficiency_debug_logging", new Property<bool>(false, "(Shadowgain) If enabled, Proficiency.OnSuccessUse logs every award AND every gate-blocked attempt: skill, difficulty vs lastDifficulty, which condition triggered, timeScale, pp granted, and rank/xp before-after. The only unambiguous measure of passive skill gain - the skill's ExperienceSpent field is also written by manual XP spending, so the DB alone cannot separate them")),
                 ("pk_server", new Property<bool>(false, "set this to TRUE for darktide servers")),
                 ("pk_server_safe_training_academy", new Property<bool>(false, "set this to TRUE to disable pk fighting in training academy and time to exit starter town safely")),
                 ("pkl_server", new Property<bool>(false, "set this to TRUE for pink servers")),
