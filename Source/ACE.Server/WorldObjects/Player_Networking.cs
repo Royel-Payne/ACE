@@ -36,6 +36,12 @@ namespace ACE.Server.WorldObjects
 
             Sequences.SetSequence(SequenceType.ObjectInstance, new UShortSequence((ushort)Character.TotalLogins));
 
+            // Shadowgain: reconcile characters created before all_skills_trained existed (and any
+            // heritage/skill added later) so we never have to reroll. No-op once everything is Trained.
+            var newlyTrained = EnsureAllSkillsTrained();
+            if (newlyTrained > 0)
+                log.Info($"[SHADOWGAIN] {Name} - granted Trained on {newlyTrained} skill(s) at login");
+
             if (BarberActive)
                 BarberActive = false;
 

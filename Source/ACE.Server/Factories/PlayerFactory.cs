@@ -348,6 +348,12 @@ namespace ACE.Server.Factories
                 }
             }
 
+            // Shadowgain: grant every remaining skill at Trained, free of credit cost, so usage-based
+            // gain is eligible on all of them. Deliberately placed AFTER the starter-gear/spell block
+            // above - that block branches on AdvancementClass, and training first would hand every new
+            // character the gear and spells for all 38 skills.
+            player.EnsureAllSkillsTrained();
+
             player.Name = characterCreateInfo.Name;
             player.Character.Name = characterCreateInfo.Name;
 
