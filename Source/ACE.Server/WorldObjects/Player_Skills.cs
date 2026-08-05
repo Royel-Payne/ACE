@@ -196,35 +196,6 @@ namespace ACE.Server.WorldObjects
             return true;
         }
 
-        /// <summary>
-        /// Shadowgain: brings every valid skill up to at least Trained, free of skill-credit cost.
-        /// Proficiency.OnSuccessUse() requires AdvancementClass >= Trained, so any skill left
-        /// Untrained can never rise through use. Ranks/XP are left alone - a newly trained skill
-        /// starts at its trained base rather than receiving the creation bonus.
-        /// Gated on the "all_skills_trained" server property. Returns the number newly trained.
-        /// </summary>
-        public int EnsureAllSkillsTrained()
-        {
-            if (!PropertyManager.GetBool("all_skills_trained").Item)
-                return 0;
-
-            var newlyTrained = 0;
-
-            foreach (var skill in SkillHelper.ValidSkills)
-            {
-                var creatureSkill = GetCreatureSkill(skill);
-
-                if (creatureSkill.AdvancementClass >= SkillAdvancementClass.Trained)
-                    continue;
-
-                // 0 credits spent, and no creation bonus XP - this is a grant, not a purchase
-                if (TrainSkill(skill, 0))
-                    newlyTrained++;
-            }
-
-            return newlyTrained;
-        }
-
         public bool SpecializeSkill(Skill skill, bool resetSkill = true)
         {
             // get the amount of skill credits required to upgrade this skill
