@@ -83,7 +83,7 @@ namespace ACE.Server.WorldObjects
 
             if (CombatMode != CombatMode.Magic)
             {
-                log.Error($"{Name}.HandleActionCastTargetedSpell({targetGuid:X8}, {spellId}, {casterItem?.Name}) - CombatMode mismatch {CombatMode}, LastCombatMode: {LastCombatMode}");
+                log.Warn($"{Name}.HandleActionCastTargetedSpell({targetGuid:X8}, {spellId}, {casterItem?.Name}) - CombatMode mismatch {CombatMode}, LastCombatMode: {LastCombatMode}");
 
                 if (LastCombatMode == CombatMode.Magic)
                     CombatMode = CombatMode.Magic;
@@ -222,7 +222,7 @@ namespace ACE.Server.WorldObjects
         {
             // fellowship spell
             var spell = new Spell(spellId);
-            if ((spell.Flags & SpellFlags.FellowshipSpell) != 0)
+            if (spell.IsFellowshipSpell)
             {
                 target = this;
                 return TargetCategory.Fellowship;
@@ -274,7 +274,7 @@ namespace ACE.Server.WorldObjects
 
             if (CombatMode != CombatMode.Magic)
             {
-                log.Error($"{Name}.HandleActionMagicCastUnTargetedSpell({spellId}) - CombatMode mismatch {CombatMode}, LastCombatMode {LastCombatMode}");
+                log.Warn($"{Name}.HandleActionMagicCastUnTargetedSpell({spellId}) - CombatMode mismatch {CombatMode}, LastCombatMode {LastCombatMode}");
 
                 if (LastCombatMode == CombatMode.Magic)
                     CombatMode = CombatMode.Magic;
@@ -892,7 +892,7 @@ namespace ACE.Server.WorldObjects
             {
                 case CastingPreCheckStatus.Success:
 
-                    if ((spell.Flags & SpellFlags.FellowshipSpell) == 0)
+                    if (!spell.IsFellowshipSpell)
                         CreatePlayerSpell(target, spell, isWeaponSpell);
                     else
                     {
