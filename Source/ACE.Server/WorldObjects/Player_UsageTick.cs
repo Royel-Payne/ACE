@@ -18,6 +18,14 @@ namespace ACE.Server.WorldObjects
         private ACE.Entity.Position LastUsageTickPosition;
 
         /// <summary>
+        /// Shadowgain 008/009: distinct cells visited since the last movement award, used INDOORS.
+        /// Dungeon coordinates are cell-local - each room has its own origin - so PositionX/Y do not
+        /// accumulate as you travel and a displacement test can never pass underground. Counting
+        /// distinct cells is the meaningful measure of "actually went somewhere" down there.
+        /// </summary>
+        private readonly System.Collections.Generic.HashSet<uint> UsageTickCellsVisited = new System.Collections.Generic.HashSet<uint>();
+
+        /// <summary>
         /// Shadowgain 008 + 009: the shared movement tick, called from Heartbeat (~5s).
         ///
         /// Entries 008 (Quickness/Run from travel) and 009 (Strength from hauling while
@@ -44,6 +52,40 @@ namespace ACE.Server.WorldObjects
 
                 return;
             }
+
+            // ---- INDOOR PATH -------------------------------------------------------------------
+            // Underground, positions are cell-local: each room has its own coordinate origin, so
+            // running through a dungeon never accumulates displacement and the outdoor test can
+            // never fire. Chris confirmed live - no ticks at all inside a dungeon. Count distinct
+            // cells entered instead. A 2-room shuffle can only ever reach 2 distinct cells, so the
+            // threshold still resists pacing back and forth.
+            if (Location.Indoors)
+            {
+                UsageTickCellsVisited.Add(Location.Cell);
+
+                var cellsNeeded = (int)Math.Max(2, PropertyManager.GetLong("movement_gain_indoor_cells").Item);
+
+                if (UsageTickCellsVisited.Count < cellsNeeded)
+                {
+                    if (debug)
+                        log.Info($"[MOVETICK] {Name} | SKIP=indoorCells | {UsageTickCellsVisited.Count}/{cellsNeeded} distinct cells");
+
+                    return;
+                }
+
+                if (debug)
+                    log.Info($"[MOVETICK] {Name} | AWARD=indoor | {UsageTickCellsVisited.Count} distinct cells");
+
+                UsageTickCellsVisited.Clear();
+                LastUsageTickPosition = new ACE.Entity.Position(Location);
+
+                AwardMovementGains();
+                AwardOverburdenStrength();
+                return;
+            }
+
+            // outdoors from here - reset the indoor tracker so leaving a dungeon starts clean
+            UsageTickCellsVisited.Clear();
 
             // Cross-landblock distance is only trustworthy OUTDOORS. Position.DistanceTo falls back to
             // (landblockX - landblockX) * 192 + offset, which assumes the outdoor grid - ACE's own
