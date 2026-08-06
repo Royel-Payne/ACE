@@ -306,7 +306,18 @@ namespace ACE.Server.WorldObjects
                 Level++;
 
                 // increase the skill credits if the chart allows this level to grant a credit
-                if (xpTable.CharacterLevelSkillCreditList[Level ?? 0] > 0)
+                //
+                // Shadowgain 013: not when everything is auto-trained and specialization is off -
+                // credits then buy literally nothing. The reconcile zeroes them at creation and at
+                // login, but this line re-granted them on every level-up, so they quietly
+                // accumulated during play (found on Chris's fresh character: 6 credits by level 7)
+                // and the client kept offering to spend them on a dead economy. Suppressed at the
+                // source rather than mopped up afterwards, so the "you have N credits" message
+                // never appears either.
+                var creditsAreSpendable = !(PropertyManager.GetBool("all_skills_trained").Item
+                                            && PropertyManager.GetBool("disable_specialization").Item);
+
+                if (creditsAreSpendable && xpTable.CharacterLevelSkillCreditList[Level ?? 0] > 0)
                 {
                     AvailableSkillCredits += (int)xpTable.CharacterLevelSkillCreditList[Level ?? 0];
                     TotalSkillCredits += (int)xpTable.CharacterLevelSkillCreditList[Level ?? 0];
