@@ -36,6 +36,12 @@ namespace ACE.Server.WorldObjects
 
             Sequences.SetSequence(SequenceType.ObjectInstance, new UShortSequence((ushort)Character.TotalLogins));
 
+            // Shadowgain 004: catch up vital ranks to the attributes that govern them. Normally this
+            // fires on an attribute rank-up, but characters that existed before the system - or that
+            // gained attributes while it was disabled - would otherwise sit undertuned until their next
+            // rank. Only ever raises, so it is safe to run on every login.
+            SyncVitalRanksToAttributes();
+
             if (BarberActive)
                 BarberActive = false;
 

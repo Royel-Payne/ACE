@@ -222,7 +222,85 @@ namespace ACE.Server.WorldObjects
                     HandleRunRateUpdate();
             }
 
+            if (prevRank != creatureAttribute.Ranks)
+                SyncVitalRanksToAttributes();
+
             return true;
+        }
+
+        /// <summary>
+        /// Shadowgain 004: keeps vital ranks in step with the attributes that govern them.
+        ///
+        /// A vital's maximum is <c>StartingValue + Ranks + attributeDerivedComponent</c>. Ranks were
+        /// normally purchased with pooled XP, which is now disabled - and simply losing them would leave
+        /// characters permanently far below what retail content difficulty is balanced against, because
+        /// that content assumes players raised BOTH the attribute and the vital.
+        ///
+        /// So rather than being bought, ranks are earned implicitly: a vital is held at the same
+        /// PROPORTION of its rank ceiling as its governing attribute is of the attribute ceiling. Max
+        /// the attribute and the vital maxes at exactly the same moment. The ratio is computed from the
+        /// live dat tables rather than hardcoded, so it stays correct whatever those tables contain.
+        ///
+        /// Only ever raises, never lowers - a character who legitimately bought ranks keeps them.
+        /// </summary>
+        public void SyncVitalRanksToAttributes()
+        {
+            if (!PropertyManager.GetBool("vital_ranks_follow_attributes").Item)
+                return;
+
+            var attributeXPTable = DatManager.PortalDat.XpTable.AttributeXpList;
+            var vitalXPTable = DatManager.PortalDat.XpTable.VitalXpList;
+
+            var attributeMaxRanks = attributeXPTable.Count - 1;
+            var vitalMaxRanks = vitalXPTable.Count - 1;
+
+            if (attributeMaxRanks <= 0 || vitalMaxRanks <= 0)
+                return;
+
+            uint RanksOf(PropertyAttribute a) => Attributes.TryGetValue(a, out var ca) ? ca.Ranks : 0;
+
+            var endurance = RanksOf(PropertyAttribute.Endurance);
+
+            // Health follows Endurance and Mana follows Self - the same attributes the game's own vital
+            // formulas key off.
+            SyncVital(PropertyAttribute2nd.MaxHealth, endurance);
+            SyncVital(PropertyAttribute2nd.MaxMana, RanksOf(PropertyAttribute.Self));
+
+            // Stamina is the one with a real choice. Retail derives it from Endurance alone, but under
+            // usage-based gain Endurance only rises from BEING HIT - so a character who evades well
+            // would be starved of the very resource their attacking spends fastest. Tracking the best of
+            // Endurance/Strength/Coordination means any active playstyle feeds it.
+            var stamina = endurance;
+
+            if (PropertyManager.GetBool("vital_stamina_multi_source").Item)
+                stamina = Math.Max(endurance, Math.Max(RanksOf(PropertyAttribute.Strength), RanksOf(PropertyAttribute.Coordination)));
+
+            SyncVital(PropertyAttribute2nd.MaxStamina, stamina);
+
+            void SyncVital(PropertyAttribute2nd vitalType, uint attributeRanks)
+            {
+                if (!Vitals.TryGetValue(vitalType, out var vital))
+                    return;
+
+                var target = (uint)Math.Round((double)attributeRanks * vitalMaxRanks / attributeMaxRanks);
+
+                if (target > vitalMaxRanks)
+                    target = (uint)vitalMaxRanks;
+
+                if (target <= vital.Ranks)
+                    return;     // never strip ranks a player already had
+
+                vital.Ranks = target;
+                vital.ExperienceSpent = vitalXPTable[(int)target];
+
+                ChangesDetected = true;
+
+                if (PropertyManager.GetBool("attribute_debug_logging").Item)
+                    log.Info($"[ATTRIBUTE] {Name} | {vitalType} | VITAL-SYNC | attributeRanks={attributeRanks}/{attributeMaxRanks} -> vitalRanks={target}/{vitalMaxRanks} | newMax={vital.MaxValue}");
+
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessagePrivateUpdateVital(this, vital));
+            }
         }
 
         /// <summary>
