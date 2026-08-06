@@ -32,13 +32,14 @@ namespace ACE.Server.Physics.Common
             //
             // Applied here rather than at the call sites so the burden penalty, the client's
             // "overburdened by N" readout, and 009's Strength gain all agree on one number.
+            // ADDITIVE, not max(). A max() floor would create a dead zone - with a floor of 5000,
+            // Strength 10 and Strength 33 both yield exactly 5000, so raising Strength buys a weak
+            // character nothing at all until they pass the floor. Adding it instead means Strength
+            // always matters, there is no flat region, and the strong stay far ahead:
+            //   Str 10  ->  1,500 + floor
+            //   Str 100 -> 15,000 + floor
             if (PropertyManager.GetBool("burden_capacity_floor_enabled").Item)
-            {
-                var floor = (int)PropertyManager.GetLong("burden_capacity_floor").Item;
-
-                if (capacity < floor)
-                    capacity = floor;
-            }
+                capacity += (int)PropertyManager.GetLong("burden_capacity_floor").Item;
 
             return capacity;
         }
