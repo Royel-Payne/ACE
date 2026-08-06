@@ -229,14 +229,16 @@ namespace ACE.Server.WorldObjects
                 if (playerSkill.Current < ItemSkillLevelLimit.Value)
                     return new ActivationResult(new GameEventWeenieErrorWithString(player.Session, WeenieErrorWithString.Your_IsTooLowToUseItemMagic, playerSkill.Skill.ToSentence()));
 
-                // Shadowgain 007: this is how SUMMONING is actually gated - ACE never references
-                // Skill.Summoning directly, which is why it looked vestigial at first. Summoning
-                // devices carry ItemSkillLimit=Summoning and ItemSkillLevelLimit=<required skill>,
-                // matching the wiki's "creatures restricted by level and buffed Summoning skill".
+                // Shadowgain 007: generic award for ItemSkillLimit-gated item use.
                 //
-                // Hooked generically rather than special-casing Summoning, so any ItemSkillLimit-
-                // gated item trains the skill it demands. Difficulty is the item's own requirement -
-                // external to the skill - so a higher-tier device teaches more.
+                // The upstream comment above ("only seems to be used for summoning so far") is what
+                // led me to hook Summoning here. It is wrong: checking the world database, pet
+                // devices carry UseRequiresSkill / UseRequiresSkillLevel and leave ItemSkillLimit
+                // unset - Mud Golem Essence (wcid 48886) has UseRequiresSkill=Summoning and
+                // UseRequiresSkillLevel=50, no ItemSkillLimit. Summoning is handled in
+                // PetDevice.ActOnUse; this hook stays for whatever genuinely uses this branch.
+                //
+                // Difficulty is the item's own requirement - external to the skill it raises.
                 if (PropertyManager.GetBool("specialty_gain_from_use").Item
                     && playerSkill.AdvancementClass >= SkillAdvancementClass.Trained)
                 {
@@ -263,14 +265,17 @@ namespace ACE.Server.WorldObjects
                         return new ActivationResult(new GameEventWeenieErrorWithString(player.Session, WeenieErrorWithString.Your_IsTooLowToUseItemMagic, playerSkill.Skill.ToSentence()));
                 }
 
-                // Shadowgain 007: THIS is the branch summoning devices actually take -
-                // UseRequiresSkill / UseRequiresSkillLevel, NOT the ItemSkillLimit branch above.
-                // Verified against the world DB: Mud Golem Essence (wcid 48886) carries
-                // UseRequiresSkill=Summoning and UseRequiresSkillLevel=50, with ItemSkillLimit unset -
-                // as do all pet devices. My first hook sat on a branch they never take.
+                // Shadowgain 007: generic award for skill-gated item use. Difficulty is the item's
+                // own requirement - external to the skill being raised - so a harder item teaches
+                // more.
                 //
-                // Difficulty is the item's own requirement, so a higher-tier device teaches more.
-                if (PropertyManager.GetBool("specialty_gain_from_use").Item)
+                // PetDevice is excluded on purpose. This is CheckUseRequirements, which runs BEFORE
+                // the action, and PetDevice then applies further checks of its own: summoning
+                // mastery, whether a pet is already active, and remaining charges. Awarding here
+                // would pay out on a spent device, or on every click while a golem is already out -
+                // free skill for a click that summons nothing. Summoning is awarded in
+                // PetDevice.ActOnUse instead, once a pet has actually spawned.
+                if (PropertyManager.GetBool("specialty_gain_from_use").Item && !(this is PetDevice))
                 {
                     var useDifficulty = (uint)System.Math.Max(1, UseRequiresSkillLevel ?? 1);
 

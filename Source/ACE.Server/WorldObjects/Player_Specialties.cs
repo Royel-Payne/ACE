@@ -101,6 +101,78 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 007: Summoning, from actually putting a pet into the world.
+        ///
+        /// Called from PetDevice.ActOnUse once a summon has succeeded and a charge is spent, so a
+        /// spent device or a refused click teaches nothing. Difficulty is the device's own skill
+        /// requirement, external to Summoning.
+        ///
+        /// This is the SMALLER of the two Summoning paths - see <see cref="AwardSummoningFromPet"/>.
+        /// </summary>
+        public void AwardSummoningUse(uint deviceRequirement)
+        {
+            if (deviceRequirement == 0 || !PropertyManager.GetBool("specialty_gain_from_use").Item)
+                return;
+
+            var skill = GetCreatureSkill(Skill.Summoning);
+
+            if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return;
+
+            var mult = PropertyManager.GetDouble("summoning_gain_summon_multiplier").Item;
+
+            if (mult <= 0.0)
+                return;
+
+            var difficulty = (uint)System.Math.Max(1, System.Math.Round(deviceRequirement * mult));
+
+            Proficiency.OnSuccessUse(this, skill, difficulty);
+        }
+
+        /// <summary>
+        /// Shadowgain 007: Summoning, from the pet's own share of a kill.
+        ///
+        /// The primary path. Device activation alone could never bridge the gap between the entry
+        /// essence (Summoning 50) and the next tier (220) - there is nothing in between, and only a
+        /// handful of charges per device.
+        ///
+        /// Called from Creature_Death.OnDeath_GrantXP on the PET's damage history entry, so the
+        /// award is already proportional to how much of the kill the summon did. A pet that never
+        /// engages earns nothing.
+        ///
+        /// Difficulty is that XP share divided down - kill XP runs in the thousands while every
+        /// other difficulty here is a skill value in the tens, the same scale mismatch that made
+        /// burden pay ten ranks a tick in 009.
+        ///
+        /// UNTUNED. summoning_gain_xp_divisor is the dial, and the concrete test is how many kills
+        /// 50 -> 220 actually takes.
+        /// </summary>
+        public void AwardSummoningFromPet(double petXpShare)
+        {
+            if (petXpShare <= 0 || !PropertyManager.GetBool("specialty_gain_from_pet_kills").Item)
+                return;
+
+            if (!PropertyManager.GetBool("specialty_gain_from_use").Item)
+                return;
+
+            var skill = GetCreatureSkill(Skill.Summoning);
+
+            if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return;
+
+            var divisor = System.Math.Max(1.0, PropertyManager.GetDouble("summoning_gain_xp_divisor").Item);
+
+            var difficulty = petXpShare / divisor;
+
+            if (double.IsNaN(difficulty) || difficulty < 1.0)
+                return;
+
+            var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Round(difficulty));
+
+            Proficiency.OnSuccessUse(this, skill, award);
+        }
+
+        /// <summary>
         /// Shadowgain 007: Assess Creature / Assess Person, from a successful appraisal.
         ///
         /// Difficulty is the target's Deception - which is exactly what the appraisal roll is made

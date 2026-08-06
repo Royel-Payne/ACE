@@ -180,8 +180,16 @@ namespace ACE.Server.WorldObjects
 
                 var playerDamager = damager as Player;
 
+                // Shadowgain 007: a combat pet gets its OWN damage history entry, keyed by the pet's
+                // guid with PetOwner pointing back at the summoner - so this branch is reached only
+                // for damage the pet personally dealt.
+                var isPetDamage = false;
+
                 if (playerDamager == null && kvp.Value.PetOwner != null)
+                {
                     playerDamager = kvp.Value.TryGetPetOwner();
+                    isPetDamage = playerDamager != null;
+                }
 
                 if (playerDamager == null)
                     continue;
@@ -193,6 +201,21 @@ namespace ACE.Server.WorldObjects
                 var totalXP = (XpOverride ?? 0) * damagePercent;
 
                 playerDamager.EarnXP((long)Math.Round(totalXP), XpType.Kill);
+
+                // Shadowgain 007: the main Summoning path. Activating a device was never going to
+                // carry anyone from Summoning 50 to the 220 the next essence tier demands - Chris:
+                // "even if you spam summon these things it will be brutally slow".
+                //
+                // So the pet's share of the kill trains Summoning. Because the award rides this
+                // entry, it is weighted by what the pet actually did: a golem parked in a corner
+                // deals no damage, gets no damage history entry, and earns nothing. Only a summon
+                // that fights teaches summoning.
+                //
+                // Difficulty is the pet's XP share - external to Summoning, so it cannot run away -
+                // divided down because kill XP runs in the thousands while every other difficulty in
+                // this system is a skill value in the tens.
+                if (isPetDamage)
+                    playerDamager.AwardSummoningFromPet(totalXP);
 
                 // handle luminance
                 if (LuminanceAward != null)

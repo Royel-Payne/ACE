@@ -85,6 +85,16 @@ namespace ACE.Server.WorldObjects
 
             if (result == null || result.Value)
             {
+                // Shadowgain 007: a successful summon trains Summoning. Awarded here rather than in
+                // CheckUseRequirements so it costs a charge and actually puts a pet in the world -
+                // clicking a spent device, or one that refuses because a golem is already out, is
+                // not practice.
+                //
+                // Difficulty is the device's own skill requirement, so a higher-tier essence teaches
+                // more. This is the smaller of the two Summoning paths; the bulk comes from the pet
+                // fighting - see Creature_Death.OnDeath_GrantXP.
+                player.AwardSummoningUse((uint)Math.Max(1, UseRequiresSkillLevel ?? ItemSkillLevelLimit ?? 1));
+
                 // CombatPet devices should always have structure
                 if (Structure != null)
                 {
