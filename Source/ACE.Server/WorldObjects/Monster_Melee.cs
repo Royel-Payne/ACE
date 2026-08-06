@@ -110,7 +110,19 @@ namespace ACE.Server.WorldObjects
                             if (damageEvent.ShieldMod != 1.0f)
                             {
                                 var shieldSkill = targetPlayer.GetCreatureSkill(Skill.Shield);
-                                Proficiency.OnSuccessUse(targetPlayer, shieldSkill, shieldSkill.Current); // ?
+
+                                // Shadowgain 003: upstream passed the player's OWN shield skill as the
+                                // difficulty (its authors marked this line "?"). With the 15-minute gate
+                                // removed that becomes a runaway - difficulty/current is exactly 1.0, so
+                                // every block pays full credit equal to the entire current skill value,
+                                // and the award grows as the skill grows. Use the attacker's weapon skill,
+                                // matching how Melee Defense already sources its difficulty.
+                                var shieldDifficulty = shieldSkill.Current;
+
+                                if (PropertyManager.GetBool("skill_gain_normalize_shield_difficulty").Item)
+                                    shieldDifficulty = GetCreatureSkill(GetCurrentWeaponSkill()).Current;
+
+                                Proficiency.OnSuccessUse(targetPlayer, shieldSkill, shieldDifficulty);
                             }
 
                             // handle Dirty Fighting

@@ -63,7 +63,17 @@ namespace ACE.Server.WorldObjects
                             if (damageEvent.ShieldMod != 1.0f)
                             {
                                 var shieldSkill = targetPlayer.GetCreatureSkill(Skill.Shield);
-                                Proficiency.OnSuccessUse(targetPlayer, shieldSkill, shieldSkill.Current);   // ??
+
+                                // Shadowgain 003: same self-referential difficulty as the melee shield
+                                // call site - see Monster_Melee. Own-skill-as-difficulty gives a constant
+                                // 1.0 ratio, which with the gate removed pays full credit on every block
+                                // and scales with the skill itself. Source it from the attacker instead.
+                                var shieldDifficulty = shieldSkill.Current;
+
+                                if (PropertyManager.GetBool("skill_gain_normalize_shield_difficulty").Item)
+                                    shieldDifficulty = sourceCreature.GetCreatureSkill(sourceCreature.GetCurrentWeaponSkill()).Current;
+
+                                Proficiency.OnSuccessUse(targetPlayer, shieldSkill, shieldDifficulty);
                             }
 
                             // handle Dirty Fighting
