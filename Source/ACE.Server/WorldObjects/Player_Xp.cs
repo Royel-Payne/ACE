@@ -309,7 +309,21 @@ namespace ACE.Server.WorldObjects
             {
                 var message = (Level == maxLevel) ? $"You have reached the maximum level of {Level}!" : $"You are now level {Level}!";
 
-                message += (AvailableSkillCredits > 0) ? $"\nYou have {AvailableExperience:#,###0} experience points and {AvailableSkillCredits} skill credits available to raise skills and attributes." : $"\nYou have {AvailableExperience:#,###0} experience points available to raise skills and attributes.";
+                // Shadowgain 003: under usage-only, experience can no longer raise skill ranks, so the
+                // retail wording ("available to raise skills and attributes") is actively misleading.
+                // Skill credits still train NEW skills, and experience still raises attributes until
+                // entry 004 lands. Falls back to the retail string when the toggle is off.
+                if (PropertyManager.GetBool("skill_gain_usage_only").Item)
+                {
+                    message += $"\nYou have {AvailableExperience:#,###0} experience points available to raise attributes.";
+
+                    if (AvailableSkillCredits > 0)
+                        message += $"\nYou have {AvailableSkillCredits} skill credit{(AvailableSkillCredits == 1 ? "" : "s")} available to train new skills.";
+
+                    message += "\nSkills you already know rise through use, not experience.";
+                }
+                else
+                    message += (AvailableSkillCredits > 0) ? $"\nYou have {AvailableExperience:#,###0} experience points and {AvailableSkillCredits} skill credits available to raise skills and attributes." : $"\nYou have {AvailableExperience:#,###0} experience points available to raise skills and attributes.";
 
                 var levelUp = new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.Level, Level ?? 1);
                 var currentCredits = new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, AvailableSkillCredits ?? 0);
