@@ -116,9 +116,9 @@ namespace ACE.Server.WorldObjects
         ///
         /// ANTI-RUNAWAY RULE (from the 003 Shield bug): <paramref name="difficulty"/> must ALWAYS come
         /// from something external - the target, the attacker, or the magnitude of the action. It must
-        /// never be derived from the attribute being raised. If it were, difficulty/current would sit at
-        /// a constant 1.0 and every award would equal the whole attribute and grow as it grows.
-        /// The denominator being the attribute is fine and intended: that is what makes gain
+        /// never be derived from the attribute being raised. If it were, difficulty/base would sit at a
+        /// constant 1.0 and every award would equal the whole attribute and grow as it grows.
+        /// The denominator being the attribute's Base is fine and intended: that is what makes gain
         /// self-limiting as the attribute climbs.
         ///
         /// Returns true if XP was applied.
@@ -159,8 +159,11 @@ namespace ACE.Server.WorldObjects
             if (isSecondary)
                 multiplier *= PropertyManager.GetDouble("attribute_gain_overlap_factor").Item;
 
-            var current = Math.Max(1u, creatureAttribute.Current);
-            var ratio = (double)difficulty / current;
+            // Base, deliberately NOT Current - see the matching note in Proficiency.cs. Current applies
+            // enchantments and vitae, which made being buffed shrink your gain. Buffing is the normal
+            // state in AC, so that penalised standard play and made measurements buff-dependent.
+            var baseValue = Math.Max(1u, creatureAttribute.Base);
+            var ratio = (double)difficulty / baseValue;
             var difficultyFactor = Math.Clamp(ratio, Math.Min(floor, cap), Math.Max(floor, cap));
 
             var awarded = difficulty * difficultyFactor * multiplier;
@@ -186,7 +189,7 @@ namespace ACE.Server.WorldObjects
             if (debug)
             {
                 log.Info($"[ATTRIBUTE] {Name} | {attribute} | AWARD{(isSecondary ? "=secondary" : "")}" +
-                         $" | difficulty={difficulty} vs current={current} ratio={ratio:N3}" +
+                         $" | difficulty={difficulty} vs base={baseValue} ratio={ratio:N3}" +
                          $" | factor={difficultyFactor:N3} mult={multiplier:N3}" +
                          $" | pp={pp}" +
                          $" | rank {prevRank}->{creatureAttribute.Ranks} xp {prevXP}->{creatureAttribute.ExperienceSpent}");

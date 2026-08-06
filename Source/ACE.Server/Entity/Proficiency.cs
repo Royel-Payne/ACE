@@ -100,8 +100,13 @@ namespace ACE.Server.Entity
                 multiplier *= PropertyManager.GetDouble("skill_gain_magic_multiplier").Item;
             var minAward = (uint)Math.Max(0, PropertyManager.GetLong("skill_gain_min_award").Item);
 
-            var current = Math.Max(1u, skill.Current);
-            var ratio = (double)difficulty / current;
+            // Base, deliberately NOT Current. Current applies enchantment multipliers and vitae, so
+            // using it made being buffed reduce your gain - and buffing is the normal state in AC, even
+            // melee players self-buff. That created a perverse incentive to play unbuffed to progress
+            // faster, and made measurements depend on buff state. Base is the actual trained level, so
+            // buffs still help you land hits and survive; they just no longer tax your learning.
+            var baseValue = Math.Max(1u, skill.Base);
+            var ratio = (double)difficulty / baseValue;
 
             // Math.Min/Max guard the clamp in case an operator sets floor above cap live.
             var difficultyFactor = Math.Clamp(ratio, Math.Min(floor, cap), Math.Max(floor, cap));
@@ -131,7 +136,7 @@ namespace ACE.Server.Entity
             if (debug)
             {
                 log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | {(applied ? "AWARD" : "NOOP=maxRank")}" +
-                         $" | difficulty={difficulty} vs current={current} ratio={ratio:N3}" +
+                         $" | difficulty={difficulty} vs base={baseValue} ratio={ratio:N3}" +
                          $" | factor={difficultyFactor:N3} mult={multiplier:N2}" +
                          $" | pp={pp}" +
                          $" | rank {prevRank}->{skill.Ranks} xp {prevXP}->{skill.ExperienceSpent}" +
