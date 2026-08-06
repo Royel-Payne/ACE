@@ -109,6 +109,15 @@ namespace ACE.Server.WorldObjects
                 {
                     player.LearnSpellWithNetworking(Spell.Id);
 
+                    // Shadowgain 007: deciphering a scroll is Arcane Lore almost by definition.
+                    // Difficulty is the spell's own power (Spellcraft, falling back to its
+                    // difficulty), so a higher-tier scroll teaches more - and it fires only after
+                    // the scroll is actually consumed and the spell learned, never on a failed read.
+                    // Spell.Power is the spell's own magnitude - the same value the magic paths use
+                    // as difficulty - so it is external to Arcane Lore and scales with scroll tier.
+                    if (Spell.Power > 0)
+                        player.AwardArcaneLoreUse(Spell.Power);
+
                     player.Session.Network.EnqueueSend(new GameMessageSystemChat("The scroll is destroyed.", ChatMessageType.Broadcast));
                 }
             });
