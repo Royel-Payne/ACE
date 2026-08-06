@@ -109,6 +109,70 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain: writes usage-based skill XP DIRECTLY into the skill.
+        ///
+        /// Deliberately does NOT go through HandleActionRaiseSkill/SpendSkillXp. That path spends
+        /// from AvailableExperience, which (a) couples usage gain to the level-XP pool we are
+        /// decoupling from, and (b) is the same path we disable for players under usage-only mode -
+        /// routing usage through it would kill usage along with the shortcut.
+        ///
+        /// Leveling is unaffected: Level derives from TotalExperience, which this never touches.
+        ///
+        /// Returns true if any XP was applied. Caps at the top of the skill's XP table
+        /// (entry 005 is what lifts that ceiling).
+        /// </summary>
+        public bool AwardSkillUsageXP(CreatureSkill creatureSkill, uint amount)
+        {
+            if (amount == 0 || creatureSkill == null)
+                return false;
+
+            if (creatureSkill.AdvancementClass < SkillAdvancementClass.Trained)
+                return false;
+
+            var skillXPTable = GetSkillXPTable(creatureSkill.AdvancementClass);
+            if (skillXPTable == null)
+                return false;
+
+            var maxXP = skillXPTable[skillXPTable.Count - 1];
+
+            if (creatureSkill.ExperienceSpent >= maxXP)
+                return false;
+
+            var prevRank = creatureSkill.Ranks;
+
+            // widen before adding so a large award cannot wrap uint
+            var newXP = Math.Min((ulong)creatureSkill.ExperienceSpent + amount, maxXP);
+
+            creatureSkill.ExperienceSpent = (uint)newXP;
+            creatureSkill.Ranks = (ushort)CalcSkillRank(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent);
+
+            if (Session == null)
+                return true;    // still applied; just nobody to tell (logging out, etc.)
+
+            Session.Network.EnqueueSend(new GameMessagePrivateUpdateSkill(this, creatureSkill));
+
+            if (prevRank != creatureSkill.Ranks)
+            {
+                var suffix = "";
+                if (creatureSkill.IsMaxRank)
+                {
+                    PlayParticleEffect(PlayScript.WeddingBliss, Guid);
+                    suffix = $" and has reached its upper limit";
+                }
+
+                Session.Network.EnqueueSend(
+                    new GameMessageSound(Guid, Sound.RaiseTrait),
+                    new GameMessageSystemChat($"Your base {creatureSkill.Skill.ToSentence()} skill is now {creatureSkill.Base}{suffix}!", ChatMessageType.Advancement));
+
+                // same runrate hook the manual raise path applies
+                if (creatureSkill.Skill == Skill.Run && PropertyManager.GetBool("runrate_add_hooks").Item)
+                    HandleRunRateUpdate();
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Handles the GameAction 0x47 - TrainSkill network message from client
         /// </summary>
         public bool HandleActionTrainSkill(Skill skill, int creditsSpent)

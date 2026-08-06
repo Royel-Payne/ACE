@@ -324,7 +324,20 @@ namespace ACE.Server.WorldObjects
                 DoSpellEffects(Spell, ProjectileSource, creatureTarget, true);
 
                 if (player != null)
-                    Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), Spell.PowerMod);
+                {
+                    // Shadowgain 003: Spell.PowerMod is Math.Max(Power, 25) - a property of the SPELL,
+                    // not the target. Every low-level spell therefore reports difficulty 25 no matter
+                    // what is being fought, which makes the difficulty-relative modifier inert and
+                    // leaves casters frozen while melee - which reads the target - scales normally.
+                    // Prefer the target's Magic Defense, matching what the non-projectile magic path
+                    // in Player_Magic already does.
+                    var magicDifficulty = Spell.PowerMod;
+
+                    if (creatureTarget != null && PropertyManager.GetBool("skill_gain_normalize_magic_difficulty").Item)
+                        magicDifficulty = creatureTarget.GetCreatureSkill(Skill.MagicDefense).Current;
+
+                    Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty);
+                }
 
                 // handle target procs
                 // note that for untargeted multi-projectile spells,

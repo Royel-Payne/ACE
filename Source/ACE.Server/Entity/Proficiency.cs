@@ -12,6 +12,12 @@ namespace ACE.Server.Entity
     {
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// <summary>
+        /// LEGACY (Shadowgain 003): this was the throttle for the old repeat-use gate - a skill could
+        /// only re-award once 15 minutes had elapsed, unless the target was strictly harder than the
+        /// last one. That gate has been removed; nothing reads this any more. Retained so any external
+        /// Mods referencing Proficiency.FullTime still compile.
+        /// </summary>
         public static TimeSpan FullTime = TimeSpan.FromMinutes(15);
 
         public static void OnSuccessUse(Player player, CreatureSkill skill, uint difficulty)
@@ -54,98 +60,73 @@ namespace ACE.Server.Entity
             {
                 // can happen if server clock is rewound back in time
                 log.Warn($"Proficiency.OnSuccessUse({player.Name}, {skill.Skill}, {difficulty}) - timeDiff: {timeDiff}");
-                skill.PropertiesSkill.LastUsedTime = currentTime;       // update to prevent log spam
-                return;
+                timeDiff = 0;   // no longer fatal: nothing gates on elapsed time any more
             }
 
-            var difficulty_check = difficulty > last_difficulty;
-            var time_check = timeDiff >= FullTime.TotalSeconds;
+            // ----------------------------------------------------------------------------------
+            // Shadowgain 003: the repeat-use gate is GONE.
+            //
+            // Upstream awarded only when (difficulty > ResistanceAtLastCheck || timeSinceLastUse
+            // >= 15 min). Repeating a skill against same-difficulty targets therefore paid
+            // literally nothing - measured in 001, where a second kill with the same spell 11
+            // minutes later awarded exactly zero. That is fundamentally incompatible with "skills
+            // rise by use", and no amount of re-tuning the multiplier would have fixed it.
+            //
+            // Anti-farming is now the difficulty-relative modifier below instead of a timer:
+            // trivial targets trickle, appropriately-hard targets pay full.
+            //
+            // These two fields are still maintained - not as a gate now, but as telemetry
+            // (last difficulty faced / last time used) that the logging and other systems read.
+            // ----------------------------------------------------------------------------------
+            skill.PropertiesSkill.ResistanceAtLastCheck = difficulty;
+            skill.PropertiesSkill.LastUsedTime = currentTime;
 
-            if (debug && !difficulty_check && !time_check)
+            player.ChangesDetected = true;
+
+            // Difficulty relative to the actor's CURRENT skill. A target trivial for a master pays
+            // a trickle; one that stretches them pays full credit. This is what makes farming
+            // chickens pointless once strong, per Greylock's example.
+            var floor = PropertyManager.GetDouble("skill_gain_difficulty_floor").Item;
+            var cap = PropertyManager.GetDouble("skill_gain_difficulty_cap").Item;
+            var multiplier = PropertyManager.GetDouble("skill_gain_multiplier").Item;
+            var minAward = (uint)Math.Max(0, PropertyManager.GetLong("skill_gain_min_award").Item);
+
+            var current = Math.Max(1u, skill.Current);
+            var ratio = (double)difficulty / current;
+
+            // Math.Min/Max guard the clamp in case an operator sets floor above cap live.
+            var difficultyFactor = Math.Clamp(ratio, Math.Min(floor, cap), Math.Max(floor, cap));
+
+            // Model A: base points (difficulty) x difficultyFactor x global multiplier, written as
+            // raw XP into the skill. The steep native XP tables then give "fast early, slow to
+            // master" for free - no normalisation needed (Model B was considered and rejected).
+            var awarded = difficulty * difficultyFactor * multiplier;
+
+            // These knobs are operator-settable live to arbitrary values. Clamp into uint range
+            // before casting: a large multiplier would otherwise overflow and wrap to a garbage
+            // (often tiny) award, and a negative one would wrap to something enormous.
+            if (double.IsNaN(awarded) || awarded < 0)
+                awarded = 0;
+
+            var pp = (uint)Math.Min(uint.MaxValue, Math.Max(minAward, Math.Round(awarded)));
+
+            var prevRank = skill.Ranks;
+            var prevXP = skill.ExperienceSpent;
+
+            // Direct write. Deliberately bypasses GrantXP/HandleActionRaiseSkill, and with them the
+            // unassigned-XP pool, the IsMaxLevel early-return, and the GetRemainingXP(maxLevel)
+            // bound that upstream imposed. Usage gain must keep working at and past max level, and
+            // must not be killed when the player-facing spend path is disabled.
+            var applied = player.AwardSkillUsageXP(skill, pp);
+
+            if (debug)
             {
-                // The gate denied an award. Logging these is as valuable as logging the grants -
-                // it measures how often the repeat-use gate suppresses gain during real play.
-                log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | BLOCKED=gate | difficulty={difficulty} <= lastDifficulty={last_difficulty} | timeDiff={timeDiff:N1}s < {FullTime.TotalSeconds}s | rank={skill.Ranks} xp={skill.ExperienceSpent}");
-            }
-
-            if (difficulty_check || time_check)
-            {
-                // todo: not independent variables?
-                // always scale if timeDiff < FullTime?
-                var timeScale = 1.0f;
-                if (!time_check)
-                {
-                    // 10 mins elapsed from 15 min FullTime:
-                    // 0.66f timeScale
-                    timeScale = (float)(timeDiff / FullTime.TotalSeconds);
-
-                    // any rng involved?
-                }
-
-                skill.PropertiesSkill.ResistanceAtLastCheck = difficulty;
-                skill.PropertiesSkill.LastUsedTime = currentTime;
-
-                player.ChangesDetected = true;
-
-                if (player.IsMaxLevel)
-                {
-                    if (debug)
-                        log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | BLOCKED=maxLevel | difficulty={difficulty} | gate passed but no XP awarded");
-
-                    return;
-                }
-
-                var pp = (uint)Math.Round(difficulty * timeScale);
-                var totalXPGranted = (long)Math.Round(pp * 1.1f);   // give additional 10% of proficiency XP to unassigned XP
-
-                if (totalXPGranted > 10000)
-                {
-                    log.Warn($"Proficiency.OnSuccessUse({player.Name}, {skill.Skill}, {difficulty}) - totalXPGranted: {totalXPGranted:N0}");
-                }
-
-                var maxLevel = Player.GetMaxLevel();
-                var remainingXP = player.GetRemainingXP(maxLevel).Value;
-
-                if (totalXPGranted > remainingXP)
-                {
-                    // checks and balances:
-                    // total xp = pp * 1.1
-                    // pp = total xp / 1.1
-
-                    totalXPGranted = remainingXP;
-                    pp = (uint)Math.Round(totalXPGranted / 1.1f);
-                }
-
-                // if skill is maxed out, but player is below MaxLevel,
-                // not sure if retail granted 0%, 10%, or 110% of the pp to TotalExperience here
-                // since pp is such a miniscule system at the higher levels,
-                // going to just naturally add it to TotalXP for now..
-
-                pp = Math.Min(pp, skill.ExperienceLeft);
-
-                //Console.WriteLine($"Earned {pp} PP ({skill.Skill})");
-
-                var prevRank = skill.Ranks;
-                var prevXP = skill.ExperienceSpent;
-
-                // send CP to player as unassigned XP
-                player.GrantXP(totalXPGranted, XpType.Proficiency, ShareType.None);
-
-                // send PP to player as skill XP, which gets spent from the CP sent
-                if (pp > 0)
-                {
-                    player.HandleActionRaiseSkill(skill.Skill, pp);
-                }
-
-                if (debug)
-                {
-                    log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | AWARD" +
-                             $" | difficulty={difficulty} (lastDifficulty={last_difficulty})" +
-                             $" | trigger={(difficulty_check ? "harderTarget" : "15minTimer")}" +
-                             $" | timeDiff={timeDiff:N1}s timeScale={timeScale:N3}" +
-                             $" | pp={pp} grantedXP={totalXPGranted}" +
-                             $" | rank {prevRank}->{skill.Ranks} xp {prevXP}->{skill.ExperienceSpent}");
-                }
+                log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | {(applied ? "AWARD" : "NOOP=maxRank")}" +
+                         $" | difficulty={difficulty} vs current={current} ratio={ratio:N3}" +
+                         $" | factor={difficultyFactor:N3} mult={multiplier:N2}" +
+                         $" | pp={pp}" +
+                         $" | rank {prevRank}->{skill.Ranks} xp {prevXP}->{skill.ExperienceSpent}" +
+                         $" | sinceLastUse={timeDiff:N1}s prevDifficulty={last_difficulty}");
             }
         }
 

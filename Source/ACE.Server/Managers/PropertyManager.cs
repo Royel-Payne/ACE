@@ -588,6 +588,8 @@ namespace ACE.Server.Managers
                 ("reportbug_enabled", new Property<bool>(false, "toggles the /reportbug player command")),
                 ("require_spell_comps", new Property<bool>(true, "if FALSE, spell components are no longer required to be in inventory to cast spells. defaults to enabled, as in retail")),
                 ("safe_spell_comps", new Property<bool>(false, "if TRUE, disables spell component burning for everyone")),
+                ("skill_gain_normalize_magic_difficulty", new Property<bool>(true, "(Shadowgain) If enabled, war-magic PROJECTILE skill gain uses the target's Magic Defense as its difficulty instead of Spell.PowerMod. PowerMod is Math.Max(Power,25) - spell-driven and identical for every low-level spell - which makes the difficulty-relative modifier inert for casters and freezes their progression. The non-projectile magic path already uses target Magic Defense")),
+                ("skill_gain_usage_only", new Property<bool>(true, "(Shadowgain) If enabled, players cannot raise a skill's RANK by spending pooled experience - skills rise only through use. Training a NEW skill with a skill credit is unaffected and still works, as does levelling from kills; only the buy-ranks-with-XP shortcut is removed")),
                 ("salvage_handle_overages", new Property<bool>(false, "in retail, if 2 salvage bags were combined beyond 100 structure, the overages would be lost")),
                 ("show_ammo_buff", new Property<bool>(false, "shows active enchantments such as blood drinker on equipped missile ammo during appraisal")),
                 ("show_aura_buff", new Property<bool>(false, "shows active aura enchantments on wielded items during appraisal")),
@@ -629,6 +631,7 @@ namespace ACE.Server.Managers
                 ("player_save_interval", new Property<long>(300, "the number of seconds between automatic player saves")),
                 ("rares_max_days_between", new Property<long>(45, "for rares_real_time_v2: the maximum number of days a player can go before a rare is generated on rare eligible creature kills")),
                 ("rares_max_seconds_between", new Property<long>(5256000, "for rares_real_time: the maximum number of seconds a player can go before a second chance at a rare is allowed on rare eligible creature kills that did not generate a rare")),
+                ("skill_gain_min_award", new Property<long>(1, "(Shadowgain) Minimum skill XP granted by a single successful use, after the difficulty modifier. Keeps 'every action gives a slight gain' true even against trivial targets. Set 0 to allow zero-value awards")),
                 ("summoning_killtask_multicredit_cap", new Property<long>(2, "if allow_summoning_killtask_multicredit is enabled, the maximum # of killtask credits a player can receive from 1 kill")),
                 ("teleport_visibility_fix", new Property<long>(0, "Fixes some possible issues with invisible players and mobs. 0 = default / disabled, 1 = players only, 2 = creatures, 3 = all world objects"))
                 );
@@ -663,6 +666,9 @@ namespace ACE.Server.Managers
                 ("quest_mindelta_rate", new Property<double>(1.0, "scales all quest min delta time between solves, 1 being normal")),
                 ("quest_xp_modifier", new Property<double>(1.0, "Scale multiplier for amount of quest XP received by players.  Quest XP is also modified by 'xp_modifier'.")),
                 ("rare_drop_rate_percent", new Property<double>(0.04, "Adjust the chance of a rare to spawn as a percentage. Default is 0.04, or 1 in 2,500. Max is 100, or every eligible drop.")),
+                ("skill_gain_difficulty_cap", new Property<double>(2.0, "(Shadowgain) Upper clamp on the difficulty-relative modifier (targetDifficulty / currentSkill). Caps how much a very hard target can multiply a single award. Raise to reward fighting above your weight; lower to flatten")),
+                ("skill_gain_difficulty_floor", new Property<double>(0.05, "(Shadowgain) Lower clamp on the difficulty-relative modifier. This is the anti-farm knob that replaced the old 15-minute timer: a trivial target still pays this fraction, so grinding chickens never stops working outright but becomes negligible once strong. Set higher to be more forgiving")),
+                ("skill_gain_multiplier", new Property<double>(1.0, "(Shadowgain) Global multiplier on ALL usage-based skill gain. This is the primary grind-rate dial: 0.5 = half speed, 2.0 = double. Deliberately left at 1.0 - the experiment ships the mechanism, the operator tunes the pace")),
                 ("spellcast_max_angle", new Property<double>(20.0, "for advanced player spell casting, the maximum angle to target release a spell projectile. retail seemed to default to value of around 20, although some players seem to prefer a higher 45 degree angle")),
                 ("trophy_drop_rate", new Property<double>(1.0, "Modifier for trophies dropped on creature death")),
                 ("unlocker_window", new Property<double>(10.0, "The number of seconds a player unlocking a chest has exclusive access to first opening the chest.")),
