@@ -586,6 +586,9 @@ namespace ACE.Server.WorldObjects
 
             Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ManaConversion), spell.PowerMod);
 
+            // Shadowgain 004: mana conversion exercises Self.
+            AwardAttributesForMagicSkill(Skill.ManaConversion, spell.PowerMod);
+
             return true;
         }
 
@@ -1084,6 +1087,9 @@ namespace ACE.Server.WorldObjects
                     // use target resistance?
                     Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ItemEnchantment), spell.PowerMod);
 
+                    // Shadowgain 004: item enchantment exercises Focus.
+                    AwardAttributesForMagicSkill(Skill.ItemEnchantment, spell.PowerMod);
+
                     if (spell.IsHarmful)
                     {
                         var playerRedirect = targetPlayer;
@@ -1121,6 +1127,9 @@ namespace ACE.Server.WorldObjects
                             if (targetCreature != null)
                                 Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), targetCreature.GetCreatureSkill(Skill.MagicDefense).Current);
 
+                                // Shadowgain 004: target-derived difficulty -> Focus/Self by school.
+                                AwardAttributesForMagicSkill(spell.School, targetCreature.GetCreatureSkill(Skill.MagicDefense).Current);
+
                             // handle target procs
                             if (targetCreature != null && targetCreature != this)
                                 TryProcEquippedItems(this, targetCreature, false, caster);
@@ -1130,6 +1139,10 @@ namespace ACE.Server.WorldObjects
                         }
                         else
                             Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), spell.PowerMod);
+
+                            // Shadowgain 004: no creature target here (self/item cast), so PowerMod
+                            // is the action's own magnitude - still external to the attribute.
+                            AwardAttributesForMagicSkill(spell.School, spell.PowerMod);
                     }
 
                     break;

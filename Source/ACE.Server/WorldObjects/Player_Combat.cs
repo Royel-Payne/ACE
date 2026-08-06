@@ -216,6 +216,11 @@ namespace ACE.Server.WorldObjects
             var difficulty = GetTargetEffectiveDefenseSkill(target);
 
             Proficiency.OnSuccessUse(this, attackSkill, difficulty);
+
+            // Shadowgain 004: the same target-derived difficulty feeds the attributes this attack
+            // exercises (heavy/2h -> Strength, light/dual -> Quickness, finesse/missile -> Coordination,
+            // each with a related secondary). External by construction, per the anti-runaway rule.
+            AwardAttributesForWeaponSkill(attackSkill.Skill, difficulty);
         }
 
         public override uint GetEffectiveAttackSkill()
@@ -507,6 +512,20 @@ namespace ACE.Server.WorldObjects
             // update health
             var damageTaken = (uint)-UpdateVitalDelta(Health, (int)-amount);
             DamageHistory.Add(source, damageType, damageTaken);
+
+            // Shadowgain 004: Endurance rises from taking hits. The difficulty MUST be external - using
+            // the defender's own Endurance is exactly the self-referential pattern that produced the 003
+            // Shield runaway. Prefer the attacker's weapon skill (what Melee Defense already uses), and
+            // fall back to the damage magnitude for non-creature sources such as traps or hazards.
+            if (damageTaken > 0)
+            {
+                var enduranceDifficulty = damageTaken;
+
+                if (source is Creature enduranceAttacker)
+                    enduranceDifficulty = enduranceAttacker.GetCreatureSkill(enduranceAttacker.GetCurrentWeaponSkill()).Current;
+
+                AwardAttributeUsageXP(PropertyAttribute.Endurance, enduranceDifficulty);
+            }
 
             // update stamina
             if (CombatMode != CombatMode.NonCombat)

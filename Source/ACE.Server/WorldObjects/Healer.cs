@@ -222,6 +222,9 @@ namespace ACE.Server.WorldObjects
             var healingSkill = healer.GetCreatureSkill(Skill.Healing);
             Proficiency.OnSuccessUse(healer, healingSkill, difficulty);
 
+            // Shadowgain 004: healing exercises Self. Difficulty is the heal difficulty - external.
+            healer.AwardAttributesForMagicSkill(Skill.Healing, (uint)Math.Max(0, difficulty));
+
             var crit = critical ? "expertly " : "";
             var message = new GameMessageSystemChat($"You {crit}heal {targetName} for {healAmount} {BoosterEnum.ToString()} points.{remainingMsg}", ChatMessageType.Broadcast);
 

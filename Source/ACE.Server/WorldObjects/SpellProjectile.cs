@@ -337,6 +337,10 @@ namespace ACE.Server.WorldObjects
                         magicDifficulty = creatureTarget.GetCreatureSkill(Skill.MagicDefense).Current;
 
                     Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty);
+
+                    // Shadowgain 004: same external difficulty drives the mental attribute for this
+                    // school - Focus for war/void/enchantment, Self for life magic.
+                    player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty);
                 }
 
                 // handle target procs
