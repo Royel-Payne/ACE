@@ -544,10 +544,26 @@ namespace ACE.Server.WorldObjects
             if (xpAmount < topXp)
                 return CalcSkillRank(sac, xpAmount);
 
-            var lastDelta = (double)topXp - rankXpTable[topRank - 1];
+            // Cost of the FIRST rank past the table.
+            //
+            // This deliberately does NOT use the table's own final step. Measured 2026-08-06: the
+            // specialized table tops out at 4,100,490,438 and ExperienceSpent is a uint capped at
+            // 4,294,967,295, leaving only ~194M of headroom - while the table's final step is LARGER
+            // than that entire remainder. Anchoring to it produced literally zero extra ranks in a
+            // live test at 149.5M above the cap.
+            //
+            // Widening the field would not help either: GameMessagePrivateUpdateSkill writes
+            // ExperienceSpent as a uint in a fixed 37-byte packet, so the wire format is the real
+            // ceiling and changing it would break the retail client.
+            //
+            // The cost of ranks beyond the table is ours to define, so it is a config value sized to
+            // fit the remaining headroom: at 1,000,000 the ~194M buys ~194 further ranks. "Slow to
+            // master" is delivered by the gain RATE (a few tens of xp per use at this level, so tens
+            // of thousands of uses per rank), not by a per-rank cost we cannot afford.
+            var overcapCost = PropertyManager.GetDouble("skill_overcap_rank_cost").Item;
 
-            if (lastDelta <= 0)
-                return topRank;
+            if (overcapCost < 1.0)
+                overcapCost = 1.0;
 
             var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
             if (growth < 1.0) growth = 1.0;
@@ -557,9 +573,9 @@ namespace ACE.Server.WorldObjects
             double extraRanks;
 
             if (growth - 1.0 < 0.000001)
-                extraRanks = extra / lastDelta;
+                extraRanks = extra / overcapCost;
             else
-                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / lastDelta) / Math.Log(growth);
+                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / overcapCost) / Math.Log(growth);
 
             if (double.IsNaN(extraRanks) || extraRanks < 0)
                 extraRanks = 0;

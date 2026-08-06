@@ -436,10 +436,12 @@ namespace ACE.Server.WorldObjects
             if (xpAmount < topXp)
                 return CalcAttributeRank(xpAmount);
 
-            var lastDelta = (double)topXp - rankXpTable[topRank - 1];
+            // same reasoning as CalcSkillRankUncapped - the table's own final step exceeds the
+            // remaining uint headroom, so the overflow cost is a config value instead
+            var overcapCost = PropertyManager.GetDouble("skill_overcap_rank_cost").Item;
 
-            if (lastDelta <= 0)
-                return topRank;
+            if (overcapCost < 1.0)
+                overcapCost = 1.0;
 
             var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
             if (growth < 1.0) growth = 1.0;
@@ -449,9 +451,9 @@ namespace ACE.Server.WorldObjects
             double extraRanks;
 
             if (growth - 1.0 < 0.000001)
-                extraRanks = extra / lastDelta;
+                extraRanks = extra / overcapCost;
             else
-                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / lastDelta) / Math.Log(growth);
+                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / overcapCost) / Math.Log(growth);
 
             if (double.IsNaN(extraRanks) || extraRanks < 0)
                 extraRanks = 0;
