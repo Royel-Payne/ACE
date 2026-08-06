@@ -101,6 +101,15 @@ namespace ACE.Server.WorldObjects
                 if (amount > amountLeftToEnd)
                     addAmount = amountLeftToEnd;
 
+                // Shadowgain: AvailableExperience is deliberately NOT suppressed, despite skills (003),
+                // attributes and vitals (004) all being raised by use now.
+                //
+                // It looked like dead weight, but AugmentationDevice.cs:127 spends it directly
+                // (player.AvailableExperience -= AugmentationCost) - augmentation gems are bought with
+                // unassigned XP. Zeroing the pool would silently disable augmentations entirely.
+                //
+                // So the pool still has exactly one purpose, and the level-up message says so rather
+                // than claiming it raises skills or attributes, which it no longer can.
                 AvailableExperience += addAmount;
                 TotalExperience += addAmount;
 
@@ -332,6 +341,8 @@ namespace ACE.Server.WorldObjects
 
                     if (spendable.Count > 0)
                         message += $"\nYou have {AvailableExperience:#,###0} experience points available to raise {string.Join(" and ", spendable)}.";
+                    else
+                        message += $"\nYou have {AvailableExperience:#,###0} experience points, spendable only on augmentation gems.";
 
                     if (AvailableSkillCredits > 0)
                         message += $"\nYou have {AvailableSkillCredits} skill credit{(AvailableSkillCredits == 1 ? "" : "s")} available to train new skills.";
