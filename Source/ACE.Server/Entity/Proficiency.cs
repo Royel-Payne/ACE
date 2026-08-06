@@ -89,6 +89,15 @@ namespace ACE.Server.Entity
             var floor = PropertyManager.GetDouble("skill_gain_difficulty_floor").Item;
             var cap = PropertyManager.GetDouble("skill_gain_difficulty_cap").Item;
             var multiplier = PropertyManager.GetDouble("skill_gain_multiplier").Item;
+
+            // Per-skill-type override (design decision #5). Measured 2026-08-06: the difficulty inputs
+            // are not on comparable scales. Against similar-tier content, melee read the target's
+            // physical defense at ~72 while war magic read its Magic Defense at ~12 - so normalising
+            // magic to the target fixed its *scaling* (it varies with the fight now) but left it an
+            // order of magnitude behind melee in *magnitude*. A global multiplier cannot correct that,
+            // since it moves both paths together. This knob can.
+            if (IsMagicSkill(skill.Skill))
+                multiplier *= PropertyManager.GetDouble("skill_gain_magic_multiplier").Item;
             var minAward = (uint)Math.Max(0, PropertyManager.GetLong("skill_gain_min_award").Item);
 
             var current = Math.Max(1u, skill.Current);
@@ -127,6 +136,27 @@ namespace ACE.Server.Entity
                          $" | pp={pp}" +
                          $" | rank {prevRank}->{skill.Ranks} xp {prevXP}->{skill.ExperienceSpent}" +
                          $" | sinceLastUse={timeDiff:N1}s prevDifficulty={last_difficulty}");
+            }
+        }
+
+        /// <summary>
+        /// Shadowgain: the magic skills whose difficulty comes from a magic-side stat, and which
+        /// therefore share the low-magnitude problem that skill_gain_magic_multiplier compensates for.
+        /// </summary>
+        private static bool IsMagicSkill(Skill skill)
+        {
+            switch (skill)
+            {
+                case Skill.WarMagic:
+                case Skill.LifeMagic:
+                case Skill.CreatureEnchantment:
+                case Skill.ItemEnchantment:
+                case Skill.VoidMagic:
+                case Skill.ManaConversion:
+                case Skill.MagicDefense:
+                    return true;
+                default:
+                    return false;
             }
         }
 
