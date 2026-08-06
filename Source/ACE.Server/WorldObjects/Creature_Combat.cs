@@ -882,6 +882,12 @@ namespace ACE.Server.WorldObjects
             if (rng >= chance)
                 return;
 
+            // Shadowgain 007: the proc actually fired, so Dirty Fighting was genuinely used. Hooked
+            // after the roll rather than at the skill check above, so a failed roll pays nothing.
+            // Difficulty comes from the target, never from Dirty Fighting itself.
+            if (this is Player dirtyFighter)
+                dirtyFighter.AwardDirtyFightingUse(creatureTarget);
+
             switch (AttackHeight)
             {
                 case ACE.Entity.Enum.AttackHeight.Low:

@@ -137,6 +137,13 @@ namespace ACE.Server.WorldObjects
             {
                 OnDamageTarget(target, damageEvent.CombatType, damageEvent.IsCritical);
 
+                // Shadowgain 007: the combat specialties had no usage path at all - they fire
+                // constantly in play but never trained themselves. Hooked here rather than inside the
+                // Get*Mod helpers because those are evaluation functions called during damage
+                // calculation; this is the one place per landed attack where the resolved DamageEvent
+                // says which effects actually applied.
+                AwardCombatSpecialtyUse(damageEvent, target);
+
                 if (targetPlayer != null)
                     targetPlayer.TakeDamage(this, damageEvent);
                 else
