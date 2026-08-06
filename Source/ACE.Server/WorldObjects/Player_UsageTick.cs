@@ -26,6 +26,50 @@ namespace ACE.Server.WorldObjects
         private readonly System.Collections.Generic.HashSet<uint> UsageTickCellsVisited = new System.Collections.Generic.HashSet<uint>();
 
         /// <summary>
+        /// Shadowgain 010: stamina spent since the last Endurance payout. Accumulated rather than
+        /// awarded per point, because stamina drains a point at a time and per-point awards would be
+        /// both noisy and dominated by the minimum-award floor.
+        /// </summary>
+        private uint StaminaSpentSinceTick;
+
+        /// <summary>
+        /// Shadowgain 010: called from UpdateVitalDelta whenever a player spends stamina.
+        /// </summary>
+        public void TrackStaminaSpent(uint amount)
+        {
+            // saturate rather than wrap; the tick clears this every ~5s anyway
+            if (StaminaSpentSinceTick < uint.MaxValue - amount)
+                StaminaSpentSinceTick += amount;
+        }
+
+        /// <summary>
+        /// Shadowgain 010: pays out Endurance for stamina burned since the last tick.
+        ///
+        /// Difficulty is the stamina SPENT, which is external to Endurance - the cost of a swing or
+        /// an evade comes from the weapon and the action, not from the attribute being raised. (Max
+        /// stamina derives from Endurance, but the amount *spent* does not, so the anti-runaway rule
+        /// holds.) The ratio still self-limits against Endurance's own Base.
+        /// </summary>
+        private void AwardExertionEndurance()
+        {
+            var spent = StaminaSpentSinceTick;
+
+            StaminaSpentSinceTick = 0;
+
+            if (spent == 0 || !PropertyManager.GetBool("endurance_from_exertion").Item)
+                return;
+
+            var scale = PropertyManager.GetDouble("endurance_exertion_multiplier").Item;
+
+            var difficulty = (uint)Math.Max(1, Math.Round(spent * scale));
+
+            AwardAttributeUsageXP(PropertyAttribute.Endurance, difficulty);
+
+            if (PropertyManager.GetBool("attribute_debug_logging").Item)
+                log.Info($"[EXERTION] {Name} | stamina spent={spent} -> difficulty={difficulty}");
+        }
+
+        /// <summary>
         /// Shadowgain 008 + 009: the shared movement tick, called from Heartbeat (~5s).
         ///
         /// Entries 008 (Quickness/Run from travel) and 009 (Strength from hauling while

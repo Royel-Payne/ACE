@@ -129,6 +129,12 @@ namespace ACE.Server.WorldObjects
             // Strength. Both gated on net displacement so neither can be farmed standing still.
             UsageMovementTick();
 
+            // Shadowgain 010: Endurance from stamina burned this tick. Runs unconditionally, NOT
+            // inside UsageMovementTick, because exertion should pay even while standing and fighting -
+            // that is precisely the case (a high-defence build that never moves and never gets hit)
+            // this exists to rescue.
+            AwardExertionEndurance();
+
             // Check if we're due for our periodic SavePlayer
             if (LastRequestedDatabaseSave == DateTime.MinValue)
                 LastRequestedDatabaseSave = DateTime.UtcNow;

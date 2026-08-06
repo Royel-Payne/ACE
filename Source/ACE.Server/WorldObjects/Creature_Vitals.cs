@@ -64,6 +64,20 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public int UpdateVitalDelta(CreatureVital vital, int delta)
         {
+            // Shadowgain 010: exertion builds Endurance. Every point of stamina a player spends is
+            // accumulated here and paid out on the heartbeat.
+            //
+            // Hooked at this chokepoint rather than at each cost site so it catches ALL expenditure -
+            // swinging, evading (which costs stamina in combat mode), jumping, healing kits - without
+            // having to find and maintain every one.
+            //
+            // Why this exists: Endurance previously rose ONLY from taking damage, which is a trap for
+            // a high-defence build. They are never hit, so Endurance never grows, so Health stays low,
+            // so they can never safely fight anything that WOULD hit them. Stamina spend is the
+            // signal every active playstyle produces, evasive ones included.
+            if (delta < 0 && vital.Vital == PropertyAttribute2nd.MaxStamina && this is Player staminaSpender)
+                staminaSpender.TrackStaminaSpent((uint)(-delta));
+
             var newVital = (int)vital.Current + delta;
 
             return UpdateVital(vital, newVital);
