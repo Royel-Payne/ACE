@@ -95,6 +95,44 @@ namespace ACE.Server.Command.Handlers
         }
         */
 
+        /// <summary>
+        /// Shadowgain: dumps the skill XP cost curve to the server log.
+        ///
+        /// Needed for balance work, and unobtainable any other way from here: the table lives in
+        /// client_portal.dat, which only exists on the server host. Every "how long will this take"
+        /// question depends on it, because cost-per-rank escalates steeply while usage awards scale
+        /// with target difficulty - and whether those two curves cancel decides whether the whole
+        /// usage-progression idea holds up at high level. Guessing at it is how estimates become
+        /// fiction.
+        /// </summary>
+        [CommandHandler("sg-xptable", AccessLevel.Developer, CommandHandlerFlag.None, 0,
+            "(Shadowgain) Dump the trained/specialized skill XP cost curve to the server log.",
+            "[rankInterval]")]
+        public static void HandleShadowgainXpTable(Session session, params string[] parameters)
+        {
+            var interval = 10;
+
+            if (parameters?.Length > 0 && int.TryParse(parameters[0], out var parsed) && parsed > 0)
+                interval = parsed;
+
+            var xpTable = DatManager.PortalDat.XpTable;
+
+            var trained = xpTable.TrainedSkillXpList;
+            var specialized = xpTable.SpecializedSkillXpList;
+
+            log.Info($"[SG-XPTABLE] trained ranks={trained.Count - 1} max={trained[trained.Count - 1]:N0} | specialized ranks={specialized.Count - 1} max={specialized[specialized.Count - 1]:N0}");
+
+            for (var rank = 0; rank < trained.Count; rank += interval)
+            {
+                var stepFrom = rank >= interval ? trained[rank] - trained[rank - interval] : trained[rank];
+
+                log.Info($"[SG-XPTABLE] rank={rank} trainedTotal={trained[rank]:N0} trainedStep={stepFrom:N0}"
+                       + (rank < specialized.Count ? $" specTotal={specialized[rank]:N0}" : ""));
+            }
+
+            CommandHandlerHelper.WriteOutputInfo(session, $"Dumped skill XP table to server log (trained max rank {trained.Count - 1}).", ChatMessageType.Broadcast);
+        }
+
         [CommandHandler("nudge", AccessLevel.Developer, CommandHandlerFlag.RequiresWorld, 0, "Correct player position cell ID after teleporting into black space.")]
         public static void HandleNudge(Session session, params string[] parameters)
         {
