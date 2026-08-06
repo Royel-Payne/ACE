@@ -262,6 +262,20 @@ namespace ACE.Server.WorldObjects
                     if (playerSkill.Current < UseRequiresSkillLevel.Value)
                         return new ActivationResult(new GameEventWeenieErrorWithString(player.Session, WeenieErrorWithString.Your_IsTooLowToUseItemMagic, playerSkill.Skill.ToSentence()));
                 }
+
+                // Shadowgain 007: THIS is the branch summoning devices actually take -
+                // UseRequiresSkill / UseRequiresSkillLevel, NOT the ItemSkillLimit branch above.
+                // Verified against the world DB: Mud Golem Essence (wcid 48886) carries
+                // UseRequiresSkill=Summoning and UseRequiresSkillLevel=50, with ItemSkillLimit unset -
+                // as do all pet devices. My first hook sat on a branch they never take.
+                //
+                // Difficulty is the item's own requirement, so a higher-tier device teaches more.
+                if (PropertyManager.GetBool("specialty_gain_from_use").Item)
+                {
+                    var useDifficulty = (uint)System.Math.Max(1, UseRequiresSkillLevel ?? 1);
+
+                    Proficiency.OnSuccessUse(player, playerSkill, useDifficulty);
+                }
             }
 
             // verify skill specialized
