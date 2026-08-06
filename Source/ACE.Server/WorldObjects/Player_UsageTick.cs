@@ -45,6 +45,26 @@ namespace ACE.Server.WorldObjects
                 return;
             }
 
+            // Cross-landblock distance is only trustworthy OUTDOORS. Position.DistanceTo falls back to
+            // (landblockX - landblockX) * 192 + offset, which assumes the outdoor grid - ACE's own
+            // source says "verify this is working correctly if one of these is indoors" and evidently
+            // never did. Dungeon landblocks are not on that grid, so a measurement spanning an
+            // indoor/outdoor boundary is meaningless, and was producing a large bogus distance that
+            // fired an award for merely walking out of a dungeon.
+            //
+            // Inside a dungeon the landblock does not change, so plain 3D distance applies and travel
+            // is credited normally. Outdoor travel across landblocks is fine too. Only the boundary
+            // is untrustworthy - there we re-anchor and skip.
+            if (Location.LandblockId != LastUsageTickPosition.LandblockId
+                && (Location.Indoors || LastUsageTickPosition.Indoors))
+            {
+                if (debug)
+                    log.Info($"[MOVETICK] {Name} | SKIP=indoorBoundary | re-anchoring, cross-landblock distance is unreliable indoors");
+
+                LastUsageTickPosition = new ACE.Entity.Position(Location);
+                return;
+            }
+
             var distance = Location.DistanceTo(LastUsageTickPosition);
 
             // A teleport/recall is not travel. Reset the anchor and award nothing, so portalling
