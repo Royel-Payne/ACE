@@ -403,8 +403,19 @@ namespace ACE.Server.WorldObjects
 
                 case Skill.LifeMagic:
                 case Skill.ManaConversion:
-                case Skill.Healing:
                     AwardAttributeUsageXP(PropertyAttribute.Self, difficulty);
+                    break;
+
+                // Healing's own formula is (Focus + Coordination) / 3 - confirmed against the AC
+                // wiki - so using a healing kit should train THOSE, not Self. 004 mapped it to Self,
+                // which was wrong.
+                //
+                // This also closes the last stranded-attribute edge: a pure melee character had no
+                // Focus path at all, and healing kits are near-universal. General principle worth
+                // reusing - a skill's use should train the attributes that skill is BUILT from.
+                case Skill.Healing:
+                    AwardAttributeUsageXP(PropertyAttribute.Focus, difficulty);
+                    AwardAttributeUsageXP(PropertyAttribute.Coordination, difficulty, true);
                     break;
             }
         }
