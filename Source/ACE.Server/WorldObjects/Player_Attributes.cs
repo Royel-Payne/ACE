@@ -134,15 +134,28 @@ namespace ACE.Server.WorldObjects
             var debug = PropertyManager.GetBool("attribute_debug_logging").Item;
 
             var attributeXPTable = DatManager.PortalDat.XpTable.AttributeXpList;
-            var maxXP = attributeXPTable[attributeXPTable.Count - 1];
+            var tableMaxXP = attributeXPTable[attributeXPTable.Count - 1];
 
-            if (creatureAttribute.ExperienceSpent >= maxXP)
+            // Shadowgain 005: attributes stay CAPPED by default, unlike skills. 004's
+            // vitals-follow-attributes math is built on the 190-attribute / 196-vital ceilings, so
+            // uncapping attributes silently breaks the proportion vitals are derived from.
+            // The toggle exists for completeness; past the cap gains are deliberately brutal.
+            var overcapAllowed = PropertyManager.GetBool("attribute_overcap_allow").Item;
+
+            var atCap = creatureAttribute.ExperienceSpent >= tableMaxXP;
+
+            if (atCap && !overcapAllowed)
             {
                 if (debug)
                     log.Info($"[ATTRIBUTE] {Name} | {attribute} | NOOP=maxRank | difficulty={difficulty}");
 
                 return false;
             }
+
+            var maxXP = overcapAllowed ? uint.MaxValue : tableMaxXP;
+
+            if (creatureAttribute.ExperienceSpent >= maxXP)
+                return false;
 
             var floor = PropertyManager.GetDouble("attribute_gain_difficulty_floor").Item;
             var cap = PropertyManager.GetDouble("attribute_gain_difficulty_cap").Item;
@@ -158,6 +171,10 @@ namespace ACE.Server.WorldObjects
             // overlapping mapping: an action feeds a primary attribute fully and a related one partially
             if (isSecondary)
                 multiplier *= PropertyManager.GetDouble("attribute_gain_overlap_factor").Item;
+
+            // past the table cap (only reachable with attribute_overcap_allow on) gains crawl
+            if (atCap)
+                multiplier *= PropertyManager.GetDouble("attribute_overcap_multiplier").Item;
 
             // Base, deliberately NOT Current - see the matching note in Proficiency.cs. Current applies
             // enchantments and vitae, which made being buffed shrink your gain. Buffing is the normal
@@ -180,7 +197,9 @@ namespace ACE.Server.WorldObjects
             var newXP = Math.Min((ulong)creatureAttribute.ExperienceSpent + pp, maxXP);
 
             creatureAttribute.ExperienceSpent = (uint)newXP;
-            creatureAttribute.Ranks = (ushort)Math.Max(0, CalcAttributeRank(creatureAttribute.ExperienceSpent));
+            creatureAttribute.Ranks = (ushort)Math.Max(0, overcapAllowed
+                ? CalcAttributeRankUncapped(creatureAttribute.ExperienceSpent)
+                : CalcAttributeRank(creatureAttribute.ExperienceSpent));
 
             // CreatureAttribute's setters, unlike CreatureSkill's, do NOT flag the biota as dirty -
             // without this the gain is never persisted.
@@ -399,6 +418,47 @@ namespace ACE.Server.WorldObjects
         /// Returns the maximum rank that can be purchased with an xp amount
         /// </summary>
         /// <param name="xpAmount">The amount of xp used to make the purchase</param>
+        /// <summary>
+        /// Shadowgain 005: attribute rank extended past the table top, mirroring
+        /// CalcSkillRankUncapped. Only reachable when attribute_overcap_allow is on, which it is
+        /// NOT by default - 004 ties vital ranks to the attribute ceiling.
+        /// </summary>
+        public static int CalcAttributeRankUncapped(uint xpAmount)
+        {
+            var rankXpTable = DatManager.PortalDat.XpTable.AttributeXpList;
+
+            if (rankXpTable == null || rankXpTable.Count < 2)
+                return CalcAttributeRank(xpAmount);
+
+            var topRank = rankXpTable.Count - 1;
+            var topXp = rankXpTable[topRank];
+
+            if (xpAmount < topXp)
+                return CalcAttributeRank(xpAmount);
+
+            var lastDelta = (double)topXp - rankXpTable[topRank - 1];
+
+            if (lastDelta <= 0)
+                return topRank;
+
+            var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
+            if (growth < 1.0) growth = 1.0;
+
+            var extra = (double)xpAmount - topXp;
+
+            double extraRanks;
+
+            if (growth - 1.0 < 0.000001)
+                extraRanks = extra / lastDelta;
+            else
+                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / lastDelta) / Math.Log(growth);
+
+            if (double.IsNaN(extraRanks) || extraRanks < 0)
+                extraRanks = 0;
+
+            return (int)Math.Min(topRank + (long)extraRanks, ushort.MaxValue - 1);
+        }
+
         public static int CalcAttributeRank(uint xpAmount)
         {
             var rankXpTable = DatManager.PortalDat.XpTable.AttributeXpList;

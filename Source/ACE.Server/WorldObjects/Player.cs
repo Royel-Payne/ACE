@@ -876,6 +876,18 @@ namespace ACE.Server.WorldObjects
             var extent = Math.Clamp(jump.Extent, 0.0f, 1.0f);
             var staminaCost = MovementSystem.JumpStaminaCost(extent, burden, PKTimerActive);
 
+            // Shadowgain 008: jumping raises the Jump skill (one of the 14 with no usage path before
+            // now). Difficulty scales with jump EXTENT - how hard the jump was, 0-1 - against a
+            // configured base. External to the Jump skill itself, and a tap-jump is worth little.
+            var jumpSkill = GetCreatureSkill(Skill.Jump);
+
+            if (jumpSkill != null)
+            {
+                var jumpDifficulty = (uint)Math.Max(1, Math.Round(extent * PropertyManager.GetLong("jump_gain_difficulty").Item));
+
+                Proficiency.OnSuccessUse(this, jumpSkill, jumpDifficulty);
+            }
+
             //Console.WriteLine($"Strength: {strength}, Capacity: {capacity}, Encumbrance: {EncumbranceVal ?? 0}, Burden: {burden}, StaminaCost: {staminaCost}");
 
             // ensure player has enough stamina to jump

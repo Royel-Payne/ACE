@@ -1,3 +1,5 @@
+using ACE.Server.Managers;
+
 namespace ACE.Server.Physics.Common
 {
     public class EncumbranceSystem
@@ -8,15 +10,37 @@ namespace ACE.Server.Physics.Common
 
             var bonusBurden = 30 * numAugs;
 
+            int capacity;
+
             if (bonusBurden >= 0)
             {
                 if (bonusBurden > 150)
                     bonusBurden = 150;
 
-                return 150 * strength + strength * bonusBurden;
+                capacity = 150 * strength + strength * bonusBurden;
             }
             else
-                return 150 * strength;
+                capacity = 150 * strength;
+
+            // Shadowgain 009: Strength-independent capacity floor.
+            //
+            // Capacity is purely 150 x Strength upstream, which was fine when anyone could buy
+            // Strength with pooled XP. Under usage-based gain a caster who never melees would be
+            // stuck at their starting Strength - and therefore permanently unable to carry their own
+            // loot. The floor guarantees a workable minimum while Strength still governs everything
+            // above it, so a warrior still out-carries a mage by a wide margin.
+            //
+            // Applied here rather than at the call sites so the burden penalty, the client's
+            // "overburdened by N" readout, and 009's Strength gain all agree on one number.
+            if (PropertyManager.GetBool("burden_capacity_floor_enabled").Item)
+            {
+                var floor = (int)PropertyManager.GetLong("burden_capacity_floor").Item;
+
+                if (capacity < floor)
+                    capacity = floor;
+            }
+
+            return capacity;
         }
 
         public static float GetBurden(int capacity, int encumbrance)

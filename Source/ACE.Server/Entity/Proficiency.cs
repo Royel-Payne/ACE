@@ -98,6 +98,12 @@ namespace ACE.Server.Entity
             // since it moves both paths together. This knob can.
             if (IsMagicSkill(skill.Skill))
                 multiplier *= PropertyManager.GetDouble("skill_gain_magic_multiplier").Item;
+
+            // Shadowgain 005: uncapping removes Specialized's old advantage - a higher rank ceiling -
+            // so without this Trained and Specialized collapse into identical progression, differing
+            // only by the +5/+10 InitLevel head start. Specialized instead grows FASTER per use.
+            if (skill.AdvancementClass == SkillAdvancementClass.Specialized)
+                multiplier *= PropertyManager.GetDouble("spec_gain_multiplier").Item;
             var minAward = (uint)Math.Max(0, PropertyManager.GetLong("skill_gain_min_award").Item);
 
             // Base, deliberately NOT Current. Current applies enchantment multipliers and vitae, so

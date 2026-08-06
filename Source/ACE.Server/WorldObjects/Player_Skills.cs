@@ -133,7 +133,11 @@ namespace ACE.Server.WorldObjects
             if (skillXPTable == null)
                 return false;
 
-            var maxXP = skillXPTable[skillXPTable.Count - 1];
+            // Shadowgain 005: with uncapping on, the XP table's top is no longer a ceiling - the
+            // rank formula continues past it. Without it, behaviour is unchanged from 003.
+            var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
+
+            var maxXP = uncapped ? uint.MaxValue : skillXPTable[skillXPTable.Count - 1];
 
             if (creatureSkill.ExperienceSpent >= maxXP)
                 return false;
@@ -144,7 +148,10 @@ namespace ACE.Server.WorldObjects
             var newXP = Math.Min((ulong)creatureSkill.ExperienceSpent + amount, maxXP);
 
             creatureSkill.ExperienceSpent = (uint)newXP;
-            creatureSkill.Ranks = (ushort)CalcSkillRank(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent);
+
+            creatureSkill.Ranks = (ushort)(uncapped
+                ? CalcSkillRankUncapped(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent)
+                : CalcSkillRank(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent));
 
             if (Session == null)
                 return true;    // still applied; just nobody to tell (logging out, etc.)
@@ -154,7 +161,10 @@ namespace ACE.Server.WorldObjects
             if (prevRank != creatureSkill.Ranks)
             {
                 var suffix = "";
-                if (creatureSkill.IsMaxRank)
+
+                // With uncapping on there is no upper limit, so never claim one was reached -
+                // IsMaxRank still reports true past the table top, which would be a lie now.
+                if (creatureSkill.IsMaxRank && !uncapped)
                 {
                     PlayParticleEffect(PlayScript.WeddingBliss, Guid);
                     suffix = $" and has reached its upper limit";
@@ -505,6 +515,61 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         /// <param name="sac">Trained or specialized skill</param>
         /// <param name="xpAmount">The amount of xp used to make the purchase</param>
+        /// <summary>
+        /// Shadowgain 005: rank from XP, extended PAST the top of the dat XP table.
+        ///
+        /// Upstream rank is a table lookup, so a skill hard-stops at <c>table.Count - 1</c>. For
+        /// "effectively unlimited" progression the curve has to continue past the table's end, so
+        /// beyond the top we keep going geometrically from the table's own final step:
+        ///
+        ///     cost of rank (top + k) = lastTableDelta * growth^(k-1)
+        ///
+        /// which inverts to a closed form for k. growth = 1.0 continues linearly at the final
+        /// delta; higher values make each further rank progressively more expensive, preserving the
+        /// "slow to master" feel rather than flattening once the table runs out.
+        ///
+        /// ATTRIBUTES ARE DELIBERATELY NOT UNCAPPED (Chris, 2026-08-06) - 004's
+        /// vitals-follow-attributes math is built on the 190/196 ceilings.
+        /// </summary>
+        public static int CalcSkillRankUncapped(SkillAdvancementClass sac, uint xpAmount)
+        {
+            var rankXpTable = GetSkillXPTable(sac);
+
+            if (rankXpTable == null || rankXpTable.Count < 2)
+                return CalcSkillRank(sac, xpAmount);
+
+            var topRank = rankXpTable.Count - 1;
+            var topXp = rankXpTable[topRank];
+
+            if (xpAmount < topXp)
+                return CalcSkillRank(sac, xpAmount);
+
+            var lastDelta = (double)topXp - rankXpTable[topRank - 1];
+
+            if (lastDelta <= 0)
+                return topRank;
+
+            var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
+            if (growth < 1.0) growth = 1.0;
+
+            var extra = (double)xpAmount - topXp;
+
+            double extraRanks;
+
+            if (growth - 1.0 < 0.000001)
+                extraRanks = extra / lastDelta;
+            else
+                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / lastDelta) / Math.Log(growth);
+
+            if (double.IsNaN(extraRanks) || extraRanks < 0)
+                extraRanks = 0;
+
+            // Ranks is a ushort on the wire - stay well inside it rather than wrapping
+            var total = topRank + (long)extraRanks;
+
+            return (int)Math.Min(total, ushort.MaxValue - 1);
+        }
+
         public static int CalcSkillRank(SkillAdvancementClass sac, uint xpAmount)
         {
             var rankXpTable = GetSkillXPTable(sac);

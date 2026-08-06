@@ -125,6 +125,10 @@ namespace ACE.Server.WorldObjects
 
             PhysicsObj.ObjMaint.DestroyObjects();
 
+            // Shadowgain 008/009: travel raises Quickness/Run, and hauling while overburdened raises
+            // Strength. Both gated on net displacement so neither can be farmed standing still.
+            UsageMovementTick();
+
             // Check if we're due for our periodic SavePlayer
             if (LastRequestedDatabaseSave == DateTime.MinValue)
                 LastRequestedDatabaseSave = DateTime.UtcNow;
