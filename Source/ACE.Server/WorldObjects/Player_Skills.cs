@@ -144,21 +144,47 @@ namespace ACE.Server.WorldObjects
 
             var prevRank = creatureSkill.Ranks;
 
+            // Past the cap the overflow lives in InitLevel, so Ranks stops moving. Track both, or the
+            // "your base skill is now N" message would go silent exactly when uncapped progression
+            // starts - the player would see the number climb with no feedback that it had.
+            var prevInitLevel = creatureSkill.InitLevel;
+
             // widen before adding so a large award cannot wrap uint
             var newXP = Math.Min((ulong)creatureSkill.ExperienceSpent + amount, maxXP);
 
             creatureSkill.ExperienceSpent = (uint)newXP;
 
-            creatureSkill.Ranks = (ushort)(uncapped
+            var computedRank = uncapped
                 ? CalcSkillRankUncapped(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent)
-                : CalcSkillRank(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent));
+                : CalcSkillRank(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent);
+
+            var tableMaxRank = skillXPTable.Count - 1;
+
+            // Shadowgain 005: carry overflow ranks in InitLevel, NOT in Ranks.
+            //
+            // Measured live: the client CLAMPS Ranks at its own table maximum but HONOURS InitLevel.
+            // With rank 269 / InitLevel 10 the panel showed 305 (= 69 attr + 10 + 226 clamped), while
+            // the server had 348. Moving the overflow into InitLevel raised the panel to 431 - visible
+            // progression past the cap, with no client modification.
+            //
+            // Base is attrFormula + InitLevel + Ranks either way, so the server-side value is
+            // identical; this only changes which field carries it so the client will render it.
+            if (uncapped && computedRank > tableMaxRank)
+            {
+                var baseInitLevel = creatureSkill.AdvancementClass == SkillAdvancementClass.Specialized ? 10u : 0u;
+
+                creatureSkill.Ranks = (ushort)tableMaxRank;
+                creatureSkill.InitLevel = baseInitLevel + (uint)(computedRank - tableMaxRank);
+            }
+            else
+                creatureSkill.Ranks = (ushort)computedRank;
 
             if (Session == null)
                 return true;    // still applied; just nobody to tell (logging out, etc.)
 
             Session.Network.EnqueueSend(new GameMessagePrivateUpdateSkill(this, creatureSkill));
 
-            if (prevRank != creatureSkill.Ranks)
+            if (prevRank != creatureSkill.Ranks || prevInitLevel != creatureSkill.InitLevel)
             {
                 var suffix = "";
 
