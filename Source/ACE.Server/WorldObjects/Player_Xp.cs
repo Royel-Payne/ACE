@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using ACE.Common.Extensions;
@@ -309,18 +310,38 @@ namespace ACE.Server.WorldObjects
             {
                 var message = (Level == maxLevel) ? $"You have reached the maximum level of {Level}!" : $"You are now level {Level}!";
 
-                // Shadowgain 003: under usage-only, experience can no longer raise skill ranks, so the
-                // retail wording ("available to raise skills and attributes") is actively misleading.
-                // Skill credits still train NEW skills, and experience still raises attributes until
-                // entry 004 lands. Falls back to the retail string when the toggle is off.
-                if (PropertyManager.GetBool("skill_gain_usage_only").Item)
+                // Shadowgain: the retail wording ("experience available to raise skills and attributes")
+                // is wrong on this server. 003 removed spending XP on skills; 004 removed it on
+                // attributes AND vitals - so pooled experience now raises NOTHING and is pure residue.
+                //
+                // Built from the toggles rather than hardcoded, so it stays honest if an operator
+                // switches any back on. The previous version said experience could still raise
+                // attributes: true when 003 shipped, false the moment 004 landed. This construction is
+                // specifically to stop that drift happening again.
+                var skillsByUse = PropertyManager.GetBool("skill_gain_usage_only").Item;
+                var attribsByUse = PropertyManager.GetBool("attribute_gain_usage_only").Item;
+                var vitalsByUse = PropertyManager.GetBool("vital_gain_usage_only").Item;
+
+                if (skillsByUse || attribsByUse || vitalsByUse)
                 {
-                    message += $"\nYou have {AvailableExperience:#,###0} experience points available to raise attributes.";
+                    // only advertise experience as spendable on whatever it can genuinely still buy
+                    var spendable = new List<string>();
+                    if (!skillsByUse) spendable.Add("skills");
+                    if (!attribsByUse) spendable.Add("attributes");
+                    if (!vitalsByUse) spendable.Add("health, stamina and mana");
+
+                    if (spendable.Count > 0)
+                        message += $"\nYou have {AvailableExperience:#,###0} experience points available to raise {string.Join(" and ", spendable)}.";
 
                     if (AvailableSkillCredits > 0)
                         message += $"\nYou have {AvailableSkillCredits} skill credit{(AvailableSkillCredits == 1 ? "" : "s")} available to train new skills.";
 
-                    message += "\nSkills you already know rise through use, not experience.";
+                    var byUse = new List<string>();
+                    if (skillsByUse) byUse.Add("Skills");
+                    if (attribsByUse) byUse.Add("attributes");
+                    if (vitalsByUse) byUse.Add("vitals");
+
+                    message += $"\n{string.Join(", ", byUse)} rise through use, not experience.";
                 }
                 else
                     message += (AvailableSkillCredits > 0) ? $"\nYou have {AvailableExperience:#,###0} experience points and {AvailableSkillCredits} skill credits available to raise skills and attributes." : $"\nYou have {AvailableExperience:#,###0} experience points available to raise skills and attributes.";
