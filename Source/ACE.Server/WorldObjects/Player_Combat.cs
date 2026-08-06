@@ -531,7 +531,22 @@ namespace ACE.Server.WorldObjects
                 if (source is Creature enduranceAttacker)
                     enduranceDifficulty = enduranceAttacker.GetCreatureSkill(enduranceAttacker.GetCurrentWeaponSkill()).Current;
 
-                AwardAttributeUsageXP(PropertyAttribute.Endurance, enduranceDifficulty);
+                // Shadowgain 018: scaled down, because this path massively out-earns every other
+                // attribute and 010 left it without a dial of its own.
+                //
+                // Measured on Chris's character: Endurance took 898 awards for 84,391 xp against
+                // Strength's 78 for 13,419 - six times the total xp on eleven times the awards. The
+                // per-award size is fair (both use a skill-scale difficulty); the FREQUENCY is not.
+                // Strength fires only on a hit you LAND, and a low-skill character misses ~60% of
+                // swings, whereas this fires on every hit you TAKE - and several monsters can be
+                // hitting you while you hit one of them.
+                //
+                // The exertion path (endurance_exertion_multiplier) is NOT the lever, despite being
+                // the obvious one: it supplied 0.3% of Endurance xp. Tuning it changes nothing.
+                var enduranceMult = PropertyManager.GetDouble("endurance_damage_multiplier").Item;
+
+                if (enduranceMult > 0.0)
+                    AwardAttributeUsageXP(PropertyAttribute.Endurance, enduranceDifficulty, weightOverride: enduranceMult);
             }
 
             // update stamina
