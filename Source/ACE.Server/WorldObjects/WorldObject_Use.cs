@@ -207,6 +207,16 @@ namespace ACE.Server.WorldObjects
                 var arcaneLore = player.GetCreatureSkill(Skill.ArcaneLore);
                 if (arcaneLore.Current < ItemDifficulty.Value)
                     return new ActivationResult(new GameEventWeenieErrorWithString(player.Session, WeenieErrorWithString.Your_IsTooLowToUseItemMagic, arcaneLore.Skill.ToSentence()));
+
+                // Shadowgain 007: successfully activating a magic item trains Arcane Lore, with the
+                // item's own ItemDifficulty as the difficulty - external to the skill.
+                //
+                // Kept on a SEPARATE, deliberately slow multiplier. Arcane Lore's Current is what
+                // gates this very check, so if it outgrows a character's level they unlock item
+                // effects far too early. Chris's target: not capped before roughly level 40-50, and
+                // few items still a challenge by 80-90. arcane_lore_gain_multiplier is the dial.
+                if (PropertyManager.GetBool("specialty_gain_from_use").Item)
+                    player.AwardArcaneLoreUse((uint)ItemDifficulty.Value);
             }
 
             // verify skill - does this have to be trained, or only in conjunction with UseRequiresSkillLevel?
@@ -218,6 +228,20 @@ namespace ACE.Server.WorldObjects
 
                 if (playerSkill.Current < ItemSkillLevelLimit.Value)
                     return new ActivationResult(new GameEventWeenieErrorWithString(player.Session, WeenieErrorWithString.Your_IsTooLowToUseItemMagic, playerSkill.Skill.ToSentence()));
+
+                // Shadowgain 007: this is how SUMMONING is actually gated - ACE never references
+                // Skill.Summoning directly, which is why it looked vestigial at first. Summoning
+                // devices carry ItemSkillLimit=Summoning and ItemSkillLevelLimit=<required skill>,
+                // matching the wiki's "creatures restricted by level and buffed Summoning skill".
+                //
+                // Hooked generically rather than special-casing Summoning, so any ItemSkillLimit-
+                // gated item trains the skill it demands. Difficulty is the item's own requirement -
+                // external to the skill - so a higher-tier device teaches more.
+                if (PropertyManager.GetBool("specialty_gain_from_use").Item
+                    && playerSkill.AdvancementClass >= SkillAdvancementClass.Trained)
+                {
+                    Proficiency.OnSuccessUse(player, playerSkill, (uint)System.Math.Max(1, ItemSkillLevelLimit.Value));
+                }
             }
 
             if (UseRequiresSkill != null)

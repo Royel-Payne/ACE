@@ -71,6 +71,60 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 007: Arcane Lore, from successfully activating a magic item.
+        ///
+        /// On its OWN multiplier, deliberately slow. Arcane Lore's Current gates item activation
+        /// (WorldObject_Use), so if it outgrows the character it unlocks item effects far too early -
+        /// the one skill here where over-fast growth actively breaks progression rather than just
+        /// being generous. Chris's target: not maxed before ~level 40-50, few items still a
+        /// challenge by ~80-90.
+        /// </summary>
+        public void AwardArcaneLoreUse(uint itemDifficulty)
+        {
+            if (itemDifficulty == 0)
+                return;
+
+            var skill = GetCreatureSkill(Skill.ArcaneLore);
+
+            if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return;
+
+            var mult = PropertyManager.GetDouble("arcane_lore_gain_multiplier").Item;
+
+            if (mult <= 0.0)
+                return;
+
+            var difficulty = (uint)System.Math.Max(1, System.Math.Round(itemDifficulty * mult));
+
+            Proficiency.OnSuccessUse(this, skill, difficulty);
+        }
+
+        /// <summary>
+        /// Shadowgain 007: Assess Creature / Assess Person, from a successful appraisal.
+        ///
+        /// Difficulty is the target's Deception - which is exactly what the appraisal roll is made
+        /// against - so it is external to the assessing skill and scales with how hard the target
+        /// was to read. These are not idle skills: a target's Assess Person reduces incoming
+        /// sneak-attack damage from the front (Creature_Combat.cs), so they defend against the
+        /// specialties hooked above.
+        /// </summary>
+        public void AwardAssessUse(Skill assessSkill, uint targetDeception)
+        {
+            if (!PropertyManager.GetBool("specialty_gain_from_use").Item)
+                return;
+
+            var skill = GetCreatureSkill(assessSkill);
+
+            if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return;
+
+            // an undeceptive target still teaches something, so floor rather than skip
+            var difficulty = System.Math.Max(1u, targetDeception);
+
+            Proficiency.OnSuccessUse(this, skill, difficulty);
+        }
+
+        /// <summary>
         /// Shadowgain 007: award a specialty only if the player actually has it trained.
         /// Proficiency enforces this too, but checking here keeps the debug log free of a
         /// BLOCKED=untrained line on every single swing for skills most characters never train.

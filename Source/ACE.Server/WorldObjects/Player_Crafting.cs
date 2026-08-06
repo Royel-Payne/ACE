@@ -192,6 +192,21 @@ namespace ACE.Server.WorldObjects
         {
             var materialType = (MaterialType)item.MaterialType;
 
+            // Shadowgain 007: salvaging trains Salvaging. Difficulty comes from the ITEM's
+            // workmanship - external to the skill being raised - so breaking down better gear
+            // teaches more, and grinding worthless items pays the trickle floor.
+            if (PropertyManager.GetBool("specialty_gain_from_use").Item)
+            {
+                var workmanship = (uint)Math.Max(1, item.Workmanship ?? 1);
+
+                var salvageDifficulty = (uint)Math.Max(1, workmanship * PropertyManager.GetLong("salvage_gain_per_workmanship").Item);
+
+                var salvageSkill = GetCreatureSkill(Skill.Salvaging);
+
+                if (salvageSkill != null && salvageSkill.AdvancementClass >= SkillAdvancementClass.Trained)
+                    Proficiency.OnSuccessUse(this, salvageSkill, salvageDifficulty);
+            }
+
             // determine the amount of salvage produced (structure)
             SalvageMessage message = null;
             var amountProduced = GetStructure(item, salvageResults, ref message);
