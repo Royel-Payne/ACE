@@ -1,3 +1,4 @@
+using ACE.Common;
 using ACE.Entity.Enum;
 using ACE.Server.Entity;
 using ACE.Server.Managers;
@@ -122,6 +123,107 @@ namespace ACE.Server.WorldObjects
             var difficulty = System.Math.Max(1u, targetDeception);
 
             Proficiency.OnSuccessUse(this, skill, difficulty);
+        }
+
+        /// <summary>
+        /// Shadowgain 007: Loyalty, from experience passed UP to your patron.
+        ///
+        /// Loyalty is a vassal's skill, so the trigger is the vassal's own passup - the more you
+        /// contribute to your patron, the more loyal you demonstrably are. Difficulty is the XP
+        /// passed up (divided down: XP runs in the thousands while every other difficulty in this
+        /// system is a skill value in the tens - the same scale mismatch that made burden pay ten
+        /// ranks a tick in 009).
+        ///
+        /// Tenure bonus rewards genuine long-term vassalage rather than allegiance-hopping: gain is
+        /// multiplied by how long you have been sworn to your CURRENT patron
+        /// (AllegianceSwearTimestamp, which resets when you re-swear). Capped so it cannot run away.
+        ///
+        /// UNTUNED - the knobs exist precisely because calibrating this needs far more play than we
+        /// can generate solo. Defaults are a starting point, not a balance target.
+        /// </summary>
+        public void AwardLoyaltyUse(long xpPassedUp)
+        {
+            if (xpPassedUp <= 0 || !PropertyManager.GetBool("specialty_gain_from_use").Item)
+                return;
+
+            var skill = GetCreatureSkill(Skill.Loyalty);
+
+            if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return;
+
+            var divisor = System.Math.Max(1.0, PropertyManager.GetDouble("loyalty_gain_xp_divisor").Item);
+
+            var difficulty = xpPassedUp / divisor;
+
+            // tenure: how long under the CURRENT patron, in days
+            var swornAt = GetProperty(ACE.Entity.Enum.Properties.PropertyFloat.AllegianceSwearTimestamp) ?? 0;
+
+            if (swornAt > 0)
+            {
+                var days = (Time.GetUnixTime() - swornAt) / 86400.0;
+
+                if (days > 0)
+                {
+                    var perDay = PropertyManager.GetDouble("loyalty_tenure_bonus_per_day").Item;
+                    var cap = System.Math.Max(1.0, PropertyManager.GetDouble("loyalty_tenure_bonus_cap").Item);
+
+                    difficulty *= System.Math.Min(1.0 + days * perDay, cap);
+                }
+            }
+
+            if (double.IsNaN(difficulty) || difficulty < 0)
+                return;
+
+            var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Max(1, System.Math.Round(difficulty)));
+
+            Proficiency.OnSuccessUse(this, skill, award);
+        }
+
+        /// <summary>
+        /// Shadowgain 007: Leadership, the mirror of Loyalty - earned by leading, not by following.
+        ///
+        /// Fires when you earn experience while fellowed with at least one of your OWN vassals.
+        /// Simply having vassals is not leadership; adventuring alongside them is. Difficulty is the
+        /// XP earned, divided down for the same scale reason as Loyalty, and scaled by how many of
+        /// your vassals are actually present.
+        ///
+        /// UNTUNED - same caveat as Loyalty.
+        /// </summary>
+        public void AwardLeadershipUse(long xpEarned)
+        {
+            if (xpEarned <= 0 || !PropertyManager.GetBool("specialty_gain_from_use").Item)
+                return;
+
+            if (Fellowship == null || AllegianceNode == null || !AllegianceNode.HasVassals)
+                return;
+
+            var skill = GetCreatureSkill(Skill.Leadership);
+
+            if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return;
+
+            // count how many of my own vassals are in the fellowship with me
+            var vassalsPresent = 0;
+
+            foreach (var member in Fellowship.GetFellowshipMembers().Values)
+            {
+                if (member != null && member != this && AllegianceNode.Vassals.ContainsKey(member.Guid.Full))
+                    vassalsPresent++;
+            }
+
+            if (vassalsPresent == 0)
+                return;
+
+            var divisor = System.Math.Max(1.0, PropertyManager.GetDouble("leadership_gain_xp_divisor").Item);
+
+            var difficulty = (xpEarned / divisor) * vassalsPresent;
+
+            if (double.IsNaN(difficulty) || difficulty < 0)
+                return;
+
+            var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Max(1, System.Math.Round(difficulty)));
+
+            Proficiency.OnSuccessUse(this, skill, award);
         }
 
         /// <summary>

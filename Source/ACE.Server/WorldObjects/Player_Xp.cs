@@ -113,6 +113,9 @@ namespace ACE.Server.WorldObjects
                 AvailableExperience += addAmount;
                 TotalExperience += addAmount;
 
+                // Shadowgain 007: Leadership trains on XP earned while fellowed with your own vassals.
+                AwardLeadershipUse(addAmount);
+
                 var xpTotalUpdate = new GameMessagePrivateUpdatePropertyInt64(this, PropertyInt64.TotalExperience, TotalExperience ?? 0);
                 var xpAvailUpdate = new GameMessagePrivateUpdatePropertyInt64(this, PropertyInt64.AvailableExperience, AvailableExperience ?? 0);
                 Session.Network.EnqueueSend(xpTotalUpdate, xpAvailUpdate);
@@ -135,6 +138,9 @@ namespace ACE.Server.WorldObjects
             if (!HasAllegiance) return;
 
             AllegianceManager.PassXP(AllegianceNode, (ulong)amount, true);
+
+            // Shadowgain 007: Loyalty trains on what you pass up to your patron.
+            AwardLoyaltyUse(amount);
         }
 
         /// <summary>
