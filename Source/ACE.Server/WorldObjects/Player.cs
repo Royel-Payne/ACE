@@ -335,6 +335,22 @@ namespace ACE.Server.WorldObjects
                 success = chance > ThreadSafeRandom.Next(0.0f, 1.0f);
             }
 
+            // Shadowgain 007: appraising a MAGIC ITEM trains Arcane Lore. This is the main path -
+            // the activation hook in WorldObject_Use only fires for items that carry an arcane-lore
+            // requirement AND get used, which most gear never does, so on its own it left the skill
+            // looking dead.
+            //
+            // Difficulty prefers the item's own arcane-lore requirement, falling back to its
+            // spellcraft (magical power). Mundane items have neither and teach nothing - appraising
+            // every rock should not train lore.
+            if (creature == null)
+            {
+                var loreDifficulty = obj.ItemDifficulty ?? obj.ItemSpellcraft ?? 0;
+
+                if (loreDifficulty > 0)
+                    AwardArcaneLoreUse((uint)loreDifficulty);
+            }
+
             if (obj.ResistItemAppraisal >= 999)
                 success = false;
 

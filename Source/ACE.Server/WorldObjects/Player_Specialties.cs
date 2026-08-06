@@ -82,7 +82,7 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public void AwardArcaneLoreUse(uint itemDifficulty)
         {
-            if (itemDifficulty == 0)
+            if (itemDifficulty == 0 || !PropertyManager.GetBool("specialty_gain_from_use").Item)
                 return;
 
             var skill = GetCreatureSkill(Skill.ArcaneLore);
