@@ -316,6 +316,17 @@ namespace ACE.Server.WorldObjects
         /// <param name="resetSkill">only set to TRUE during character creation. set to FALSE during temple / asheron's castle</param>
         public bool SpecializeSkill(Skill skill, int creditsSpent, bool resetSkill = true)
         {
+            // Shadowgain 013: specialization is gone. Blocked at the single chokepoint every path
+            // funnels through - character creation, the skill temple and Asheron's Castle all reach
+            // specialization here - so nothing can re-enter spec after the reconcile normalises it.
+            if (PropertyManager.GetBool("disable_specialization").Item)
+            {
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessageSystemChat("Specialization is disabled on this world - every skill is Trained, and rises only by use.", ChatMessageType.Broadcast));
+
+                return false;
+            }
+
             var creatureSkill = GetCreatureSkill(skill);
 
             if (creatureSkill.AdvancementClass != SkillAdvancementClass.Trained || creditsSpent > AvailableSkillCredits)

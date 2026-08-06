@@ -275,10 +275,13 @@ namespace ACE.Server.WorldObjects
             if (!PropertyManager.GetBool("vital_ranks_follow_attributes").Item)
                 return;
 
-            var attributeXPTable = DatManager.PortalDat.XpTable.AttributeXpList;
             var vitalXPTable = DatManager.PortalDat.XpTable.VitalXpList;
 
-            var attributeMaxRanks = attributeXPTable.Count - 1;
+            // Shadowgain 013: the attribute rank ceiling is no longer the table's 190. With every
+            // attribute starting at 10, reaching attribute_max_value takes ~280 ranks, so the
+            // proportion below has to be measured against THAT ceiling or vitals would max out long
+            // before their attribute does - at 190/280 of the way there.
+            var attributeMaxRanks = AttributeMaxRanks();
             var vitalMaxRanks = vitalXPTable.Count - 1;
 
             if (attributeMaxRanks <= 0 || vitalMaxRanks <= 0)
@@ -479,6 +482,9 @@ namespace ACE.Server.WorldObjects
 
         public static int CalcAttributeRank(uint xpAmount)
         {
+            if (PropertyManager.GetBool("attributes_start_at_ten").Item)
+                return CalcAttributeRankScaled(xpAmount);
+
             var rankXpTable = DatManager.PortalDat.XpTable.AttributeXpList;
 
             for (var i = rankXpTable.Count - 1; i >= 0; i--)
@@ -488,6 +494,102 @@ namespace ACE.Server.WorldObjects
                     return i;
             }
             return -1;
+        }
+
+        /// <summary>
+        /// Shadowgain 013: how many ranks an attribute must be able to earn so that, starting from
+        /// the uniform value of 10, it reaches attribute_max_value.
+        ///
+        /// Attribute value is StartingValue + Ranks, so a start-10 attribute needs
+        /// (attribute_max_value - 10) ranks - about 280 for the retail ceiling of 290, against a dat
+        /// table that only defines 190.
+        /// </summary>
+        public static int AttributeMaxRanks()
+        {
+            var tableMax = DatManager.PortalDat.XpTable.AttributeXpList.Count - 1;
+
+            if (!PropertyManager.GetBool("attributes_start_at_ten").Item)
+                return tableMax;
+
+            var maxValue = PropertyManager.GetLong("attribute_max_value").Item;
+
+            var ranks = (int)(maxValue - AttributeStartingValue);
+
+            return ranks > 0 ? ranks : tableMax;
+        }
+
+        /// <summary>
+        /// Shadowgain 013: cost to reach a given attribute rank, with the dat table STRETCHED across
+        /// the wider rank range instead of extended past its end.
+        ///
+        /// Why stretch rather than extend: the table's own final step is 308,765,680 while the entire
+        /// remaining uint headroom above its 4,019,438,644 total is only 275,528,651. Continuing at
+        /// the table's pace therefore buys **zero** further ranks - the identical trap that made
+        /// 005's first skill-overcap attempt produce no extra ranks at all.
+        ///
+        /// Stretching keeps the total cost of a maxed attribute exactly what retail charges
+        /// (4,019,438,644, which fits), keeps cost per rank monotonically increasing, and simply
+        /// spreads the same climb over more, smaller ranks. The alternative - a cheap flat tail past
+        /// rank 190 - would make the last 90 ranks about 4% of the grind and invert the curve.
+        ///
+        /// Interpolates linearly between table entries so the curve stays smooth rather than stepping
+        /// wherever two ranks would land on the same index.
+        /// </summary>
+        public static uint AttributeRankCost(int rank)
+        {
+            var table = DatManager.PortalDat.XpTable.AttributeXpList;
+            var tableMax = table.Count - 1;
+
+            if (rank <= 0)
+                return 0;
+
+            var maxRanks = AttributeMaxRanks();
+
+            if (rank >= maxRanks)
+                return table[tableMax];
+
+            // position of this rank on the table's own scale
+            var t = (double)rank * tableMax / maxRanks;
+
+            var lower = (int)Math.Floor(t);
+            var frac = t - lower;
+
+            if (lower >= tableMax)
+                return table[tableMax];
+
+            var cost = table[lower] + frac * (table[lower + 1] - table[lower]);
+
+            if (cost < 0)
+                return 0;
+
+            return cost >= uint.MaxValue ? uint.MaxValue : (uint)Math.Round(cost);
+        }
+
+        /// <summary>
+        /// Shadowgain 013: highest rank affordable with this much attribute XP, under the stretched
+        /// curve. Binary search - the cost function is monotonic by construction.
+        /// </summary>
+        public static int CalcAttributeRankScaled(uint xpAmount)
+        {
+            var maxRanks = AttributeMaxRanks();
+
+            if (xpAmount < AttributeRankCost(1))
+                return 0;
+
+            var lo = 0;
+            var hi = maxRanks;
+
+            while (lo < hi)
+            {
+                var mid = (lo + hi + 1) / 2;
+
+                if (AttributeRankCost(mid) <= xpAmount)
+                    lo = mid;
+                else
+                    hi = mid - 1;
+            }
+
+            return lo;
         }
     }
 }

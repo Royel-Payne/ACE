@@ -36,6 +36,11 @@ namespace ACE.Server.WorldObjects
 
             Sequences.SetSequence(SequenceType.ObjectInstance, new UShortSequence((ushort)Character.TotalLogins));
 
+            // Shadowgain 013: normalise skills/attributes/credits to the pure vision. Runs BEFORE the
+            // vital sync below, because it can change attribute starting values and the sync derives
+            // vitals from those. Idempotent, and never removes earned ranks.
+            ShadowgainReconcile();
+
             // Shadowgain 004: catch up vital ranks to the attributes that govern them. Normally this
             // fires on an attribute rank-up, but characters that existed before the system - or that
             // gained attributes while it was disabled - would otherwise sit undertuned until their next

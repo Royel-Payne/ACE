@@ -348,6 +348,14 @@ namespace ACE.Server.Factories
                 }
             }
 
+            // Shadowgain 013: normalise the new character to the pure vision - every skill exactly
+            // Trained, no specialization, all attributes starting at 10, no leftover credits.
+            //
+            // Deliberately placed AFTER the starter-gear/spell block above. That block branches on
+            // AdvancementClass, so reconciling first would hand every new character the gear and
+            // spells for all 38 skills - the placement lesson from 002.
+            player.ShadowgainReconcile(atCreation: true);
+
             player.Name = characterCreateInfo.Name;
             player.Character.Name = characterCreateInfo.Name;
 
