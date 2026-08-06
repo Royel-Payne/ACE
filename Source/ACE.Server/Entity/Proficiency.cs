@@ -54,7 +54,9 @@ namespace ACE.Server.Entity
 
             var currentTime = Time.GetUnixTime();
 
-            var timeDiff = currentTime - last_used_time;
+            // A never-used skill has LastUsedTime 0, which would otherwise report a nonsense
+            // "seconds since last use" of ~1.79 billion (i.e. the unix epoch) in the logs.
+            var timeDiff = last_used_time > 0 ? currentTime - last_used_time : 0;
 
             if (timeDiff < 0)
             {

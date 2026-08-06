@@ -26,12 +26,22 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public void UsageMovementTick()
         {
-            if (Location == null || IsDead || Teleporting)
+            var debug = PropertyManager.GetBool("attribute_debug_logging").Item;
+
+            if (Location == null || IsDead)
                 return;
 
+            // NOTE: deliberately not gating on Teleporting. PlayerEnterWorld sets it true and only
+            // OnTeleportComplete clears it, so a logged-in player can sit with it stuck true - which
+            // silently disabled every movement award. Oversized jumps are filtered by distance below,
+            // which handles actual teleports anyway.
             if (LastUsageTickPosition == null)
             {
                 LastUsageTickPosition = new ACE.Entity.Position(Location);
+
+                if (debug)
+                    log.Info($"[MOVETICK] {Name} | anchor set");
+
                 return;
             }
 
@@ -43,6 +53,9 @@ namespace ACE.Server.WorldObjects
 
             if (distance > maxDistance)
             {
+                if (debug)
+                    log.Info($"[MOVETICK] {Name} | SKIP=teleport | distance={distance:N1} > {maxDistance:N1}");
+
                 LastUsageTickPosition = new ACE.Entity.Position(Location);
                 return;
             }
@@ -52,7 +65,15 @@ namespace ACE.Server.WorldObjects
             var minDisplacement = PropertyManager.GetDouble("movement_gain_min_displacement").Item;
 
             if (distance < minDisplacement)
+            {
+                if (debug)
+                    log.Info($"[MOVETICK] {Name} | SKIP=tooClose | distance={distance:N1} < {minDisplacement:N1}");
+
                 return;
+            }
+
+            if (debug)
+                log.Info($"[MOVETICK] {Name} | AWARD | distance={distance:N1} (min {minDisplacement:N1})");
 
             LastUsageTickPosition = new ACE.Entity.Position(Location);
 
@@ -105,7 +126,16 @@ namespace ACE.Server.WorldObjects
             if (carried <= capacity)
                 return;
 
-            var overburden = (uint)(carried - capacity);
+            var overburdenUnits = carried - capacity;
+
+            // SCALE CORRECTION. Burden is measured in units of a few thousand, while every other
+            // difficulty in the system is a skill/defence value in the tens - melee reads ~72, the
+            // movement tick 30. Feeding raw burden in made difficulty ~30x out of scale: a first
+            // test paid 4132 xp and took Strength from rank 0 to 10 in ONE tick. The ratio cap
+            // cannot save that, because it bounds the multiplier, not the difficulty itself.
+            var divisor = Math.Max(1.0, PropertyManager.GetDouble("burden_strength_divisor").Item);
+
+            var overburden = (uint)Math.Max(1, Math.Round(overburdenUnits / divisor));
 
             AwardAttributeUsageXP(PropertyAttribute.Strength, overburden);
         }
