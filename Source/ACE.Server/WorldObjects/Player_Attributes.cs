@@ -123,7 +123,7 @@ namespace ACE.Server.WorldObjects
         ///
         /// Returns true if XP was applied.
         /// </summary>
-        public bool AwardAttributeUsageXP(PropertyAttribute attribute, uint difficulty, bool isSecondary = false)
+        public bool AwardAttributeUsageXP(PropertyAttribute attribute, uint difficulty, bool isSecondary = false, double weightOverride = 0.0)
         {
             if (difficulty == 0)
                 return false;
@@ -168,8 +168,13 @@ namespace ACE.Server.WorldObjects
             if (attribute == PropertyAttribute.Focus || attribute == PropertyAttribute.Self)
                 multiplier *= PropertyManager.GetDouble("attribute_gain_mental_multiplier").Item;
 
-            // overlapping mapping: an action feeds a primary attribute fully and a related one partially
-            if (isSecondary)
+            // overlapping mapping: an action feeds a primary attribute fully and a related one partially.
+            // weightOverride lets a caller set its own fraction (011 uses it so spell-aiming Coordination
+            // can be tuned independently of the melee overlap - magic difficulty already runs about half
+            // melee's, so sharing one factor would compound that disadvantage).
+            if (weightOverride > 0.0)
+                multiplier *= weightOverride;
+            else if (isSecondary)
                 multiplier *= PropertyManager.GetDouble("attribute_gain_overlap_factor").Item;
 
             // past the table cap (only reachable with attribute_overcap_allow on) gains crawl

@@ -341,6 +341,23 @@ namespace ACE.Server.WorldObjects
                     // Shadowgain 004: same external difficulty drives the mental attribute for this
                     // school - Focus for war/void/enchantment, Self for life magic.
                     player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty);
+
+                    // Shadowgain 011: aiming a bolt trains Coordination, exactly as firing a bow does.
+                    // This closes the last stranded-attribute hole - a pure caster had NO path to
+                    // Coordination at all, since 004 grants it only as a secondary on melee/missile/
+                    // finesse hits.
+                    //
+                    // Applied to any projectile rather than only War/Void as the entry suggested: the
+                    // rationale is that aiming trains coordination, and every spell reaching this code
+                    // path is by definition an aimed projectile. Restricting by school would exclude
+                    // aimed life-magic projectiles for no principled reason.
+                    //
+                    // Anti-runaway: difficulty is the same target-derived value used above, never
+                    // Coordination itself.
+                    var coordFactor = PropertyManager.GetDouble("coordination_spell_factor").Item;
+
+                    if (coordFactor > 0.0)
+                        player.AwardAttributeUsageXP(PropertyAttribute.Coordination, magicDifficulty, false, coordFactor);
                 }
 
                 // handle target procs
