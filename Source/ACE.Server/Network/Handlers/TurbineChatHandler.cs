@@ -321,6 +321,18 @@ namespace ACE.Server.Network.Handlers
                 }
 
                 LogTurbineChat(adjustedChannelID, session.Player.Name, message, senderID, adjustedchatType);
+
+                // Shadowgain 031: relay allowlisted PUBLIC chat to Discord.
+                //
+                // Deliberately here, at the bottom, rather than up where adjustedChannelID is
+                // resolved. Every reject path above (chat_disable_*, the account-age, player-age
+                // and level gates, chat_echo_only) returns AFTER the channel is known, so hooking
+                // higher would relay lines that never actually reached a player in game. Gagged
+                // senders return earlier still. Reaching this line means the message was sent.
+                //
+                // The allowlist {General, Trade, LFG, Roleplay} lives inside EmitChat, so private
+                // channel types can never be relayed by accident from this call site.
+                ShadowgainRelay.EmitChat(adjustedChannelID, session.Player.Name, message);
             }
             else
                 Console.WriteLine($"Unhandled TurbineChatHandler ChatNetworkBlobType: 0x{(uint)chatBlobType:X4}");

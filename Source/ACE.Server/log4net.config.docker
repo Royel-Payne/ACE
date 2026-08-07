@@ -40,6 +40,64 @@
     <level value="INFO" />
   </logger>
 
+  <!-- ============================================================================
+       Shadowgain 031: Discord relay feeds.
+
+       The game server never talks to Discord. It appends JSON lines here and a
+       separate bot tails the files and posts them. Two appenders, not one: chat is
+       high-volume and disposable, while bug reports and verification codes are
+       low-volume and precious, and must not be rolled out of the backup window by a
+       chat flood.
+
+       Three settings below are load-bearing:
+         - conversionPattern is %message%newline ONLY. No date, level or logger
+           prefix - the bot parses each line as pure JSON, and the JSON carries its
+           own "ts" field. A PatternLayout prefix would make every line unparseable.
+         - encoding is stated explicitly as utf-8. Relayed names carry the dagger
+           marker, and an inherited default encoding silently transcoded that to
+           CP1252 0x86 in an earlier exporter - corruption invisible until read at
+           byte level.
+         - additivity="false" on both loggers. Without it these JSON lines ALSO go to
+           the root appender, duplicating every chat line into ACE_Log.txt and the
+           server console.
+       ============================================================================ -->
+
+  <appender name="ChatRelayAppender" type="log4net.Appender.RollingFileAppender">
+    <file value="/ace/Logs/chatrelay.jsonl" />
+    <appendToFile value="true" />
+    <rollingStyle value="Size" />
+    <maxSizeRollBackups value="5" />
+    <maximumFileSize value="10240KB" />
+    <staticLogFileName value="true" />
+    <encoding value="utf-8" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%message%newline" />
+    </layout>
+  </appender>
+
+  <appender name="SgEventsAppender" type="log4net.Appender.RollingFileAppender">
+    <file value="/ace/Logs/sgevents.jsonl" />
+    <appendToFile value="true" />
+    <rollingStyle value="Size" />
+    <maxSizeRollBackups value="20" />
+    <maximumFileSize value="5120KB" />
+    <staticLogFileName value="true" />
+    <encoding value="utf-8" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%message%newline" />
+    </layout>
+  </appender>
+
+  <logger name="Shadowgain.ChatRelay" additivity="false">
+    <level value="INFO" />
+    <appender-ref ref="ChatRelayAppender" />
+  </logger>
+
+  <logger name="Shadowgain.Events" additivity="false">
+    <level value="INFO" />
+    <appender-ref ref="SgEventsAppender" />
+  </logger>
+
   <appender name="asyncForwarder" type="Log4Net.Async.AsyncForwardingAppender,Log4Net.Async">
     <appender-ref ref="Console" />
     <appender-ref ref="RollingFileAppender" />

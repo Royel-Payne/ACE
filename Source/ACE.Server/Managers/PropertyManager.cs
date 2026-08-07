@@ -630,12 +630,16 @@ namespace ACE.Server.Managers
                 ("use_wield_requirements", new Property<bool>(true, "disable this to bypass wield requirements. mostly for dev debugging")),
                 ("version_info_enabled", new Property<bool>(false, "toggles the /aceversion player command")),
                 ("vendor_shop_uses_generator", new Property<bool>(false, "enables or disables vendors using generator system in addition to createlist to create artificial scarcity")),
-                ("world_closed", new Property<bool>(false, "enable this to startup world as a closed to players world"))
+                ("world_closed", new Property<bool>(false, "enable this to startup world as a closed to players world")),
+                ("discord_relay_enabled", new Property<bool>(false, "(Shadowgain 031) If enabled, PUBLIC chat is written as JSON lines to /ace/Logs/chatrelay.jsonl for the Discord bot to tail and post. ALLOWLIST, not denylist: only General, Trade, LFG and Roleplay are ever emitted, so any channel type added later defaults to not relayed. Allegiance, Society, Olthoi, the private Channel-enum channels (fellow/patron/vassals/monarch/staff) and local say are never touched. The server never talks to Discord itself - it only writes the file. DEFAULT OFF: turn it on once the bot is actually running, otherwise the file just grows unread")),
+                ("discord_bug_reports_enabled", new Property<bool>(true, "(Shadowgain 031) If enabled, players can file a bug with the in-game @bug command, which writes to /ace/Logs/sgevents.jsonl for the bot to post to #bugs. The report never appears in public chat. Independent of discord_relay_enabled so bug collection keeps working even with the chat relay switched off - the reports are still captured on disk when no bot is running"))
                 );
 
         public static readonly ReadOnlyDictionary<string, Property<long>> DefaultLongProperties =
             DictOf(
                 ("char_delete_time", new Property<long>(3600, "the amount of time in seconds a deleted character can be restored")),
+                ("discord_relay_max_message", new Property<long>(400, "(Shadowgain 031) Maximum characters of a single relayed chat line before it is truncated with an ellipsis. Guards the Discord message limit and stops one pasted wall of text from dominating the channel. 0 disables truncation")),
+                ("discord_bug_cooldown_seconds", new Property<long>(60, "(Shadowgain 031) Minimum seconds between @bug reports from the same character. Anti-spam: the funnel writes to a file a human reads, so an unthrottled command is an invitation to flood it. Applies per character, not per account")),
                 ("chat_requires_account_time_seconds", new Property<long>(0, "the amount of time in seconds an account is required to have existed for for global chat privileges")),
                 ("chat_requires_player_age", new Property<long>(0, "the amount of time in seconds a player is required to have played for global chat privileges")),
                 ("chat_requires_player_level", new Property<long>(0, "the level a player is required to have for global chat privileges")),
