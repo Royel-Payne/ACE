@@ -11,14 +11,26 @@ namespace ACE.Server.WorldObjects
     partial class Player
     {
         /// <summary>
-        /// Shadowgain 021: the `*` prefix marks a character that has NEVER taken the fast
-        /// progression lane. Built the same way as the admin `+` - the server rewrites the name
-        /// before sending it - so it shows in chat, radar and appraisal with no client modification.
-        /// That is why a name prefix was chosen over a title: titles live in the client's own
-        /// language dat, so no new title text can ever be added without modding the client.
+        /// Shadowgain 021/023: a prefix marks a character that has NEVER taken the fast progression
+        /// lane. Built the same way as the admin `+` - the server rewrites the name before sending -
+        /// so it shows in chat and the selection/appraisal panels with no client modification. A
+        /// prefix rather than a title because titles live in the client's own language dat: only the
+        /// 872 strings already shipped there can ever render.
         ///
-        /// `+` wins if both apply, since admin status is the more operationally important fact.
-        /// The setter strips both so a prefix can never be persisted into the stored name.
+        /// 023: the original `*` proved too easy to miss in play - thin, sits high, and reads like a
+        /// stray quote. This 1999 client has no floating overhead names, so those text panels are
+        /// the only places it appears and it has to carry on its own.
+        ///
+        /// THE PREFIX IS CONFIGURABLE ON PURPOSE. Whether the dagger renders depends on a 26-year-old
+        /// client font that cannot be inspected from here - only from in front of the game. Making it
+        /// a live dial means the fallback is a one-line in-game change rather than a code change and
+        /// a restart. Verified safe on the wire: WriteString16L encodes with CP1252, and the dagger
+        /// is a single byte (0x86) there, so the length prefix stays consistent. A Unicode star would
+        /// NOT encode at all and would corrupt the packet.
+        ///
+        /// `+` wins if both apply - admin status is the more operationally important fact.
+        /// The setter strips every marker character so a prefix can never be persisted into the
+        /// stored name, whatever the dial is set to at the time.
         /// </summary>
         public override string Name
         {
@@ -28,12 +40,14 @@ namespace ACE.Server.WorldObjects
                     return "+" + base.Name;
 
                 if (IsMasochist && PropertyManager.GetBool("progression_marker_enabled").Item)
-                    return "*" + base.Name;
+                    return PropertyManager.GetString("progression_marker_prefix").Item + base.Name;
 
                 return base.Name;
             }
 
-            set => base.Name = value.TrimStart('+', '*');
+            // '+' admin, '*' the original 021 marker, '†' the 023 dagger, '[' ']' the ASCII
+            // fallback, and the trailing space each of those carries.
+            set => base.Name = value.TrimStart('+', '*', '†', '[', ']', ' ');
         }
 
         public string GetNameWithSuffix()
