@@ -338,32 +338,43 @@ namespace ACE.Server.WorldObjects
         /// Difficulty is the caller's already-computed target-derived value, so it is external by
         /// construction. Primary gets the full award, the related attribute a fraction.
         /// </summary>
+        /// <summary>
+        /// Shadowgain 019: which attributes a weapon skill trains, read from the GAME'S OWN skill
+        /// formula in client_portal.dat rather than a hand-written table.
+        ///
+        /// The hand-written version was wrong, and Greylock found it by playing: Light Weapons
+        /// trained Quickness and no Strength at all. I had mapped it on the intuition that "light
+        /// means fast". The dat says Light Weapons is Strength + Coordination - identical to Heavy
+        /// Weapons. Four of the six weapon mappings were wrong to some degree:
+        ///
+        ///     skill             dat formula              what I had written
+        ///     LightWeapons      Strength + Coordination  Quickness + Coordination   WRONG
+        ///     FinesseWeapons    Quickness + Coordination Coordination + Quickness   swapped
+        ///     MissileWeapons    Coordination only        Coordination + Quickness   extra
+        ///     DualWield         Coordination             Quickness + Coordination   WRONG
+        ///
+        /// Reading the dat removes the whole class of error: the attributes a skill trains are now
+        /// the attributes that skill is actually computed from, by construction, and this cannot
+        /// drift from the game again.
+        ///
+        /// Attr2 is skipped when absent (Missile Weapons has none) or identical to Attr1 (Dual Wield
+        /// lists Coordination twice), so neither is double-awarded.
+        /// </summary>
         public void AwardAttributesForWeaponSkill(Skill skill, uint difficulty)
         {
-            switch (skill)
-            {
-                case Skill.HeavyWeapons:
-                case Skill.TwoHandedCombat:
-                    AwardAttributeUsageXP(PropertyAttribute.Strength, difficulty);
-                    AwardAttributeUsageXP(PropertyAttribute.Coordination, difficulty, true);
-                    break;
+            if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var skillBase))
+                return;
 
-                case Skill.LightWeapons:
-                case Skill.DualWield:
-                    AwardAttributeUsageXP(PropertyAttribute.Quickness, difficulty);
-                    AwardAttributeUsageXP(PropertyAttribute.Coordination, difficulty, true);
-                    break;
+            var primary = (PropertyAttribute)skillBase.Formula.Attr1;
+            var secondary = (PropertyAttribute)skillBase.Formula.Attr2;
 
-                case Skill.FinesseWeapons:
-                    AwardAttributeUsageXP(PropertyAttribute.Coordination, difficulty);
-                    AwardAttributeUsageXP(PropertyAttribute.Quickness, difficulty, true);
-                    break;
+            if (primary == PropertyAttribute.Undef)
+                return;
 
-                case Skill.MissileWeapons:
-                    AwardAttributeUsageXP(PropertyAttribute.Coordination, difficulty);
-                    AwardAttributeUsageXP(PropertyAttribute.Quickness, difficulty, true);
-                    break;
-            }
+            AwardAttributeUsageXP(primary, difficulty);
+
+            if (secondary != PropertyAttribute.Undef && secondary != primary)
+                AwardAttributeUsageXP(secondary, difficulty, true);
         }
 
         /// <summary>
@@ -374,6 +385,15 @@ namespace ACE.Server.WorldObjects
         /// <summary>
         /// Shadowgain 004: overload for the spell paths, which carry MagicSchool rather than Skill.
         /// War/void/enchantment are Focus; life magic is Self.
+        ///
+        /// NOTE (019): this deliberately does NOT follow the dat formula, unlike the weapon mapping
+        /// beside it. The dat makes every magic school Focus primary + Self secondary, which would
+        /// leave Self as nothing but a 0.25-weight passenger on every cast - it is the primary
+        /// attribute of no school at all. Routing Life Magic to Self instead gives it a real path,
+        /// and measures healthy in play (714 awards / 11,942 xp on a live character).
+        ///
+        /// So this divergence is intentional and load-bearing. Do not "correct" it to match the dat
+        /// without first checking what happens to Self.
         /// </summary>
         public void AwardAttributesForMagicSkill(MagicSchool school, uint difficulty)
         {
