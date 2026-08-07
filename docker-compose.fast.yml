@@ -2,7 +2,8 @@
 # changes WHERE the server image comes from - build from pre-published output
 # (Dockerfile.fast) instead of compiling from source on the droplet.
 #
-# Everything else - db, env, ports, volumes, restart policy - is inherited unchanged.
+# Everything else - db, env, ports, volumes - is inherited unchanged, EXCEPT the
+# server's restart policy; see below.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.fast.yml up -d --build
 #
@@ -20,3 +21,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.fast
+
+    # Shadowgain: survive an unattended reboot.
+    #
+    # Upstream sets `on-failure` for ace-server. That restarts a container that CRASHES,
+    # but it does NOT start one when the Docker daemon comes up after a host reboot - so
+    # a droplet restart left the database running and the game server DOWN until someone
+    # logged in and ran compose by hand. Found exactly that way during the 025 resize,
+    # where the stack had to be started manually after the power cycle.
+    #
+    # `unless-stopped` fixes the boot case while preserving the behaviour deploys rely
+    # on: a container we deliberately `docker compose stop` stays stopped, so the
+    # graceful-shutdown path is unaffected. ace-db already uses this.
+    #
+    # No added crash-loop risk - upstream's on-failure already had unlimited retries.
+    restart: unless-stopped
