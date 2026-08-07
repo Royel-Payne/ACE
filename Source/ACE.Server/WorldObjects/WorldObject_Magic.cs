@@ -204,6 +204,20 @@ namespace ACE.Server.WorldObjects
                         targetPlayer.SetCurrentAttacker(casterCreature);
 
                     Proficiency.OnSuccessUse(targetPlayer, targetPlayer.GetCreatureSkill(Skill.MagicDefense), magicSkill);
+
+                    // Shadowgain 022: resisting a spell trains Magic Defense's governing attributes
+                    // too - Self primary, Focus secondary, per the dat formula.
+                    //
+                    // Load-bearing rather than cosmetic. The same audit made every magic school
+                    // Focus-primary with Self as a 0.25 secondary, which left Self the primary
+                    // attribute of NOTHING and would have quietly starved it. Magic Defense is the
+                    // one skill the game gives Self as its primary, so hooking it restores a real
+                    // path rather than inventing a deviation from the formula.
+                    //
+                    // Difficulty is the CASTER's magic skill (set above from
+                    // casterCreature.GetCreatureSkill(spell.School).Current) - external to the
+                    // defender, so no self-reference.
+                    targetPlayer.AwardAttributesForSkill(Skill.MagicDefense, magicSkill);
                 }
 
                 if (this is Creature creature)

@@ -365,6 +365,41 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public void AwardAttributesForWeaponSkill(Skill skill, uint difficulty)
         {
+            AwardAttributesForSkill(skill, difficulty);
+        }
+
+        /// <summary>
+        /// Shadowgain 022: THE single mapping from a skill to the attributes its use trains, read
+        /// from the game's own skill formula. Weapons, magic, healing and everything else now go
+        /// through here.
+        ///
+        /// Greylock's principle, and the reason this is data-driven rather than a switch: a skill's
+        /// use should train the attributes that skill is actually BUILT from. Every hand-written
+        /// version of this table has been wrong. 019 found four of six weapon mappings wrong
+        /// (Light Weapons trained Quickness when the game says Strength). This audit found every
+        /// magic school wrong in the same way - the dat makes all five Focus + Self, while the code
+        /// awarded exactly one of the two:
+        ///
+        ///     school                dat formula      what the code did
+        ///     LifeMagic             Focus + Self     Self only    <- Greylock found this one
+        ///     WarMagic              Focus + Self     Focus only
+        ///     VoidMagic             Focus + Self     Focus only
+        ///     CreatureEnchantment   Focus + Self     Focus only
+        ///     ItemEnchantment       Focus + Self     Focus only
+        ///     ManaConversion        Focus + Self     Self only
+        ///     ArcaneLore            Focus            Focus        ok
+        ///     Healing               Focus + Coord    Focus + Coord ok
+        ///
+        /// Attr2 is skipped when absent (Missile Weapons, Arcane Lore, Run) or identical to Attr1
+        /// (Dual Wield lists Coordination twice), so nothing is double-awarded.
+        ///
+        /// The secondary gets attribute_gain_overlap_factor (0.25) of a full award.
+        /// </summary>
+        public void AwardAttributesForSkill(Skill skill, uint difficulty)
+        {
+            if (skill == Skill.None)
+                return;
+
             if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var skillBase))
                 return;
 
@@ -400,49 +435,24 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public void AwardAttributesForMagicSkill(MagicSchool school, uint difficulty)
         {
-            switch (school)
-            {
-                case MagicSchool.WarMagic:
-                case MagicSchool.VoidMagic:
-                case MagicSchool.ItemEnchantment:
-                case MagicSchool.CreatureEnchantment:
-                    AwardAttributeUsageXP(PropertyAttribute.Focus, difficulty);
-                    break;
-
-                case MagicSchool.LifeMagic:
-                    AwardAttributeUsageXP(PropertyAttribute.Self, difficulty);
-                    break;
-            }
+            AwardAttributesForSkill(SchoolToSkill(school), difficulty);
         }
 
         public void AwardAttributesForMagicSkill(Skill school, uint difficulty)
         {
+            AwardAttributesForSkill(school, difficulty);
+        }
+
+        private static Skill SchoolToSkill(MagicSchool school)
+        {
             switch (school)
             {
-                case Skill.WarMagic:
-                case Skill.VoidMagic:
-                case Skill.ItemEnchantment:
-                case Skill.CreatureEnchantment:
-                case Skill.ArcaneLore:
-                    AwardAttributeUsageXP(PropertyAttribute.Focus, difficulty);
-                    break;
-
-                case Skill.LifeMagic:
-                case Skill.ManaConversion:
-                    AwardAttributeUsageXP(PropertyAttribute.Self, difficulty);
-                    break;
-
-                // Healing's own formula is (Focus + Coordination) / 3 - confirmed against the AC
-                // wiki - so using a healing kit should train THOSE, not Self. 004 mapped it to Self,
-                // which was wrong.
-                //
-                // This also closes the last stranded-attribute edge: a pure melee character had no
-                // Focus path at all, and healing kits are near-universal. General principle worth
-                // reusing - a skill's use should train the attributes that skill is BUILT from.
-                case Skill.Healing:
-                    AwardAttributeUsageXP(PropertyAttribute.Focus, difficulty);
-                    AwardAttributeUsageXP(PropertyAttribute.Coordination, difficulty, true);
-                    break;
+                case MagicSchool.CreatureEnchantment: return Skill.CreatureEnchantment;
+                case MagicSchool.ItemEnchantment:     return Skill.ItemEnchantment;
+                case MagicSchool.LifeMagic:           return Skill.LifeMagic;
+                case MagicSchool.WarMagic:            return Skill.WarMagic;
+                case MagicSchool.VoidMagic:           return Skill.VoidMagic;
+                default:                              return Skill.None;
             }
         }
 
