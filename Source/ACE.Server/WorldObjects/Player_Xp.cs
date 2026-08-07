@@ -30,6 +30,13 @@ namespace ACE.Server.WorldObjects
             if (xpType == XpType.Quest)
                 modifier *= questModifier;
 
+            // Shadowgain 021: scale kill XP by the same lane speed as skill/attribute gain, kept in
+            // PROPORTION on purpose. Level grants no power here (verified: every read of Level is
+            // content-gating, death cost, vitae or housing), so scaling XP alone would make a
+            // high-level character with beginner skills. Scaling both keeps level an honest proxy
+            // and unlocks content-gates in step with actual capability.
+            modifier *= ProgressionSpeed;
+
             // should this be passed upstream to fellowship / allegiance?
             var enchantment = GetXPAndLuminanceModifier(xpType);
 

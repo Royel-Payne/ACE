@@ -106,6 +106,10 @@ namespace ACE.Server.Entity
             // only by the +5/+10 InitLevel head start. Specialized instead grows FASTER per use.
             if (skill.AdvancementClass == SkillAdvancementClass.Specialized)
                 multiplier *= PropertyManager.GetDouble("spec_gain_multiplier").Item;
+
+            // Shadowgain 021: the character's progression lane. Applied to skill gain, attribute
+            // gain and kill XP alike so power and level advance together - see Player_Progression.
+            multiplier *= player.ProgressionSpeed;
             var minAward = (uint)Math.Max(0, PropertyManager.GetLong("skill_gain_min_award").Item);
 
             // Base, deliberately NOT Current. Current applies enchantment multipliers and vitae, so

@@ -2,6 +2,7 @@ using ACE.Common;
 using ACE.Entity;
 using ACE.Entity.Enum;
 using ACE.Entity.Enum.Properties;
+using ACE.Server.Managers;
 using ACE.Server.Network.GameMessages;
 using ACE.Server.Network.GameMessages.Messages;
 
@@ -9,11 +10,30 @@ namespace ACE.Server.WorldObjects
 {
     partial class Player
     {
+        /// <summary>
+        /// Shadowgain 021: the `*` prefix marks a character that has NEVER taken the fast
+        /// progression lane. Built the same way as the admin `+` - the server rewrites the name
+        /// before sending it - so it shows in chat, radar and appraisal with no client modification.
+        /// That is why a name prefix was chosen over a title: titles live in the client's own
+        /// language dat, so no new title text can ever be added without modding the client.
+        ///
+        /// `+` wins if both apply, since admin status is the more operationally important fact.
+        /// The setter strips both so a prefix can never be persisted into the stored name.
+        /// </summary>
         public override string Name
         {
-            get => IsPlussed && CloakStatus < CloakStatus.Player ? "+" + base.Name : base.Name;
+            get
+            {
+                if (IsPlussed && CloakStatus < CloakStatus.Player)
+                    return "+" + base.Name;
 
-            set => base.Name = value.TrimStart('+');
+                if (IsMasochist && PropertyManager.GetBool("progression_marker_enabled").Item)
+                    return "*" + base.Name;
+
+                return base.Name;
+            }
+
+            set => base.Name = value.TrimStart('+', '*');
         }
 
         public string GetNameWithSuffix()

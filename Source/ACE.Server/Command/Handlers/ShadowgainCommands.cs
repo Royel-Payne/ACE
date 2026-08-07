@@ -7,6 +7,7 @@ using ACE.Entity.Enum;
 using ACE.Server.Managers;
 using ACE.Server.Network;
 using ACE.Server.Network.GameMessages.Messages;
+using ACE.Server.WorldObjects;
 
 namespace ACE.Server.Command.Handlers
 {
@@ -39,6 +40,100 @@ namespace ACE.Server.Command.Handlers
     public static class ShadowgainCommands
     {
         private const string Marker = "(Shadowgain";
+
+        /// <summary>
+        /// Shadowgain 021: choose your progression lane.
+        ///
+        /// Default is the hard lane. Switching to fast trips a permanent ratchet - the `*` marker
+        /// and honour-roll eligibility are forfeit the instant it is chosen, and coming back to the
+        /// hard lane restores neither. Without that, a player would race ahead on fast and toggle
+        /// back to reclaim the marker, and the marker would mean nothing.
+        ///
+        /// Deliberately AccessLevel.Player: this is a gameplay choice, not an admin action.
+        /// </summary>
+        [CommandHandler("masochist", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "Choose your progression lane. The hard lane is the default and carries the * marker.",
+            "[ on | off ]\n"
+            + "  on   - the hard lane. A multi-year climb. Keeps the * if you have never left it.\n"
+            + "  off  - the fast lane. Months instead of years.\n"
+            + "         PERMANENTLY forfeits the * marker and your place on the honour roll.\n"
+            + "         Coming back to the hard lane does NOT restore either.\n"
+            + "  (no argument shows your current lane)")]
+        public static void HandleMasochist(Session session, params string[] parameters)
+        {
+            var player = session?.Player;
+
+            if (player == null)
+                return;
+
+            if (parameters == null || parameters.Length == 0)
+            {
+                var lane = player.ShadowgainFastPath ? "FAST" : "HARD";
+
+                Send(session, $"Progression lane: {lane} (speed x{player.ProgressionSpeed:0.##}).");
+
+                Send(session, player.IsMasochist
+                    ? "You still carry the * - you have never taken the fast lane. Keep it that way."
+                    : "You have taken the fast lane at some point, so the * is gone for good.");
+
+                Send(session, "Use /masochist off for the fast lane, or /masochist on for the hard lane.");
+                return;
+            }
+
+            var arg = parameters[0].ToLowerInvariant();
+
+            if (arg != "on" && arg != "off")
+            {
+                Send(session, "Usage: /masochist [ on | off ]");
+                return;
+            }
+
+            var wantFast = arg == "off";
+
+            // Warn once before the irreversible step, and make them repeat it. This is the only
+            // action in the game that permanently destroys something earned.
+            if (wantFast && player.IsMasochist && !RecentlyWarned(player))
+            {
+                Warn(player);
+
+                Send(session, "This will PERMANENTLY remove your * and your honour-roll place.");
+                Send(session, "Returning to the hard lane later will NOT give them back.");
+                Send(session, "Type /masochist off again within 30 seconds if you are sure.");
+                return;
+            }
+
+            if (!player.SetProgressionLane(wantFast))
+            {
+                Send(session, $"You are already on the {(wantFast ? "fast" : "hard")} lane.");
+                return;
+            }
+
+            if (wantFast)
+            {
+                Send(session, $"Fast lane engaged - progression is now x{player.ProgressionSpeed:0.##}.");
+                Send(session, "Your * is gone, permanently. No hard feelings; go and enjoy it.");
+            }
+            else
+            {
+                Send(session, $"Hard lane engaged - progression is now x{player.ProgressionSpeed:0.##}.");
+
+                Send(session, player.IsMasochist
+                    ? "Your * stands."
+                    : "The * does not return, but the long road is open to you again.");
+            }
+        }
+
+        // 30-second confirmation window for the irreversible switch, kept in memory on purpose -
+        // a restart clearing it just means the player is asked to confirm again.
+        private static readonly Dictionary<uint, DateTime> lastWarned = new Dictionary<uint, DateTime>();
+
+        private static bool RecentlyWarned(Player player)
+        {
+            return lastWarned.TryGetValue(player.Guid.Full, out var when)
+                && (DateTime.UtcNow - when).TotalSeconds <= 30;
+        }
+
+        private static void Warn(Player player) => lastWarned[player.Guid.Full] = DateTime.UtcNow;
 
         [CommandHandler("sg-dial", AccessLevel.Advocate, CommandHandlerFlag.RequiresWorld, 0,
             "List, read or set a Shadowgain tuning dial. Shadowgain properties only - no other server settings.",

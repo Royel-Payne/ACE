@@ -182,5 +182,17 @@ namespace ACE.Entity.Enum.Properties
         FreeAttributeResetRenewed        = 9008,
         SkillTemplesTimerReset           = 9009,
         FreeMasteryResetRenewed          = 9010,
+
+        // Shadowgain 021: two-speed progression. 9100+ is reserved for this fork so it
+        // cannot collide with future upstream additions in the 9000 range.
+        //
+        // ShadowgainFastPath        - the character's CURRENT lane (true = fast).
+        // ShadowgainForfeitedMarker - the one-way ratchet. Set the instant the fast lane
+        //                             is first chosen and NEVER cleared, even if the
+        //                             player returns to the slow lane. This is what makes
+        //                             the marker mean "never took the shortcut" rather
+        //                             than "is not taking it right now".
+        ShadowgainFastPath               = 9101,
+        ShadowgainForfeitedMarker        = 9102,
     }
 }

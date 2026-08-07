@@ -168,6 +168,9 @@ namespace ACE.Server.WorldObjects
             if (attribute == PropertyAttribute.Focus || attribute == PropertyAttribute.Self)
                 multiplier *= PropertyManager.GetDouble("attribute_gain_mental_multiplier").Item;
 
+            // Shadowgain 021: progression lane - see Player_Progression.
+            multiplier *= ProgressionSpeed;
+
             // overlapping mapping: an action feeds a primary attribute fully and a related one partially.
             // weightOverride lets a caller set its own fraction (011 uses it so spell-aiming Coordination
             // can be tuned independently of the melee overlap - magic difficulty already runs about half
