@@ -355,6 +355,12 @@ namespace ACE.Server.WorldObjects
                 var attribsByUse = PropertyManager.GetBool("attribute_gain_usage_only").Item;
                 var vitalsByUse = PropertyManager.GetBool("vital_gain_usage_only").Item;
 
+                // Shadowgain 027: skill credits are vestigial when everything is auto-trained and
+                // specialization is off - they buy nothing, are not granted at level-up, and are
+                // zeroed on login. Anything that mentions or promises them is misleading.
+                var creditsMeaningful = !(PropertyManager.GetBool("all_skills_trained").Item
+                                          && PropertyManager.GetBool("disable_specialization").Item);
+
                 if (skillsByUse || attribsByUse || vitalsByUse)
                 {
                     // only advertise experience as spendable on whatever it can genuinely still buy
@@ -384,7 +390,11 @@ namespace ACE.Server.WorldObjects
                 var levelUp = new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.Level, Level ?? 1);
                 var currentCredits = new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, AvailableSkillCredits ?? 0);
 
-                if (Level != maxLevel && !creditEarned)
+                // Shadowgain 027: don't promise a credit that will never arrive. Chris caught this
+                // at level 34 - the text still ended with "You will earn another skill credit at
+                // level 35", which on this world is simply false. The first two lines were reworded
+                // for Shadowgain; this stock line was missed.
+                if (creditsMeaningful && Level != maxLevel && !creditEarned)
                 {
                     var nextLevelWithCredits = 0;
 
