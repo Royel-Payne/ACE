@@ -52,7 +52,7 @@ namespace ACE.Server.Command.Handlers
         /// Deliberately AccessLevel.Player: this is a gameplay choice, not an admin action.
         /// </summary>
         [CommandHandler("masochist", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
-            "Choose your progression lane. The hard lane is the default and carries the * marker.",
+            "Choose your progression lane. The hard lane is the default and carries the name mark.",
             "[ on | off ]\n"
             + "  on   - the hard lane. A multi-year climb. Keeps the * if you have never left it.\n"
             + "  off  - the fast lane. Months instead of years.\n"
@@ -73,8 +73,8 @@ namespace ACE.Server.Command.Handlers
                 Send(session, $"Progression lane: {lane} (speed x{player.ProgressionSpeed:0.##}).");
 
                 Send(session, player.IsMasochist
-                    ? "You still carry the * - you have never taken the fast lane. Keep it that way."
-                    : "You have taken the fast lane at some point, so the * is gone for good.");
+                    ? $"You still carry the {Mark()} - you have never taken the fast lane. Keep it that way."
+                    : $"You have taken the fast lane at some point, so the {Mark()} is gone for good.");
 
                 Send(session, "Use /masochist off for the fast lane, or /masochist on for the hard lane.");
                 return;
@@ -96,7 +96,7 @@ namespace ACE.Server.Command.Handlers
             {
                 Warn(player);
 
-                Send(session, "This will PERMANENTLY remove your * and your honour-roll place.");
+                Send(session, $"This will PERMANENTLY remove your {Mark()} and your honour-roll place.");
                 Send(session, "Returning to the hard lane later will NOT give them back.");
                 Send(session, "Type /masochist off again within 30 seconds if you are sure.");
                 return;
@@ -111,15 +111,15 @@ namespace ACE.Server.Command.Handlers
             if (wantFast)
             {
                 Send(session, $"Fast lane engaged - progression is now x{player.ProgressionSpeed:0.##}.");
-                Send(session, "Your * is gone, permanently. No hard feelings; go and enjoy it.");
+                Send(session, $"Your {Mark()} is gone, permanently. No hard feelings; go and enjoy it.");
             }
             else
             {
                 Send(session, $"Hard lane engaged - progression is now x{player.ProgressionSpeed:0.##}.");
 
                 Send(session, player.IsMasochist
-                    ? "Your * stands."
-                    : "The * does not return, but the long road is open to you again.");
+                    ? $"Your {Mark()} stands."
+                    : $"The {Mark()} does not return, but the long road is open to you again.");
             }
         }
 
@@ -134,6 +134,20 @@ namespace ACE.Server.Command.Handlers
         }
 
         private static void Warn(Player player) => lastWarned[player.Guid.Full] = DateTime.UtcNow;
+
+        /// <summary>
+        /// The hard-path mark as it currently reads, from the live dial rather than a literal.
+        /// 023 made the prefix configurable (dagger by default, ASCII fallback if a client font
+        /// lacks it), so hard-coding it here would leave /masochist telling players about a symbol
+        /// they cannot see. Trimmed because the stored value carries a trailing space to separate
+        /// it from the name.
+        /// </summary>
+        private static string Mark()
+        {
+            var prefix = PropertyManager.GetString("progression_marker_prefix").Item;
+
+            return string.IsNullOrWhiteSpace(prefix) ? "mark" : prefix.Trim();
+        }
 
         [CommandHandler("sg-dial", AccessLevel.Advocate, CommandHandlerFlag.RequiresWorld, 0,
             "List, read or set a Shadowgain tuning dial. Shadowgain properties only - no other server settings.",
