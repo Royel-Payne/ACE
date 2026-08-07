@@ -198,8 +198,25 @@ namespace ACE.Server.Factories
                     {
                         if (!player.TrainSkill((Skill)i, trainedCost))
                             return CreateResult.FailedToTrainSkill;
-                        if (!player.SpecializeSkill((Skill)i, specializedCost))
-                            return CreateResult.FailedToSpecializeSkill;
+
+                        // Shadowgain 013 fix: the creation client still OFFERS specialization - the
+                        // server is what refuses it - so a player who specializes anything at
+                        // creation arrives here, SpecializeSkill returns false by design, and this
+                        // used to abort the whole creation with "The server cannot create your new
+                        // character at this time."
+                        //
+                        // Silent, too: CreateResult.FailedToSpecializeSkill is returned without a
+                        // log line, so the server showed nothing at all while the client refused.
+                        // Latent since 013 and only reachable if you actually specialize, which is
+                        // why several characters were created fine in between.
+                        //
+                        // The skill is already Trained by the call above, which is exactly where
+                        // the reconcile would put it anyway, so just carry on.
+                        if (!PropertyManager.GetBool("disable_specialization").Item)
+                        {
+                            if (!player.SpecializeSkill((Skill)i, specializedCost))
+                                return CreateResult.FailedToSpecializeSkill;
+                        }
                     }
                     else if (sac == SkillAdvancementClass.Trained)
                     {
