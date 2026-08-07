@@ -412,6 +412,15 @@ namespace ACE.Server.Managers
 
             HouseManager.Tick();
 
+            // Shadowgain 033: pull any Discord -> game chat waiting in the inbound feed.
+            //
+            // Here, on the world thread, because this ends up calling EnqueueSend on every
+            // recipient session - doing that from a background timer would be exactly the
+            // cross-thread game-state access the comment block above forbids. The method
+            // throttles its own filesystem access to once a second; it does not run at the
+            // 30-60fps this loop ticks at.
+            ShadowgainInbound.Tick();
+
             ServerPerformanceMonitor.RegisterEventEnd(ServerPerformanceMonitor.MonitorType.UpdateGameWorld_Entire);
             ServerPerformanceMonitor.RegisterCumulativeEvents();
 
