@@ -97,6 +97,31 @@ namespace ACE.Server.Command.Handlers
             Send(session, "Bug report filed - thank you. Your character, level and location were attached automatically.");
         }
 
+        /// <summary>
+        /// Not a real linking step - a signpost.
+        ///
+        /// `/link` is the DISCORD slash command; the in-game half is `@verify &lt;code&gt;`. But
+        /// the instructions say "run /link", and AC accepts commands with a `/` prefix, so
+        /// typing `/link` in game is the obvious wrong guess. Chris made it within a minute of
+        /// the feature going live. Without this the player gets a bare "Unknown command: link"
+        /// and no path forward.
+        ///
+        /// Costs ~10 lines and removes a dead end, so it is worth more than the tidiness of
+        /// having exactly one command per function.
+        /// </summary>
+        [CommandHandler("link", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "How to link your character to Discord.")]
+        public static void HandleLink(Session session, params string[] parameters)
+        {
+            if (session?.Player == null)
+                return;
+
+            Send(session, "To link your character to Discord:");
+            Send(session, "  1. In the Shadowgain Discord, run /link - the bot replies with a code.");
+            Send(session, "  2. Back here, type: @verify <code>");
+            Send(session, "/link only works in Discord; @verify only works in game.");
+        }
+
         [CommandHandler("verify", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1,
             "Link your Discord account by entering the code the Shadowgain bot gave you.",
             "<code>\n"
