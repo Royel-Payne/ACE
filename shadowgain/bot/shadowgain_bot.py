@@ -17,8 +17,10 @@ speaks as. A verified account/character link answers it, so inbound now ships - 
 the SERVER validates every line (ownership, gag, rate limit, length, General only).
 Nothing here is a security control.
 
-Inbound arrives two ways: the /say command, or - when SG_READ_CHANNEL is on - by
-reading the relay channel directly, which needs the Message Content intent.
+Inbound is typing in the relay channel, which needs the Message Content intent
+(SG_READ_CHANNEL). A /say slash command existed as a no-intent fallback and was removed
+in 034 once channel-typing became the desired UX - keeping it would have left a second
+inbound surface that the Verified Player role does not gate.
 
 DB access is READ-ONLY by construction - the bot is given a MySQL user with SELECT
 and nothing else (see setup.sql). It never writes game state.
@@ -557,9 +559,11 @@ class ShadowgainBot(discord.Client):
     @staticmethod
     def write_inbound(account: str, character: str, discord_name: str, text: str) -> bool:
         """
-        Append one line to the inbound feed. Shared by /say and by channel reading, so both
-        paths emit byte-identical records and there is exactly one place that can get the
-        escaping wrong.
+        Append one line to the inbound feed.
+
+        Kept as a separate method rather than inlined into on_message: it was shared with
+        the /say command until 034 removed it, and it remains the single place where the
+        record shape and escaping are decided.
 
         The SERVER decides whether any of this is actually spoken - it re-checks that the
         character belongs to the account, that they are not gagged, the rate limit and the
@@ -593,8 +597,10 @@ class ShadowgainBot(discord.Client):
         Relay-channel messages -> game, when SG_READ_CHANNEL is on.
 
         Typing in the channel is what people actually do - Chris did exactly that within
-        minutes of the channel existing - so requiring /say for every line is a worse
-        experience than it looks on paper. /say still works; this is the ergonomic path.
+        minutes of the channel existing - so requiring a slash command for every line was a
+        worse experience than it looked on paper. Since 034 this is the ONLY inbound path,
+        which also means the Verified Player role's send permission is the sole gate: lose
+        the role to the activity sweep and you lose the ability to speak into the game.
 
         IGNORING OUR OWN MESSAGES IS LOAD-BEARING. The bot posts game chat INTO this
         channel. Without the bot/webhook check, every relayed line would be read straight
@@ -793,48 +799,6 @@ async def bug(interaction: discord.Interaction, summary: str, detail: str = ""):
     await interaction.response.send_message("Thanks - your report has been filed.", ephemeral=True)
 
 
-@client.tree.command(name="say", description="Speak into the game's General chat.")
-@app_commands.describe(message="What to say in game")
-async def say(interaction: discord.Interaction, message: str):
-    """
-    Discord -> game (033). Writes a line to the inbound feed; the SERVER decides whether it
-    is actually spoken.
-
-    Everything meaningful is validated server-side - that the character belongs to the
-    account, that they are not gagged, the rate limit, the length cap, and that General is
-    the only destination. None of that is duplicated here, because a check the sender's own
-    process performs is not a check. What this does is refuse the obviously-pointless cases
-    early so the user gets a useful reply instead of silence.
-    """
-    link = client.state.links.get(str(interaction.user.id))
-    if not link:
-        await interaction.response.send_message(
-            "You need to link a character first - run `/link`.", ephemeral=True)
-        return
-
-    account = link["account"] if isinstance(link, dict) else link
-    character = link.get("character") if isinstance(link, dict) else None
-    if not character:
-        # Linked before 033 started recording the character name.
-        await interaction.response.send_message(
-            "Your link predates this feature - please run `/link` again to refresh it.",
-            ephemeral=True)
-        return
-
-    text = message.strip()
-    if not text:
-        await interaction.response.send_message("Nothing to say.", ephemeral=True)
-        return
-
-    if not client.write_inbound(account, character, str(interaction.user), text):
-        await interaction.response.send_message(
-            "Could not reach the game server right now.", ephemeral=True)
-        return
-
-    # Ephemeral: the line itself shows up in the relay channel when the server accepts it and
-    # broadcasts it back out, so confirming publicly here would double-post every message.
-    await interaction.response.send_message(f"Sent to General: {text}", ephemeral=True)
-
 
 def _is_admin(interaction: discord.Interaction) -> bool:
     """
@@ -926,9 +890,11 @@ async def unlink(interaction: discord.Interaction, member: discord.Member):
     """
     The counterpart to /override.
 
-    Without it an exempt link is permanent and unremovable from Discord - stripping the role
-    by hand would not help, because the link stays and the person can still speak into the
-    game via /say.
+    Since 034 removed /say, stripping the role by hand DOES stop someone speaking - the
+    channel's send permission is the only inbound gate. But it leaves the link in place, so
+    re-granting the role later would silently restore their ability to speak as that
+    character. /unlink clears both, which is the difference between revoking access and
+    revoking identity.
     """
     if not _is_admin(interaction):
         await interaction.response.send_message(
