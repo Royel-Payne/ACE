@@ -525,12 +525,7 @@ class ShadowgainBot(discord.Client):
         self.state.pending.pop(code, None)
 
         guild = self.get_guild(GUILD_ID)
-        member = guild.get_member(discord_id) if guild else None
-        if member is None:
-            try:
-                member = await guild.fetch_member(discord_id)
-            except (discord.HTTPException, AttributeError):
-                member = None
+        member = await self.resolve_member(guild, discord_id)
 
         if member is None:
             print(f"WARN: verified {character} but Discord member {discord_id} not found", flush=True)
@@ -555,6 +550,34 @@ class ShadowgainBot(discord.Client):
                 print(f"WARN: could not grant role: {e}", flush=True)
 
         await self.dm(member, f"Verified as **{character}**. Welcome to the Shadowgain channels.")
+
+    @staticmethod
+    async def resolve_member(guild, discord_id):
+        """
+        Find a guild member, cache first and API second.
+
+        get_member() alone is a CACHE read, and without the privileged Server Members
+        intent that cache is populated only opportunistically - from message events and
+        interactions. Someone who has not spoken recently simply is not in it. Treating
+        that miss as "this person left the server" is wrong and, in the sweep, silent:
+        the loop would skip them and their role would never be re-checked.
+
+        fetch_member() asks Discord directly and needs no intent. It costs an HTTP call,
+        which is why it is the fallback rather than the first move.
+
+        Returns None only when the member is genuinely not in the guild.
+        """
+        if guild is None:
+            return None
+
+        member = guild.get_member(int(discord_id))
+        if member is not None:
+            return member
+
+        try:
+            return await guild.fetch_member(int(discord_id))
+        except (discord.HTTPException, AttributeError, ValueError):
+            return None
 
     @staticmethod
     def write_inbound(account: str, character: str, discord_name: str, text: str) -> bool:
@@ -736,8 +759,14 @@ class ShadowgainBot(discord.Client):
                         continue
 
                     ok, reason = await account_qualifies(account)
-                    member = guild.get_member(int(discord_id))
+
+                    # Cache-then-API. A bare get_member() here made the sweep unreliable:
+                    # anyone not in the local cache was skipped without a word, so the
+                    # role was never revoked and "active players only" quietly stopped
+                    # meaning anything. A None now really does mean "left the server".
+                    member = await self.resolve_member(guild, discord_id)
                     if member is None:
+                        print(f"sweep: {discord_id} is no longer in the guild, skipping", flush=True)
                         continue
                     has = role in member.roles
                     if ok and not has:
