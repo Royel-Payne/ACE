@@ -98,6 +98,36 @@ namespace ACE.Server.Command.Handlers
         }
 
         /// <summary>
+        /// Shadowgain 037: the invite, on demand.
+        ///
+        /// Kept separate from `@link` because they answer different questions - "where is the
+        /// Discord?" versus "how do I connect my character to it?" - and someone who has not
+        /// joined yet cannot act on the second.
+        ///
+        /// The invite is a dial rather than a literal so it can be replaced without a rebuild;
+        /// Discord invites can be revoked or expire, and a hard-coded dead link in a login
+        /// greeting would be worse than no link at all.
+        /// </summary>
+        [CommandHandler("discord", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "Show the Shadowgain Discord invite.")]
+        public static void HandleDiscord(Session session, params string[] parameters)
+        {
+            if (session?.Player == null)
+                return;
+
+            var invite = PropertyManager.GetString("discord_invite_url").Item;
+
+            if (string.IsNullOrWhiteSpace(invite))
+            {
+                Send(session, "No Discord invite is configured on this server.");
+                return;
+            }
+
+            Send(session, $"Join our Discord: {invite}");
+            Send(session, "Then type @link in game to connect your character.");
+        }
+
+        /// <summary>
         /// Not a real linking step - a signpost.
         ///
         /// `/link` is the DISCORD slash command; the in-game half is `@verify &lt;code&gt;`. But

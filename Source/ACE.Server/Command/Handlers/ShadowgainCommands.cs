@@ -136,6 +136,45 @@ namespace ACE.Server.Command.Handlers
         private static void Warn(Player player) => lastWarned[player.Guid.Full] = DateTime.UtcNow;
 
         /// <summary>
+        /// Shadowgain 037: explain the two lanes on demand.
+        ///
+        /// `/masochist` is where the CHOICE lives, but nothing in game ever mentions it, so a new
+        /// player has no way to discover that a choice exists at all. This is the signpost.
+        ///
+        /// It reports TWO facts that are easy to conflate and are genuinely different:
+        ///   - `ShadowgainFastPath` - the lane you are on RIGHT NOW
+        ///   - `IsMasochist` (i.e. !ShadowgainForfeitedMarker) - whether you still carry the mark
+        /// A character who took the fast lane once and switched back is on the hard lane but has
+        /// forfeited the mark permanently. Reading only the marker (as the task entry originally
+        /// suggested) would report that person as "currently on: fast", which is simply wrong -
+        /// and would hide the fact that the ratchet is exactly what makes the mark mean anything.
+        /// </summary>
+        [CommandHandler("paths", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "Explain the two progression lanes and show which one you are on.")]
+        public static void HandlePaths(Session session, params string[] parameters)
+        {
+            var player = session?.Player;
+
+            if (player == null)
+                return;
+
+            var mark = Mark();
+
+            Send(session, "Two roads to the top of Shadowgain:");
+            Send(session, $"  /masochist on   - the hard, slow road (the default). Keeps the {mark} mark and your Honour Roll spot.");
+            Send(session, "  /masochist off  - the fast lane, months instead of years.");
+            Send(session, $"Taking the fast lane even once forfeits the {mark} mark and your Honour Roll spot FOREVER - returning to the slow road never restores it. Both roads end at the same power.");
+
+            Send(session, $"You are currently on: {(player.ShadowgainFastPath ? "the FAST lane" : "the hard road")}.");
+
+            // Stated separately because it is a separate fact. Someone who switched back to the
+            // hard road still reads "hard road" above while having lost the mark for good.
+            Send(session, player.IsMasochist
+                ? $"You still carry the {mark} mark and remain eligible for the Honour Roll."
+                : $"You have forfeited the {mark} mark permanently, and are no longer eligible for the Honour Roll.");
+        }
+
+        /// <summary>
         /// The hard-path mark as it currently reads, from the live dial rather than a literal.
         /// 023 made the prefix configurable (dagger by default, ASCII fallback if a client font
         /// lacks it), so hard-coding it here would leave /masochist telling players about a symbol
