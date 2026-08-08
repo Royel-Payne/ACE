@@ -1,0 +1,7 @@
+# Shadowgain Discord bot dependencies.
+#
+# Deliberately tiny. discord.py for the gateway and slash commands, PyMySQL for the
+# read-only shard queries. PyMySQL rather than mysqlclient because it is pure Python -
+# no compiler, no libmysqlclient-dev on the droplet.
+discord.py>=2.3,<3
+PyMySQL>=1.1,<2

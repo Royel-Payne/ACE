@@ -1,0 +1,37 @@
+[Unit]
+Description=Shadowgain Discord bot (relay, verification, bug funnel)
+# Wants= rather than Requires=: the bot tails files and queries the DB, both of which it
+# retries. If Docker is slow to come up the bot should wait and reconnect, not refuse to
+# start and stay dead until someone notices.
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/ACE/bot.env
+ExecStart=/opt/ACE/botenv/bin/python /opt/ACE/bot/shadowgain_bot.py
+WorkingDirectory=/opt/ACE/bot
+
+# Survive crashes and Discord gateway drops without human intervention - the same
+# unattended-recovery standard the game server was brought up to.
+Restart=always
+RestartSec=10
+
+# Unbuffered so print() reaches the journal immediately instead of sitting in a pipe
+# buffer, which would make `journalctl -f` useless for watching a live relay.
+Environment=PYTHONUNBUFFERED=1
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shadowgain-bot
+
+# The bot reads logs and queries a DB. It has no business writing anywhere except its
+# own state file, so everything else is locked down.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/ACE
+
+[Install]
+WantedBy=multi-user.target
