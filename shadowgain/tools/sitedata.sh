@@ -129,6 +129,24 @@ SWAP_USED=$(free -m | awk '/Swap:/{print $3}')
 
 WORLD=$(docker logs ace-server 2>&1 | grep -c "World is now open" || true)
 
+# --- uptime, for the restart-cadence question --------------------------------
+# Seconds since the ace-server container started, straight from Docker rather than
+# inferred. Without this, reading a memory trend out of history.jsonl means GUESSING
+# where the restarts were from drops in memAceMB - which works only while a restart
+# is the sharpest thing in the series, and silently mis-segments as soon as it is not.
+#
+# The open question this exists to answer: does ACE's memory plateau or creep? A leak
+# needs a scheduled restart; a plateau does not. Either way the answer needs uptime on
+# the same row as the memory reading, or the two cannot be correlated.
+ACE_UPTIME=null
+if [ "$UP" = true ]; then
+  STARTED=$(docker inspect -f '{{.State.StartedAt}}' ace-server 2>/dev/null || true)
+  if [ -n "$STARTED" ]; then
+    S=$(date -u -d "$STARTED" +%s 2>/dev/null || true)
+    [ -n "$S" ] && ACE_UPTIME=$(( $(date -u +%s) - S ))
+  fi
+fi
+
 # The in-game marker prefix is a live dial (023). Expose it so the site can follow it
 # rather than hardcoding the dagger - otherwise switching the in-game prefix to the
 # ASCII fallback would leave the website and the game disagreeing.
@@ -187,8 +205,13 @@ mv -f "$OUT/.status.json.tmp" "$OUT/status.json"
 #
 # This is the file to look at when deciding on a resize: correlate playersOnline
 # and landblocksActive against cpuAcePct and memAvailMB at the busiest moments.
-printf '{"t":"%s","players":%s,"landblocks":%s,"objects":%s,"cpuAce":%s,"cpuDb":%s,"memAceMB":%s,"memAvailMB":%s,"swapMB":%s,"load1":%s}\n' \
-  "$NOW" "$ONLINE" "$LANDBLOCKS" "$OBJECTS" "$CPU_ACE" "$CPU_DB" "$MEM_ACE" "$MEM_AVAIL" "$SWAP_USED" "$LOAD1" >> "$OUT/history.jsonl"
+#
+# aceUptimeS makes the memory question answerable: a run is every row whose uptime is
+# monotonically increasing, and the slope of memAceMB within one run is the only number
+# that means anything. Comparing across a restart boundary compares two different
+# processes.
+printf '{"t":"%s","players":%s,"landblocks":%s,"objects":%s,"cpuAce":%s,"cpuDb":%s,"memAceMB":%s,"memAvailMB":%s,"swapMB":%s,"load1":%s,"aceUptimeS":%s}\n' \
+  "$NOW" "$ONLINE" "$LANDBLOCKS" "$OBJECTS" "$CPU_ACE" "$CPU_DB" "$MEM_ACE" "$MEM_AVAIL" "$SWAP_USED" "$LOAD1" "$ACE_UPTIME" >> "$OUT/history.jsonl"
 
 if [ "$(wc -l < "$OUT/history.jsonl")" -gt 9000 ]; then
   tail -9000 "$OUT/history.jsonl" > "$OUT/history.tmp" && mv "$OUT/history.tmp" "$OUT/history.jsonl"

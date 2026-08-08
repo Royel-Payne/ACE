@@ -120,6 +120,15 @@ class State:
     pending: dict = field(default_factory=dict)
     # discord_id (as str, because JSON keys are strings) -> account name
     links: dict = field(default_factory=dict)
+    # account name -> {"age": int, "xp": int, "t": float}
+    #
+    # The baseline for the counter-based activity check. Age and TotalExperience are
+    # COUNTERS, not timestamps, so "did this move?" needs something to compare against -
+    # and the previous sweep is exactly that. See account_qualifies().
+    activity: dict = field(default_factory=dict)
+    # Unix time of the last COMPLETED sweep. Persisted so the schedule survives a restart -
+    # see sweep_loop() for why sleeping from process start silently disabled it.
+    last_sweep: float = 0.0
 
     @classmethod
     def load(cls, path: str) -> "State":
@@ -130,6 +139,8 @@ class State:
                 offsets=raw.get("offsets", {}),
                 pending=raw.get("pending", {}),
                 links=raw.get("links", {}),
+                activity=raw.get("activity", {}),
+                last_sweep=raw.get("last_sweep", 0.0),
             )
         except FileNotFoundError:
             return cls()
@@ -145,7 +156,9 @@ class State:
         tmp = path + ".tmp"
         try:
             with open(tmp, "w", encoding="utf-8") as f:
-                json.dump({"offsets": self.offsets, "pending": self.pending, "links": self.links},
+                json.dump({"offsets": self.offsets, "pending": self.pending,
+                           "links": self.links, "activity": self.activity,
+                           "last_sweep": self.last_sweep},
                           f, ensure_ascii=False)
             os.replace(tmp, path)
         except OSError as e:
@@ -328,19 +341,50 @@ async def best_character(account_name: str):
     return rows[0] if rows else None
 
 
-async def account_qualifies(account_name: str) -> tuple:
+async def account_qualifies(account_name: str, state: "State" = None) -> tuple:
     """
     (qualifies, reason) for an ACCOUNT, judged on its best character.
 
     Account-level rather than character-level because that is what a Discord user owns.
     Someone whose main is active should not lose the role because they also have a level-2
     mule that has not logged in for a month.
+
+    TWO ways to pass the activity half, because last_Login_Timestamp alone is wrong for
+    the people most likely to be playing:
+
+      1. logged in within ACTIVITY_HOURS, or
+      2. the account's PLAY COUNTERS moved since we last looked.
+
+    (1) alone silently punishes anyone who stays connected. last_Login_Timestamp is written
+    ONCE, at login (Player_Networking.cs:33), and never refreshed - so a VTank user parked
+    in world for a week has a week-old timestamp while actively playing, and the sweep would
+    revoke their role mid-session. That is the opposite of what the gate is for.
+
+    (2) fixes it because ACE auto-saves a connected player every `player_save_interval`
+    seconds (default 300), which rewrites these rows while they are still online:
+
+        Age             PropertyInt   125   - total seconds CONNECTED
+        TotalExperience PropertyInt64 1     - total XP EARNED
+
+    Age is the one we gate on. It answers "is this account still being used?", which is the
+    question the role actually asks - it grants chat access, not merit.
+
+    OPTIONAL PATH, deliberately left wired up but unused (Chris, 2026-08-08 - "grind harder
+    fool"): swap `age_delta` for `xp_delta` below and the gate becomes "still PROGRESSING"
+    rather than "still connected". Someone parked online overnight gaining nothing would
+    fail it. That turns the Discord role into a second progression gate, which is a policy
+    change and not obviously wanted - so it stays a one-word switch rather than the default.
+    Both deltas are already queried and stored, so flipping it needs no new plumbing.
     """
     rows = await asyncio.to_thread(_query, """
         SELECT c.name,
                c.last_Login_Timestamp AS last_login,
                COALESCE((SELECT value FROM biota_properties_int
-                         WHERE object_Id = c.id AND type = 25), 1) AS level
+                         WHERE object_Id = c.id AND type = 25), 1) AS level,
+               COALESCE((SELECT value FROM biota_properties_int
+                         WHERE object_Id = c.id AND type = 125), 0) AS age,
+               COALESCE((SELECT value FROM biota_properties_int64
+                         WHERE object_Id = c.id AND type = 1), 0) AS xp
         FROM `character` c
         JOIN ace_auth.account a ON a.accountId = c.account_Id
         WHERE c.is_Deleted = 0 AND c.delete_Time = 0 AND a.accountName = %s
@@ -349,13 +393,39 @@ async def account_qualifies(account_name: str) -> tuple:
     if not rows:
         return False, "no characters found on that account"
 
-    cutoff = time.time() - ACTIVITY_HOURS * 3600
     if not any(r["level"] >= MIN_LEVEL for r in rows):
         best = max(r["level"] for r in rows)
         return False, f"highest character is level {best}; {MIN_LEVEL} is required"
-    if not any(r["level"] >= MIN_LEVEL and (r["last_login"] or 0) >= cutoff for r in rows):
+
+    # Summed across the account, not read off one character: alt-hopping is still playing,
+    # and the gate is per account everywhere else too.
+    age_now = sum(r["age"] or 0 for r in rows)
+    xp_now = sum(r["xp"] or 0 for r in rows)
+
+    cutoff = time.time() - ACTIVITY_HOURS * 3600
+    logged_in = any(r["level"] >= MIN_LEVEL and (r["last_login"] or 0) >= cutoff for r in rows)
+
+    age_delta = None
+    if state is not None:
+        prev = state.activity.get(account_name)
+        # Record BEFORE deciding, so the next call has a baseline no matter how this one
+        # goes. A revoked account that starts playing again must be able to earn it back.
+        state.activity[account_name] = {"age": age_now, "xp": xp_now, "t": time.time()}
+        if prev:
+            age_delta = age_now - (prev.get("age") or 0)
+
+    if logged_in:
+        return True, "ok"
+    if age_delta and age_delta > 0:
+        return True, "ok"
+    if age_delta is None:
+        # First look at this account since the counter check shipped. Refusing here would
+        # revoke people for our lack of a baseline rather than for their inactivity, so
+        # fall through to the old rule and let the NEXT sweep use the snapshot just stored.
         return False, f"no qualifying character has logged in within {ACTIVITY_HOURS} hours"
-    return True, "ok"
+
+    return False, (f"no qualifying character has logged in within {ACTIVITY_HOURS} hours, "
+                   f"and no play time was recorded since the last check")
 
 
 # --------------------------------------------------------------------------------------
@@ -517,7 +587,7 @@ class ShadowgainBot(discord.Client):
         # was destroyed by a fault that had nothing to do with them - they had to run /link
         # again to retry something that was never their failure.
         try:
-            ok, reason = await account_qualifies(account) if account else (False, "unknown account")
+            ok, reason = await account_qualifies(account, self.state) if account else (False, "unknown account")
         except Exception as e:
             print(f"WARN: verify lookup failed for {character}, leaving code valid: {e}", flush=True)
             return
@@ -737,15 +807,40 @@ class ShadowgainBot(discord.Client):
 
         This, not the one-time /link, is what "active players only" actually means: without
         it the role is granted once and kept forever.
+
+        SCHEDULED FROM PERSISTED STATE, not from process start. The original loop slept
+        SWEEP_HOURS and only then did its first pass, so every bot restart pushed the next
+        sweep a full day out - and during active development the bot is redeployed more
+        often than daily, which means the sweep had almost certainly never run at all. A
+        deploy cadence quietly cancelling a maintenance task is the kind of bug that only
+        shows up as "why does nobody ever lose the role", long after the cause.
+
+        Tracking `last_sweep` in the state file makes restarts irrelevant: the schedule
+        belongs to the deployment, not to the process. A first run with no recorded sweep
+        fires almost immediately, which also seeds the activity baselines rather than
+        leaving them empty for a day.
         """
         await self.wait_until_ready()
+        await asyncio.sleep(120)   # let the guild/member caches settle before judging anyone
+
         while not self.is_closed():
-            await asyncio.sleep(SWEEP_HOURS * 3600)
+            due = (self.state.last_sweep or 0) + SWEEP_HOURS * 3600
+            wait = due - time.time()
+            if wait > 0:
+                # Capped so a clock change or a long-stale state file cannot park the loop
+                # for days, and so shutdown is never more than 15 minutes away.
+                await asyncio.sleep(min(wait, 900))
+                continue
             try:
                 guild = self.get_guild(GUILD_ID)
                 role = guild.get_role(VERIFIED_ROLE_ID) if guild else None
                 if not role:
+                    # Do NOT stamp last_sweep here - nothing was checked. Stamping would
+                    # turn a transient lookup failure into a skipped day.
+                    await asyncio.sleep(300)
                     continue
+
+                print(f"sweep: checking {len(self.state.links)} link(s)", flush=True)
 
                 for discord_id, link in list(self.state.links.items()):
                     # Links were plain account strings before 033; tolerate both shapes
@@ -758,7 +853,7 @@ class ShadowgainBot(discord.Client):
                     if isinstance(link, dict) and link.get("exempt"):
                         continue
 
-                    ok, reason = await account_qualifies(account)
+                    ok, reason = await account_qualifies(account, self.state)
 
                     # Cache-then-API. A bare get_member() here made the sweep unreliable:
                     # anyone not in the local cache was skipped without a word, so the
@@ -775,8 +870,23 @@ class ShadowgainBot(discord.Client):
                         await member.remove_roles(role, reason=f"Shadowgain sweep: {reason}")
                         await self.dm(member, f"Your Shadowgain access has lapsed: {reason}. "
                                               f"Log in and run /link again to restore it.")
+
+                # Drop activity baselines for accounts nobody is linked to any more -
+                # /verify records one for every account it looks at, including the ones
+                # that failed, so without this the table only ever grows.
+                linked = {(l["account"] if isinstance(l, dict) else l)
+                          for l in self.state.links.values()}
+                for acct in [a for a in self.state.activity if a not in linked]:
+                    self.state.activity.pop(acct, None)
+
+                self.state.last_sweep = time.time()
+                self.state.save(STATE_PATH)
+                print("sweep: done", flush=True)
             except Exception as e:
+                # Deliberately does not stamp last_sweep: a failed pass should be retried
+                # on the next tick, not counted as this period's sweep.
                 print(f"ERROR in sweep_loop: {e}", flush=True)
+                await asyncio.sleep(300)
 
 
 client = ShadowgainBot()
