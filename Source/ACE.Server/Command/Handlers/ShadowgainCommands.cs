@@ -342,6 +342,12 @@ namespace ACE.Server.Command.Handlers
         private static readonly HashSet<string> NotTunableHere = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "audit_commands_enabled",
+
+            // 044: session caps. An Advocate who can raise their own limit is not limited, and
+            // one who can add their own IP to the override map has exempted themselves. Both are
+            // edited by the Admin-only /sg-multibox instead.
+            "multibox_max_sessions_per_ip",
+            "multibox_ip_overrides",
         };
 
         private static bool Marks(string description) =>

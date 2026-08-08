@@ -117,8 +117,22 @@ namespace ACE.Server.Network.Managers
                     {
                         log.DebugFormat("Login Request from {0}", endPoint);
 
-                        var ipAllowsUnlimited = ConfigManager.Config.Server.Network.AllowUnlimitedSessionsFromIPAddresses.Contains(endPoint.Address.ToString());
-                        if (ipAllowsUnlimited || ConfigManager.Config.Server.Network.MaximumAllowedSessionsPerIPAddress == -1 || GetSessionEndpointTotalByAddressCount(endPoint.Address) < ConfigManager.Config.Server.Network.MaximumAllowedSessionsPerIPAddress)
+                        // Shadowgain 044: the per-IP concurrent session cap now comes from live
+                        // dials rather than from Config.js.
+                        //
+                        // Two reasons. Config.js is read once at startup, so letting a household
+                        // play a second character would have meant restarting the world - absurd
+                        // for a permission tweak. And its allowlist is all-or-nothing: an IP is
+                        // either capped or unlimited, so "this house gets exactly 2" could not be
+                        // expressed at all. Dials are DB-backed, so both survive restarts without
+                        // anyone editing config.
+                        //
+                        // This check runs BEFORE authentication - no account or access level
+                        // exists yet - which is why exemptions are keyed on IP rather than on who
+                        // is logging in. That is a property of where the cap must live, not a
+                        // shortcut.
+                        var effectiveLimit = ShadowgainMultibox.EffectiveLimit(endPoint.Address);
+                        if (effectiveLimit < 0 || GetSessionEndpointTotalByAddressCount(endPoint.Address) < effectiveLimit)
                         {
                             var session = FindOrCreateSession(connectionListener, endPoint);
                             if (session != null)
