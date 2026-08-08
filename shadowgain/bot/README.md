@@ -124,8 +124,10 @@ These cannot be done over the API from here.
      inbound chat silently does nothing — the bot connects, logs no error, and drops every
      line. This is the single most likely cause of "inbound stopped working".
    - **Presence: off.** Unused.
-   - **Server Members: off.** The verification path falls back to `fetch_member`, so it
-     works without the intent. See *Known gaps* — the daily sweep does not.
+   - **Server Members: off.** Not needed. Every member lookup goes through
+     `resolve_member()`, which tries the cache and falls back to `fetch_member` — an API
+     call that works without the intent. Turning it on would make those lookups cheaper,
+     nothing more.
 
 3. **Invite the bot:**
    ```
@@ -211,11 +213,6 @@ undo itself within 24 hours.
 
 Documented rather than fixed — none of them is a defect in normal use.
 
-- **The daily sweep needs the Server Members intent** to be reliable. It calls
-  `guild.get_member`, which reads the local cache; without the members intent that cache is
-  populated only opportunistically, so the sweep skips uncached members silently and their
-  role is never revoked. The verification path is unaffected — it falls back to
-  `fetch_member`. Fix is either enabling the intent or giving the sweep the same fallback.
 - **An offline speaker cannot be squelched.** `SquelchDB.Contains` needs a `WorldObject`, and
   a Discord user has none. Squelch works on relayed lines only while that character is online.
 - **The `†` progression marker only renders when the speaker is online**, for the same reason.
