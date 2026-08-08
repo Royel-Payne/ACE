@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 
 using ACE.Entity.Enum;
+using ACE.Server.Managers;
 using ACE.Server.Network;
 
 using log4net;
@@ -314,9 +315,23 @@ namespace ACE.Server.Command
             if ((commandInfo.Attribute.Flags & CommandHandlerFlag.RequiresWorld) != 0 && (session == null || session.Player == null || session.Player.CurrentLandblock == null))
                 return CommandHandlerResponse.NotInWorld;
 
+            // Shadowgain 045: the audit chokepoint.
+            //
+            // Every command - typed or console - resolves through here, and both callers execute
+            // ONLY on Ok or SudoOk, so these two returns are the complete set of authorised
+            // commands. Hooking here covers every privileged command that exists today and every
+            // one added later, with nothing to remember per command.
+            //
+            // Deliberately placed AFTER every authorisation check above, so a NotAuthorized
+            // attempt is never recorded as an action taken. ShadowgainAudit applies the
+            // Access != Player noise filter itself, and never throws into this path.
             if (isSUDOauthorized)
+            {
+                ShadowgainAudit.EmitCommand(session, commandInfo, parameters, true);
                 return CommandHandlerResponse.SudoOk;
+            }
 
+            ShadowgainAudit.EmitCommand(session, commandInfo, parameters, false);
             return CommandHandlerResponse.Ok;
         }
     }

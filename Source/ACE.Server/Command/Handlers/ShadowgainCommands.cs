@@ -279,6 +279,15 @@ namespace ACE.Server.Command.Handlers
 
             PlayerManager.BroadcastToAuditChannel(session?.Player,
                 $"{who} set Shadowgain dial {name}: {before} -> {after}");
+
+            // Shadowgain 045: the durable half. The in-game Audit channel is ephemeral (only
+            // staff who happen to be online with that channel active ever see it) and the server
+            // log needs SSH plus grep. This writes the same fact to sgaudit.jsonl, which the bot
+            // mirrors into #audit and which /sg-dial-history reads back.
+            //
+            // The generic command hook cannot produce this line: it sees that `/sg-dial x 2.0`
+            // ran, but has no way to know what x WAS. before/after only exists here.
+            ShadowgainAudit.EmitDial(who, name, before, after);
         }
 
         private static void ListDials(Session session, string filter)
@@ -307,30 +316,49 @@ namespace ACE.Server.Command.Handlers
         private static IEnumerable<string> AllDials()
         {
             foreach (var kvp in DefaultPropertyManager.DefaultBooleanProperties)
-                if (Marks(kvp.Value.Description)) yield return kvp.Key;
+                if (Tunable(kvp.Key, kvp.Value.Description)) yield return kvp.Key;
 
             foreach (var kvp in DefaultPropertyManager.DefaultLongProperties)
-                if (Marks(kvp.Value.Description)) yield return kvp.Key;
+                if (Tunable(kvp.Key, kvp.Value.Description)) yield return kvp.Key;
 
             foreach (var kvp in DefaultPropertyManager.DefaultDoubleProperties)
-                if (Marks(kvp.Value.Description)) yield return kvp.Key;
+                if (Tunable(kvp.Key, kvp.Value.Description)) yield return kvp.Key;
 
             foreach (var kvp in DefaultPropertyManager.DefaultStringProperties)
-                if (Marks(kvp.Value.Description)) yield return kvp.Key;
+                if (Tunable(kvp.Key, kvp.Value.Description)) yield return kvp.Key;
         }
+
+        /// <summary>
+        /// Shadowgain dials that are deliberately NOT reachable from `/sg-dial`.
+        ///
+        /// The whitelist below is "any property whose description contains the Shadowgain marker",
+        /// and `/sg-dial` is AccessLevel.Advocate. That combination means a normally-described
+        /// audit dial would be switchable off by an Advocate - i.e. the audit that exists to watch
+        /// them could be silenced by them, without leaving a trace beyond the act of silencing it.
+        ///
+        /// These stay Admin/console-only (`/modifybool`). Anything whose whole job is to constrain
+        /// or observe privileged users belongs here, not in the tuning surface.
+        /// </summary>
+        private static readonly HashSet<string> NotTunableHere = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "audit_commands_enabled",
+        };
 
         private static bool Marks(string description) =>
             description != null && description.Contains(Marker);
 
+        private static bool Tunable(string name, string description) =>
+            Marks(description) && !NotTunableHere.Contains(name);
+
         private static string Kind(string name)
         {
-            if (DefaultPropertyManager.DefaultBooleanProperties.TryGetValue(name, out var b) && Marks(b.Description))
+            if (DefaultPropertyManager.DefaultBooleanProperties.TryGetValue(name, out var b) && Tunable(name, b.Description))
                 return "bool";
-            if (DefaultPropertyManager.DefaultLongProperties.TryGetValue(name, out var l) && Marks(l.Description))
+            if (DefaultPropertyManager.DefaultLongProperties.TryGetValue(name, out var l) && Tunable(name, l.Description))
                 return "long";
-            if (DefaultPropertyManager.DefaultDoubleProperties.TryGetValue(name, out var d) && Marks(d.Description))
+            if (DefaultPropertyManager.DefaultDoubleProperties.TryGetValue(name, out var d) && Tunable(name, d.Description))
                 return "double";
-            if (DefaultPropertyManager.DefaultStringProperties.TryGetValue(name, out var s) && Marks(s.Description))
+            if (DefaultPropertyManager.DefaultStringProperties.TryGetValue(name, out var s) && Tunable(name, s.Description))
                 return "string";
             return null;
         }

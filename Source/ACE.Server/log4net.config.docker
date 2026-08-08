@@ -88,6 +88,29 @@
     </layout>
   </appender>
 
+  <!-- Shadowgain 045: the audit trail.
+       maxSizeRollBackups is deliberately far higher than the other feeds. Chat is disposable and
+       events are consumed by the bot within seconds, but this file IS the retained record -
+       rolling it away is how an audit trail quietly stops being one. 50 x 5MB is far more than
+       staff commands on this server will ever produce. -->
+  <appender name="SgAuditAppender" type="log4net.Appender.RollingFileAppender">
+    <file value="/ace/Logs/sgaudit.jsonl" />
+    <appendToFile value="true" />
+    <rollingStyle value="Size" />
+    <maxSizeRollBackups value="50" />
+    <maximumFileSize value="5120KB" />
+    <staticLogFileName value="true" />
+    <encoding value="utf-8" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%message%newline" />
+    </layout>
+  </appender>
+
+  <logger name="Shadowgain.Audit" additivity="false">
+    <level value="INFO" />
+    <appender-ref ref="SgAuditAppender" />
+  </logger>
+
   <logger name="Shadowgain.ChatRelay" additivity="false">
     <level value="INFO" />
     <appender-ref ref="ChatRelayAppender" />

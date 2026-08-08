@@ -62,6 +62,9 @@ TOKEN            = _req("DISCORD_BOT_TOKEN")
 GUILD_ID         = _int("DISCORD_GUILD_ID")
 RELAY_CHANNEL_ID = _int("DISCORD_RELAY_CHANNEL_ID")
 BUGS_CHANNEL_ID  = _int("DISCORD_BUGS_CHANNEL_ID")
+# 045: read-only #audit. Not covered by the retention purge - that targets RELAY_CHANNEL_ID
+# alone, so the audit trail is exempt by construction rather than by a special case.
+AUDIT_CHANNEL_ID = _int("DISCORD_AUDIT_CHANNEL_ID")
 VERIFIED_ROLE_ID = _int("DISCORD_VERIFIED_ROLE_ID")
 
 LOG_DIR    = os.environ.get("SG_LOG_DIR", "/opt/ACE/Logs")
@@ -477,6 +480,10 @@ class ShadowgainBot(discord.Client):
                            self.state, start_at_end=True)
         events = JsonlTailer(os.path.join(LOG_DIR, "sgevents.jsonl"), "events",
                              self.state, start_at_end=False)
+        # 045: start_at_end=False like events, not like chat. An audit line written while the
+        # bot was down is exactly the line you most want to see when it comes back up.
+        audit = JsonlTailer(os.path.join(LOG_DIR, "sgaudit.jsonl"), "audit",
+                            self.state, start_at_end=False)
 
         while not self.is_closed():
             try:
@@ -491,11 +498,53 @@ class ShadowgainBot(discord.Client):
                     elif kind == "verify":
                         await self.handle_verify(rec)
 
+                for rec in audit.read_lines():
+                    await self.handle_audit(rec)
+
                 self.state.save(STATE_PATH)
             except Exception as e:                       # never let the loop die
                 print(f"ERROR in tail_loop: {e}", flush=True)
 
             await asyncio.sleep(1.0)
+
+    async def handle_audit(self, rec: dict):
+        """
+        Mirror one audit line into #audit.
+
+        Plain text, not an embed. #audit is a record meant to be read in bulk and searched with
+        Discord's own search - embeds are taller, and their contents match search inconsistently.
+        Deliberately no allowed_mentions: a command argument containing @everyone must never ping.
+        """
+        if not AUDIT_CHANNEL_ID:
+            return
+
+        channel = self.get_channel(AUDIT_CHANNEL_ID)
+        if channel is None:
+            return
+
+        kind = rec.get("type")
+
+        if kind == "dial":
+            line = (f"`{rec.get('t','?')}` **{rec.get('who','?')}** changed "
+                    f"`{rec.get('dial','?')}`: `{rec.get('before','?')}` -> `{rec.get('after','?')}`")
+        elif kind == "command":
+            who = rec.get("character") or rec.get("account") or "?"
+            # Show the account too when they differ - the character is who you SEE in game, the
+            # account is who is actually responsible, and one account can hold many characters.
+            acct = rec.get("account")
+            if acct and rec.get("character") and acct != rec.get("character"):
+                who = f"{rec.get('character')} ({acct})"
+            args = rec.get("args") or ""
+            sudo = " *(sudo)*" if rec.get("sudo") else ""
+            line = (f"`{rec.get('t','?')}` **{who}** `[{rec.get('access','?')}]` "
+                    f"ran `@{rec.get('command','?')} {args}`".rstrip() + f"{sudo}")
+        else:
+            return
+
+        try:
+            await channel.send(line[:1900], allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException as e:
+            print(f"WARN: could not post audit line: {e}", flush=True)
 
     async def flush_loop(self):
         """Post batched chat. Batching keeps a busy General from hitting Discord's limits."""

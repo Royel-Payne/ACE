@@ -43,7 +43,7 @@ namespace ACE.Server.Command.Handlers
         }
 
         // bestow <name> <level>
-        [CommandHandler("bestow", AccessLevel.Advocate, CommandHandlerFlag.RequiresWorld, 2,
+        [CommandHandler("bestow", AccessLevel.Admin, CommandHandlerFlag.RequiresWorld, 2,
             "Sets a character's Advocate Level.",
             "<name> <level>\nAdvocates can bestow any level less than their own.")]
         public static void HandleBestow(Session session, params string[] parameters)
@@ -115,7 +115,7 @@ namespace ACE.Server.Command.Handlers
         }
 
         // remove <name>
-        [CommandHandler("remove", AccessLevel.Advocate, CommandHandlerFlag.RequiresWorld, 1,
+        [CommandHandler("remove", AccessLevel.Admin, CommandHandlerFlag.RequiresWorld, 1,
             "Removes the specified character from the Advocate ranks.",
             "<character name>\nAdvocates can remove Advocate status for any Advocate of lower level than their own.")]
         public static void HandleRemove(Session session, params string[] parameters)
