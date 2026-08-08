@@ -28,18 +28,36 @@ namespace ACE.Server.WorldObjects
         public virtual void SerializeUpdateObject(BinaryWriter writer, bool adminvision = false, bool changenodraw = false)
         {
             // content of these 2 is the same? TODO: Validate that?
-            SerializeCreateObject(writer, false, adminvision, changenodraw);
+            SerializeCreateObjectInternal(writer, false, adminvision, changenodraw);
         }
 
-        public virtual void SerializeCreateObject(BinaryWriter writer, bool adminvision = false, bool changenodraw = false)
+        /// <summary>
+        /// Shadowgain 041: <paramref name="useBaseName"/> writes the name WITHOUT the progression
+        /// marker, and is passed true by exactly one caller - <see cref="Player.SendSelf"/>.
+        ///
+        /// Decal plugins key their per-character config on the name the client holds for ITSELF.
+        /// VTank in particular stores a `Server_Character.cdf` whose third line is the loot profile,
+        /// so a leading `† ` makes it look up a config that was never created and it silently loots
+        /// nothing. Handing the owner their own clean name fixes every such plugin at once, while
+        /// everyone ELSE still receives the marked name and keeps seeing the dagger.
+        ///
+        /// Default is false, so the broadcast path is byte-for-byte what it was before.
+        /// </summary>
+        public virtual void SerializeCreateObject(BinaryWriter writer, bool adminvision = false, bool changenodraw = false, bool useBaseName = false)
         {
-            SerializeCreateObject(writer, false, adminvision, changenodraw);
+            SerializeCreateObjectInternal(writer, false, adminvision, changenodraw, useBaseName);
         }
 
         public virtual void SerializeGameDataOnly(BinaryWriter writer, bool adminvision = false)
         {
-            SerializeCreateObject(writer, true, adminvision, false);
+            SerializeCreateObjectInternal(writer, true, adminvision, false);
         }
+
+        /// <summary>
+        /// The name as it goes on the wire. Overridden by Player so the owner's own client can be
+        /// handed an unmarked name; every other object and every other recipient gets Name.
+        /// </summary>
+        protected virtual string GetSerializedName(bool useBaseName) => Name;
 
         /// <summary>
         /// This is the function used for the GameMessage.ObjDescEvent
@@ -53,7 +71,7 @@ namespace ACE.Server.WorldObjects
             writer.Write(Sequences.GetNextSequence(SequenceType.ObjectVisualDesc));
         }
 
-        private void SerializeCreateObject(BinaryWriter writer, bool gamedataonly, bool adminvision = false, bool changenodraw = false)
+        private void SerializeCreateObjectInternal(BinaryWriter writer, bool gamedataonly, bool adminvision = false, bool changenodraw = false, bool useBaseName = false)
         {
             writer.WriteGuid(Guid);
 
@@ -74,7 +92,7 @@ namespace ACE.Server.WorldObjects
                 objDescriptionFlags &= ~ObjectDescriptionFlag.UiHidden;
 
             writer.Write((uint)weenieFlags);
-            writer.WriteString16L(Name ?? string.Empty);
+            writer.WriteString16L(GetSerializedName(useBaseName) ?? string.Empty);
             writer.WritePackedDword(WeenieClassId);
             writer.WritePackedDwordOfKnownType(IconId, 0x6000000);
             writer.Write((uint)ItemType);

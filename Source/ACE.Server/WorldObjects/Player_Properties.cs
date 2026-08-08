@@ -50,6 +50,33 @@ namespace ACE.Server.WorldObjects
             set => base.Name = value.TrimStart('+', '*', '†', '[', ']', ' ');
         }
 
+        /// <summary>
+        /// Shadowgain 041: the name written into THIS player's own ObjectCreate.
+        ///
+        /// Decal plugins key their per-character config on the name the client holds for itself.
+        /// VTank stores a `Server_Character.cdf` whose third line is the loot profile, so with a
+        /// leading `† ` it looks up a config that never existed and quietly loots nothing - the
+        /// exact symptom Chris isolated by toggling /masochist with an unchanged profile.
+        ///
+        /// The admin `+` is deliberately KEPT. It is stock AC behaviour that predates us, VTank
+        /// users already live with it (there are `Server_+Character.cdf` files in the wild), and
+        /// quietly removing it would change what an admin's own client reports about itself. Only
+        /// the marker we invented is dropped, and only for the owner - every other player still
+        /// receives the marked name, so the dagger stays in their selection and appraisal panels.
+        ///
+        /// Precedence mirrors the Name getter above exactly, so the two cannot drift apart.
+        /// </summary>
+        protected override string GetSerializedName(bool useBaseName)
+        {
+            if (!useBaseName)
+                return Name;
+
+            if (IsPlussed && CloakStatus < CloakStatus.Player)
+                return "+" + base.Name;
+
+            return base.Name;
+        }
+
         public string GetNameWithSuffix()
         {
             if (!IsOlthoiPlayer)

@@ -232,7 +232,12 @@ namespace ACE.Server.WorldObjects
 
             // Player objects don't get a placement
             Placement = null;
-            Session.Network.EnqueueSend(new GameMessagePlayerCreate(Guid), new GameMessageCreateObject(this));
+            // Shadowgain 041: useBaseName - the owner's own client gets the UNMARKED name, so Decal
+            // plugins key their per-character config on the real one. This is the ONLY self-send of
+            // a player's own object in the codebase: the two other GameMessageCreateObject(this)
+            // calls are EnqueueBroadcast(false, ...), which skips self, and TrackObject() returns
+            // early on `worldObject.Guid == Guid`. Other players are unaffected and still see the †.
+            Session.Network.EnqueueSend(new GameMessagePlayerCreate(Guid), new GameMessageCreateObject(this, useBaseName: true));
 
             SendInventoryAndWieldedItems();
 
