@@ -524,8 +524,19 @@ namespace ACE.Server.WorldObjects
             {
                 if (!(Generator != null && Generator.Guid == killer.Guid) && Guid != killer.Guid)
                 {
+                    // vtank requires + to be stripped for regex matching (upstream ACE).
+                    //
+                    // Shadowgain 041: the progression marker has to come off for exactly the same
+                    // reason, and it became load-bearing the moment 041 landed. VTank's "Mine only"
+                    // decides corpse ownership by comparing THIS string against the name the client
+                    // holds for itself - and 041 gives the owner a CLEAN name. Leave the marker here
+                    // and every corpse reads "Killed by † Foo" against a client that knows itself as
+                    // "Foo", so nothing ever matches and the character loots nothing.
+                    //
+                    // Same character set the Player.Name setter strips (Player_Properties.cs), so
+                    // the two cannot drift apart if the marker dial changes to the ASCII fallback.
                     if (!string.IsNullOrWhiteSpace(killer.Name))
-                        killerName = killer.Name.TrimStart('+');  // vtank requires + to be stripped for regex matching.
+                        killerName = killer.Name.TrimStart('+', '*', '†', '[', ']', ' ');
 
                     corpse.KillerId = killer.Guid.Full;
 
