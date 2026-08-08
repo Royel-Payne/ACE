@@ -361,7 +361,8 @@ async def account_qualifies(account_name: str, state: "State" = None) -> tuple:
     revoke their role mid-session. That is the opposite of what the gate is for.
 
     (2) fixes it because ACE auto-saves a connected player every `player_save_interval`
-    seconds (default 300), which rewrites these rows while they are still online:
+    seconds - a live dial, 60 on this server, not the compiled default of 300 - which
+    rewrites these rows while the player is still online:
 
         Age             PropertyInt   125   - total seconds CONNECTED
         TotalExperience PropertyInt64 1     - total XP EARNED
