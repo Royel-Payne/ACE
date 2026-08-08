@@ -91,14 +91,19 @@ fi
 # landblocks and objects are being simulated. Ten players in one dungeon is cheap;
 # ten scattered across Dereth is not. So record objects/landblocks, not just heads.
 ONLINE=null; LANDBLOCKS=null; OBJECTS=null; CREATURES=null
+# 043: did the world actually ANSWER this run? "The container exists" is not the same claim.
+# During a graceful drain docker still reports the container Up, so a panel driven off
+# `docker ps` alone honestly reads Online for the whole shutdown. A successful serverstatus
+# is a liveness probe: if ACE cannot answer its own console it is not serving anyone.
+SERVING=false
 if [ "$UP" = true ]; then
-  MARK=$(docker logs ace-server 2>&1 | wc -l)
+  MARK=$(timeout -s KILL 10 docker logs ace-server 2>&1 | wc -l || echo 0)
   echo "serverstatus" | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
   sleep 2
-  SS=$(docker logs ace-server 2>&1 | tail -n +$((MARK+1)))
+  SS=$(timeout -s KILL 10 docker logs ace-server 2>&1 | tail -n +$((MARK+1)) || true)
 
   N=$(printf '%s' "$SS" | grep -oE '[0-9]+ players online' | tail -1 | grep -oE '^[0-9]+' || true)
-  [ -n "$N" ] && ONLINE=$N
+  if [ -n "$N" ]; then ONLINE=$N; SERVING=true; fi
 
   L=$(printf '%s' "$SS" | grep -oE 'Landblocks: [0-9]+ active' | tail -1 | grep -oE '[0-9]+' || true)
   [ -n "$L" ] && LANDBLOCKS=$L
@@ -115,19 +120,55 @@ fi
 # and landblock-group ticking do parallelise (both enabled here), so the second core is
 # doing real work. ACE's own guidance: 2 threads/4GB serves 1-10 players, 4 threads/8GB
 # serves 11-49 - these numbers are what decide when to move up.
-CPU_ACE=$(docker stats --no-stream --format '{{.Name}} {{.CPUPerc}}' 2>/dev/null | awk '/ace-server/{gsub(/%/,"",$2); print $2}')
-CPU_DB=$(docker stats --no-stream --format '{{.Name}} {{.CPUPerc}}' 2>/dev/null | awk '/ace-db/{gsub(/%/,"",$2); print $2}')
-MEM_ACE=$(docker stats --no-stream --format '{{.Name}} {{.MemUsage}}' 2>/dev/null | awk '/ace-server/{print $2}' | sed 's/MiB//')
+# 043: ONE `docker stats` call, with a timeout, instead of three without.
+#
+# `docker stats --no-stream` blocks while the daemon is stopping a container - which is
+# exactly when this script most needs to finish and report Offline. Three untimed calls
+# meant a stopping server could stall the run past its own 15s timer, leaving status.json
+# stale at the last "Online" - the panel then lied for as long as the daemon was busy.
+# Collapsing to one call also cuts ~2/3 of the runtime on every normal run.
+STATS=$(timeout -s KILL 10 docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}' 2>/dev/null || true)
+CPU_ACE=$(printf '%s\n' "$STATS" | awk -F'|' '/^ace-server\|/{gsub(/%/,"",$2); print $2}' | head -1)
+CPU_DB=$(printf '%s\n' "$STATS"  | awk -F'|' '/^ace-db\|/{gsub(/%/,"",$2); print $2}'     | head -1)
+MEM_ACE=$(printf '%s\n' "$STATS" | awk -F'|' '/^ace-server\|/{split($3,a," "); print a[1]}' | head -1 | sed 's/MiB$//')
 LOAD1=$(awk '{print $1}' /proc/loadavg)
 MEM_USED=$(free -m | awk '/Mem:/{print $3}')
 MEM_AVAIL=$(free -m | awk '/Mem:/{print $7}')
 MEM_TOTAL=$(free -m | awk '/Mem:/{print $2}')
 SWAP_USED=$(free -m | awk '/Swap:/{print $3}')
-[ -z "$CPU_ACE" ] && CPU_ACE=null
-[ -z "$CPU_DB" ] && CPU_DB=null
-[ -z "$MEM_ACE" ] && MEM_ACE=null
 
-WORLD=$(docker logs ace-server 2>&1 | grep -c "World is now open" || true)
+# Emit `null` for anything that is not a bare number. These land UNQUOTED in status.json, so
+# one unexpected value corrupts the entire feed and the page shows "unreachable" - a much
+# worse failure than a missing metric. Docker switches MemUsage to GiB above 1024MiB, which
+# would have written `1.2GiB` straight into a JSON number field; ACE has simply never been
+# big enough to hit it.
+for v in CPU_ACE CPU_DB MEM_ACE LOAD1 MEM_USED MEM_AVAIL MEM_TOTAL SWAP_USED; do
+  eval "val=\$$v"
+  case "$val" in
+    ''|*[!0-9.]*) eval "$v=null" ;;
+  esac
+done
+
+# 043: worldOpened now means "the world is serving RIGHT NOW", not "the world opened at
+# some point this container's life".
+#
+# It used to be a grep -c over the whole log, so once the marker appeared it stayed >0 until
+# the container restarted and the log reset. During a graceful drain that kept reading
+# truthy, which is why honourroll.html's `d.worldOpened` gate could not catch a draining
+# server no matter what the page did - the exporter was answering a different question.
+#
+# The log check is KEPT and ANDed rather than replaced: it is the cheap proof the world ever
+# came up, and SERVING is the proof it is still answering. Deliberately NOT using
+# `docker logs --tail` here - on a long-uptime server the marker scrolls out of any bounded
+# window and the panel would report Offline for a perfectly healthy world.
+WORLD_EVER=0
+if [ "$UP" = true ]; then
+  WORLD_EVER=$(timeout -s KILL 10 docker logs ace-server 2>&1 | grep -c "World is now open" || true)
+fi
+WORLD=false
+if [ "$UP" = true ] && [ "${WORLD_EVER:-0}" -gt 0 ] && [ "$SERVING" = true ]; then
+  WORLD=true
+fi
 
 # --- uptime, for the restart-cadence question --------------------------------
 # Seconds since the ace-server container started, straight from Docker rather than
@@ -167,7 +208,8 @@ NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 cat > "$OUT/.status.json.tmp" <<JSON
 {
   "generated": "$NOW",
-  "online": $UP,
+  "online": $WORLD,
+  "containerUp": $UP,
   "playersOnline": $ONLINE,
   "uptime": "$UPTIME",
   "worldOpened": $WORLD,
