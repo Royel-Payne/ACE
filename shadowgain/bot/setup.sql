@@ -14,9 +14,16 @@
 
 CREATE USER IF NOT EXISTS 'sgbot'@'%' IDENTIFIED BY 'REPLACE_ME';
 
--- Character name, level (biota_properties_int type 25) and last_Login_Timestamp.
-GRANT SELECT ON ace_shard.`character`            TO 'sgbot'@'%';
-GRANT SELECT ON ace_shard.biota_properties_int   TO 'sgbot'@'%';
+-- Character name, last_Login_Timestamp, and the two play counters the activity gate
+-- reads: level + Age from biota_properties_int (types 25 and 125), TotalExperience from
+-- biota_properties_int64 (type 1).
+--
+-- int64 is a SEPARATE grant because it is a separate table, and forgetting it does not
+-- fail at deploy time - it fails inside the daily sweep, hours later, as
+-- "SELECT command denied". Which is exactly how it was found.
+GRANT SELECT ON ace_shard.`character`             TO 'sgbot'@'%';
+GRANT SELECT ON ace_shard.biota_properties_int    TO 'sgbot'@'%';
+GRANT SELECT ON ace_shard.biota_properties_int64  TO 'sgbot'@'%';
 
 -- accountId -> accountName only. The account table also holds passwordHash and
 -- passwordSalt, so this grant is column-scoped rather than table-wide: the bot can map
