@@ -1,0 +1,35 @@
+using System;
+using System.IO;
+using System.Text;
+using ACE.DatLoader;
+
+// Exports the four XP cost tables to a small TSV so downstream tools never need
+// the 927 MB dat - which the running AC client holds open.
+
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+var datDir = args.Length > 0 ? args[0] : @"C:\Games\Asheron's Call";
+var outPath = args.Length > 1 ? args[1] : "tables.tsv";
+
+DatManager.Initialize(datDir, true, false);
+var xp = DatManager.PortalDat.XpTable;
+
+using var w = new StreamWriter(outPath);
+w.WriteLine("# Shadowgain: XP cost tables extracted from client_portal.dat (0x0E000018).");
+w.WriteLine("# table\trank\ttotalXpToReach");
+void Dump(string name, System.Collections.Generic.IEnumerable<uint> list)
+{
+    var i = 0;
+    foreach (var v in list) w.WriteLine($"{name}\t{i++}\t{v}");
+}
+Dump("trained", xp.TrainedSkillXpList);
+Dump("specialized", xp.SpecializedSkillXpList);
+Dump("attribute", xp.AttributeXpList);
+Dump("vital", xp.VitalXpList);
+{
+    var i = 0;
+    foreach (var v in xp.CharacterLevelXPList) w.WriteLine($"level\t{i++}\t{v}");
+}
+
+Console.WriteLine($"wrote {outPath}: trained={xp.TrainedSkillXpList.Count} spec={xp.SpecializedSkillXpList.Count} " +
+                  $"attribute={xp.AttributeXpList.Count} vital={xp.VitalXpList.Count} level={xp.CharacterLevelXPList.Count}");
