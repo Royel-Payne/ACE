@@ -66,6 +66,15 @@ BUGS_CHANNEL_ID  = _int("DISCORD_BUGS_CHANNEL_ID")
 # alone, so the audit trail is exempt by construction rather than by a special case.
 AUDIT_CHANNEL_ID = _int("DISCORD_AUDIT_CHANNEL_ID")
 VERIFIED_ROLE_ID = _int("DISCORD_VERIFIED_ROLE_ID")
+# The gold role. Earned by reaching the level ceiling on the HARD lane and never given any
+# other way - see account_is_ascendant() for why the two extra conditions matter.
+ASCENDANT_ROLE_ID = _int("DISCORD_ASCENDANT_ROLE_ID")
+ASCENDANT_LEVEL   = _int("SG_ASCENDANT_LEVEL", 275)
+# Sanity floor, not a gate. The real conditions are level + hard lane; this exists only to
+# catch a BOOSTED character. The two characters sitting at 275 and 999 today have 1.5 and 1.9
+# hours played - that is the signature. A genuine climb to the ceiling on this server is
+# hundreds of hours, so this can never fail a real player.
+ASCENDANT_MIN_HOURS = _int("SG_ASCENDANT_MIN_HOURS", 100)
 
 LOG_DIR    = os.environ.get("SG_LOG_DIR", "/opt/ACE/Logs")
 STATE_PATH = os.environ.get("SG_STATE_PATH", "/opt/ACE/bot-state.json")
@@ -355,6 +364,44 @@ async def best_character(account_name: str):
         LIMIT 1
     """, (account_name,))
     return rows[0] if rows else None
+
+
+async def account_is_ascendant(account_name: str) -> bool:
+    """
+    Has this account earned gold?
+
+    Three conditions, and the last two are the point:
+
+      1. a character at or past ASCENDANT_LEVEL (275, retail's ceiling);
+      2. on the HARD lane - no ShadowgainForfeitedMarker (PropertyBool 9102). Gold means
+         "earned the long road". A fast-lane character reaching the cap has not, which is
+         exactly why the honour roll refuses them too;
+      3. NOT on a staff account (accessLevel < 4) - the same filter the honour roll uses,
+         because hand-boosted test characters sit at 275 and 999 right now and would
+         otherwise claim it on the first sweep;
+      4. with real playtime behind it (Age >= ASCENDANT_MIN_HOURS). Condition 3 only catches
+         boosts on STAFF accounts - a character boosted on a Player account would pass it.
+         Playtime is what actually distinguishes earned from granted: the two boosted
+         characters today show 1.5 and 1.9 hours at levels 275 and 999.
+
+    Judged per ACCOUNT, like every other gate here.
+    """
+    rows = await asyncio.to_thread(_query, """
+        SELECT 1
+        FROM `character` c
+        JOIN ace_auth.account a ON a.accountId = c.account_Id
+        WHERE c.is_Deleted = 0 AND c.delete_Time = 0
+          AND a.accountName = %s
+          AND a.accessLevel < 4
+          AND COALESCE((SELECT value FROM biota_properties_int
+                        WHERE object_Id = c.id AND type = 25), 1) >= %s
+          AND COALESCE((SELECT value FROM biota_properties_int
+                        WHERE object_Id = c.id AND type = 125), 0) >= %s
+          AND NOT EXISTS (SELECT 1 FROM biota_properties_bool
+                          WHERE object_Id = c.id AND type = 9102 AND value = 1)
+        LIMIT 1
+    """, (account_name, ASCENDANT_LEVEL, ASCENDANT_MIN_HOURS * 3600))
+    return bool(rows)
 
 
 async def account_qualifies(account_name: str, state: "State" = None) -> tuple:
@@ -986,6 +1033,25 @@ class ShadowgainBot(discord.Client):
                         await member.remove_roles(role, reason=f"Shadowgain sweep: {reason}")
                         await self.dm(member, f"Your Shadowgain access has lapsed: {reason}. "
                                               f"Log in and run /link again to restore it.")
+
+                    # Gold. Granted once and NEVER revoked - it is a ratchet like the
+                    # dagger itself: an achievement, not a status that can lapse. That is
+                    # also why it sits outside the qualifies/exempt logic above.
+                    if ASCENDANT_ROLE_ID:
+                        gold = guild.get_role(ASCENDANT_ROLE_ID)
+                        if gold is not None and gold not in member.roles:
+                            try:
+                                if await account_is_ascendant(account):
+                                    await member.add_roles(gold, reason="Shadowgain: reached the ceiling on the hard road")
+                                    print(f"ASCENDANT: {member} ({account})", flush=True)
+                                    ch = self.get_channel(RELAY_CHANNEL_ID)
+                                    if ch is not None:
+                                        await ch.send(
+                                            f"**{member.display_name}** reached level {ASCENDANT_LEVEL} "
+                                            f"on the hard road. That is the whole climb.",
+                                            allowed_mentions=discord.AllowedMentions.none())
+                            except Exception as e:
+                                print(f"WARN: ascendant check failed for {account}: {e}", flush=True)
 
                 # Backstop for on_member_update: catch any Verified Player grant made while
                 # the bot was down, when the listener could not fire.

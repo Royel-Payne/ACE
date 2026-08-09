@@ -24,10 +24,15 @@ CREATE USER IF NOT EXISTS 'sgbot'@'%' IDENTIFIED BY 'REPLACE_ME';
 GRANT SELECT ON ace_shard.`character`             TO 'sgbot'@'%';
 GRANT SELECT ON ace_shard.biota_properties_int    TO 'sgbot'@'%';
 GRANT SELECT ON ace_shard.biota_properties_int64  TO 'sgbot'@'%';
+-- The hard-lane marker (ShadowgainForfeitedMarker, PropertyBool 9102), read by the
+-- Ascendant check so a fast-lane character can never claim the gold role.
+GRANT SELECT ON ace_shard.biota_properties_bool   TO 'sgbot'@'%';
 
 -- accountId -> accountName only. The account table also holds passwordHash and
 -- passwordSalt, so this grant is column-scoped rather than table-wide: the bot can map
 -- an id to a name and can not read a credential even by accident.
-GRANT SELECT (accountId, accountName) ON ace_auth.account TO 'sgbot'@'%';
+-- accessLevel joins the column scope so staff accounts can be excluded from the honour-style
+-- checks. passwordHash and passwordSalt remain unreadable.
+GRANT SELECT (accountId, accountName, accessLevel) ON ace_auth.account TO 'sgbot'@'%';
 
 FLUSH PRIVILEGES;

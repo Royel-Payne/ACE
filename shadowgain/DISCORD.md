@@ -427,15 +427,16 @@ permissions** — checking the overwrite you just wrote proves only that you wro
 | `Shadowgain` | — | no | the bot. Administrator, **must stay top of the list** |
 | `Envoy` | `#4fd6c6` arcane | **yes** | Greylock. Renamed from `admin`; see the permission model above |
 | `Advocate` | `#3aa094` dim teal | **yes** | moderation helpers. Same colour family as Envoy, one rung down |
+| `Ascendant` | `#d8ac52` **gold** | **yes** | the level ceiling, reached on the hard lane. **No permissions at all** — a badge, not power |
 | `MEE6` / `AC Support Bot` | `#7f8b9c` muted | no | managed app roles — **their names cannot be changed by anyone**, including the owner |
 | `Member` | `#7f8b9c` muted | no | baseline |
 | `Verified Player` | `#57d98a` green | no | earned via `/verify`. Green = passed the gate |
 | `Bots` | `#8f7bd6` violet | **yes** | grouping only, no permissions. Hoisted so bots sit in their own member-list section |
 
 Colours come from the site palette (`landing/index.html`): `--arcane`, `--green`, `--violet`,
-`--muted`. **`--gold` (`#d8ac52`) is deliberately unused here** — on this server gold means the
-honour roll and the `†`, i.e. *earned the long road*. Spending it on a staff role would dilute
-the only thing it signals.
+`--muted`. **`--gold` (`#d8ac52`) is reserved for `Ascendant` and nothing else** — on this server
+gold means the honour roll and the `†`, i.e. *earned the long road*. It was deliberately held
+unused until there was something that had actually earned it.
 
 **Deleted 2026-08-08:** `community manager` (duplicated `Envoy` while *exceeding* it with
 `manage_webhooks`, and was assignable by Greylock — so he could have handed someone ban
@@ -535,3 +536,33 @@ what you want. But a false positive would then **silently drop a legitimate rela
 in-game speaker would never know their message did not arrive. Whether Discord applies AutoMod to
 bot messages was not verified. **If game chat ever goes missing from `#chat`, check this first** -
 exempting the `Shadowgain` role from the profanity rule is the fix.
+
+---
+
+## Ascendant — the gold role
+
+Granted by the daily sweep to any linked account with a character that has **reached the level
+ceiling on the hard lane, legitimately**. **Never revoked** — a ratchet like the `†` itself. It is
+an achievement, not a status that can lapse, which is why it sits outside the activity gate
+entirely.
+
+**Zero permissions.** It is a badge. Giving it power would make it something to want for the
+wrong reason.
+
+Four conditions, all required (`account_is_ascendant`):
+
+| # | condition | why |
+|---|---|---|
+| 1 | level >= `SG_ASCENDANT_LEVEL` (275) | retail's ceiling |
+| 2 | **hard lane** — no `ShadowgainForfeitedMarker` (PropertyBool 9102) | gold means *earned the long road*; a fast-lane character has not, which is why the honour roll refuses them too |
+| 3 | **non-staff account** (`accessLevel < 4`) | same filter the honour roll uses |
+| 4 | **>= `SG_ASCENDANT_MIN_HOURS` (100) played** (`Age`, PropertyInt 125) | condition 3 only catches boosts on STAFF accounts — a character boosted on a *Player* account passes it. Playtime is what actually separates earned from granted |
+
+**Why condition 4 exists.** At the time this was built, the two characters at or above the ceiling
+showed **1.5 and 1.9 hours played** at levels 275 and 999. That is the signature of a boost, and
+the staff filter caught those two only because they happened to be staff. A genuine climb here is
+hundreds of hours, so the floor can never fail a real player — it is a sanity check, not a gate.
+
+Announced in the relay channel when earned. Requires two read-only grants the bot did not
+previously have: `ace_shard.biota_properties_bool` (the lane marker) and `accessLevel` added to
+the column scope on `ace_auth.account`. **`passwordHash` and `passwordSalt` remain unreadable.**
