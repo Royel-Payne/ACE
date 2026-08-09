@@ -232,16 +232,50 @@ namespace ACE.Server.Managers
         }
 
         /// <summary>
+        /// Shadowgain: strip any leading decoration from a character name before comparing.
+        ///
+        /// Stock ACE decorates an admin's name with a leading '+' and compensates in exactly one
+        /// place - each name lookup built `"+" + name` and matched either form. Shadowgain 021/023
+        /// added a SECOND decoration, the progression marker, applied the same way in the
+        /// Player.Name getter. Nothing taught these lookups about it, so for any marked character
+        /// `Player.Name` was "† Black Breath" while every caller passed "Black Breath", and the
+        /// match silently failed.
+        ///
+        /// That broke far more than it looked like. GetOnlinePlayer(string) backs `teleto`,
+        /// `teletome`, `telereturn`, `gag`, `boot` and friends, so EVERY admin command taking a
+        /// player name was inoperable against any hard-lane character - the exact population most
+        /// likely to need a moderator. It surfaced as "Player Black Breath was not found."
+        ///
+        /// Stripping to the first letter or digit rather than naming the characters is deliberate:
+        /// progression_marker_prefix is a live dial, so the decoration is whatever it is set to
+        /// right now (the dagger, or the '[*] ' ASCII fallback, or anything Chris types next). A
+        /// character class cannot go stale when the dial changes. An AC name always begins with a
+        /// letter, so anything before the first alphanumeric is decoration by definition, and this
+        /// is a strict superset of the '+' handling it replaces.
+        /// </summary>
+        internal static string StripNameDecoration(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return name;
+
+            var i = 0;
+            while (i < name.Length && !char.IsLetterOrDigit(name[i]))
+                i++;
+
+            return i == 0 ? name : name.Substring(i);
+        }
+
+        /// <summary>
         /// This will return null of the name was not found.
         /// </summary>
         public static OfflinePlayer GetOfflinePlayer(string name)
         {
-            var admin = "+" + name;
+            var bare = StripNameDecoration(name);
 
             playersLock.EnterReadLock();
             try
             {
-                var offlinePlayer = offlinePlayers.Values.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(admin, StringComparison.OrdinalIgnoreCase));
+                var offlinePlayer = offlinePlayers.Values.FirstOrDefault(p => StripNameDecoration(p.Name).Equals(bare, StringComparison.OrdinalIgnoreCase));
 
                 if (offlinePlayer != null)
                     return offlinePlayer;
@@ -357,12 +391,12 @@ namespace ACE.Server.Managers
         /// </summary>
         public static Player GetOnlinePlayer(string name)
         {
-            var admin = "+" + name;
+            var bare = StripNameDecoration(name);
 
             playersLock.EnterReadLock();
             try
             {
-                var onlinePlayer = onlinePlayers.Values.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(admin, StringComparison.OrdinalIgnoreCase));
+                var onlinePlayer = onlinePlayers.Values.FirstOrDefault(p => StripNameDecoration(p.Name).Equals(bare, StringComparison.OrdinalIgnoreCase));
 
                 if (onlinePlayer != null)
                     return onlinePlayer;
@@ -518,7 +552,7 @@ namespace ACE.Server.Managers
             playersLock.EnterReadLock();
             try
             {
-                playerNames.TryGetValue(name.TrimStart('+'), out var player);
+                playerNames.TryGetValue(StripNameDecoration(name), out var player);
 
                 isOnline = player != null && player is Player;
 

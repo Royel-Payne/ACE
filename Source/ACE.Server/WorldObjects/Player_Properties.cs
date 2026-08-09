@@ -45,9 +45,15 @@ namespace ACE.Server.WorldObjects
                 return base.Name;
             }
 
-            // '+' admin, '*' the original 021 marker, '†' the 023 dagger, '[' ']' the ASCII
-            // fallback, and the trailing space each of those carries.
-            set => base.Name = value.TrimStart('+', '*', '†', '[', ']', ' ');
+            // Strip whatever decoration is on the front, without naming the characters.
+            //
+            // This used to TrimStart a fixed set - '+', '*', the dagger, '[', ']', ' '. That set
+            // is a snapshot of the dials as they stood the day it was written:
+            // progression_marker_prefix is live-configurable precisely so the fallback is an
+            // in-game change, and the moment it is set to anything outside the list the marker
+            // starts persisting into the stored name. Sharing PlayerManager's helper keeps the
+            // read path and the write path on one definition of "decoration".
+            set => base.Name = ACE.Server.Managers.PlayerManager.StripNameDecoration(value);
         }
 
         /// <summary>
