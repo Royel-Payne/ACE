@@ -150,10 +150,10 @@
                  beside it spending 72px to say "today" six times over. The plugin now shows the
                  time only; the date it drops is recoverable from the audit trail if it is ever
                  needed, and these are newest-first. -->
-            <column progid="DecalControls.TextColumn" name="colHT"     fixedwidth="50" />
-            <column progid="DecalControls.TextColumn" name="colHD"     fixedwidth="134" />
-            <column progid="DecalControls.TextColumn" name="colHDelta" fixedwidth="70" />
-            <column progid="DecalControls.TextColumn" name="colHWho"   fixedwidth="54" />
+            <column progid="DecalControls.TextColumn" name="colHT"     fixedwidth="44" />
+            <column progid="DecalControls.TextColumn" name="colHD"     fixedwidth="140" />
+            <column progid="DecalControls.TextColumn" name="colHDelta" fixedwidth="68" />
+            <column progid="DecalControls.TextColumn" name="colHWho"   fixedwidth="56" />
           </control>
 
           <control progid="DecalControls.PushButton" name="btnRevert"   left="6"   top="228" width="116" height="22" text="Revert selected" />
