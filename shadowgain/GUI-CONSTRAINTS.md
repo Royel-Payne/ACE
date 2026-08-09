@@ -259,3 +259,36 @@ proven by that test command. The missing piece is only *selection and delivery*.
 
 **Design note:** include Portal Storm in the Admin tab of the mockup as a high-impact action with
 inline confirm, flagged as depending on the 055 build.
+
+---
+
+## Indoor POIs — not a blocker, and there is a better design (2026-08-09)
+
+Chris, on the 12 unreachable POIs: *"Marketplace has its own command, Town Network always required
+a portal... I bet there's a way to handle those indoor cells, surely we can portal inside a
+dungeon. Not a breaking issue right now."*
+
+**Partly corrected, and the conclusion is stronger than the premise.**
+
+* **There is no `/marketplace` or `/mp` command in this build** — checked every handler; the only
+  `mp` is a mana abbreviation inside a developer command. That is retail memory. It does not
+  matter: the Marketplace and Town Network are reached by **in-world portals and gems**, so
+  *players* get there normally. Only a GUI button cannot.
+* **Indoor teleport is entirely possible.** `teleloc` takes a **raw cell + x y z**, which is
+  exactly what all 12 indoor POIs already carry in the export data. It is a **tier** problem
+  (Developer), not a capability problem.
+
+### Recommended when this is revisited: `/sg-tele <poi>` at Sentinel
+
+Resolve the POI name **server-side** to its stored position and teleport. Strictly better than the
+`tele`-plus-map-coordinates route this document assumed:
+
+| | `tele` + coords (current plan) | `/sg-tele <poi>` |
+|---|---|---|
+| coverage | 50 of 62 (outdoor only) | **all 62**, indoor included |
+| `AdvocateLevel < 5` silent no-op | **hits it** | sidestepped entirely |
+| client-side maths | plugin does coordinate conversion | plugin sends a **name** |
+| `poi.tsv` | load-bearing — wrong coords = wrong teleport | demoted to a display list for the dropdown |
+
+Belongs with the 055-era work, where the tier decisions are made together. **Not blocking:** the
+50-POI dropdown works today.
