@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using ACE.Entity.Enum;
 using ACE.Server.Command;
@@ -154,9 +155,9 @@ namespace ACE.Server.Managers
                 sb.Append(",\"dial\":");
                 AppendJsonString(sb, dial);
                 sb.Append(",\"before\":");
-                AppendJsonString(sb, before);
+                AppendJsonString(sb, MaskAddresses(before));
                 sb.Append(",\"after\":");
-                AppendJsonString(sb, after);
+                AppendJsonString(sb, MaskAddresses(after));
                 sb.Append('}');
 
                 auditLog.Info(sb.ToString());
@@ -178,7 +179,7 @@ namespace ACE.Server.Managers
                 return "";
 
             if (!SensitiveArgs.TryGetValue(command, out var keep))
-                return string.Join(" ", parameters);
+                return MaskAddresses(string.Join(" ", parameters));
 
             var sb = new StringBuilder();
             for (var i = 0; i < parameters.Length; i++)
@@ -186,8 +187,51 @@ namespace ACE.Server.Managers
                 if (i > 0) sb.Append(' ');
                 sb.Append(i < keep ? parameters[i] : "***");
             }
-            return sb.ToString();
+            return MaskAddresses(sb.ToString());
         }
+
+        /// <summary>
+        /// Blank the middle of any IPv4 address, and any IPv6 address entirely.
+        ///
+        /// #audit is readable by every verified player and is retained forever, so an address
+        /// written into it is a durable disclosure of where someone lives, to an audience that
+        /// includes the person's peers rather than just the operator. The multibox commands
+        /// (044) put real addresses straight into command arguments, which is how this surfaced.
+        ///
+        /// Masked rather than removed: `72.x.x.79` still lets Chris tell two entries apart, match
+        /// one against a report, and see that a change happened - which is the entire job of the
+        /// trail. The octets that identify a subscriber are the ones dropped.
+        ///
+        /// Note this is defence in depth, not the primary answer: /sg-multibox deliberately takes
+        /// a CHARACTER NAME, so the normal path never types an address at all.
+        /// </summary>
+        private static string MaskAddresses(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            try
+            {
+                text = Ipv4.Replace(text, m => $"{m.Groups[1].Value}.x.x.{m.Groups[4].Value}");
+                text = Ipv6.Replace(text, "[ipv6 masked]");
+                return text;
+            }
+            catch (Exception)
+            {
+                // Never let a masking failure emit the unmasked original.
+                return "[redacted]";
+            }
+        }
+
+        private static readonly Regex Ipv4 = new Regex(
+            @"\b(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\b",
+            RegexOptions.Compiled);
+
+        // Deliberately blunt: anything with two or more colons among hex groups. An IPv6 address
+        // has no safe "keep the ends" form the way IPv4 does, so it goes entirely.
+        private static readonly Regex Ipv6 = new Regex(
+            @"\b(?=[0-9A-Fa-f:]*:[0-9A-Fa-f:]*:)[0-9A-Fa-f:]{3,}\b",
+            RegexOptions.Compiled);
 
         private static void AppendJsonString(StringBuilder sb, string value)
         {
