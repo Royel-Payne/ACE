@@ -710,6 +710,12 @@ namespace ShadowgainConsole
         // instead of racing.
         private bool pendingStatus = false;
 
+        // Whether a destructive command has actually been SENT, as opposed to merely armed.
+        // Cancel means two completely different things either side of that line, and conflating
+        // them is what made the Cancel button print "Cancelled." while the server shut down.
+        private bool shutdownFired = false;
+        private bool stormFired = false;
+
         private void Refresh()
         {
             roster.Clear();
@@ -1317,7 +1323,8 @@ namespace ShadowgainConsole
                 if (ArmOrConfirm("storm", "lblServer", "Storm this landblock - every other player here goes to their lifestone. Click Portal Storm again to confirm."))
                 {
                     Fire("/sg-portalstorm");
-                    SetText("lblServer", "Portal storm sent.");
+                    stormFired = true;
+                    SetText("lblServer", "Portal storm sent - it cannot be recalled.");
                 }
             }
             catch (Exception ex) { Util.LogError(ex); }
@@ -1326,7 +1333,21 @@ namespace ShadowgainConsole
         [MVControlEvent("btnStormNo", "Click")]
         private void btnStormNo_Click(object sender, MVControlEventArgs e)
         {
-            try { Disarm("Cancelled."); }
+            try
+            {
+                // A storm in flight genuinely cannot be recalled - it is an ActionChain already
+                // queued on the server, and there is no command to stop it. So say that, rather
+                // than printing "Cancelled." and letting the operator believe otherwise.
+                if (stormFired)
+                {
+                    stormFired = false;
+                    armed = null;
+                    SetText("lblServer", "Too late - the storm is already running.");
+                    return;
+                }
+
+                Disarm("Cancelled - no storm had been sent.");
+            }
             catch (Exception ex) { Util.LogError(ex); }
         }
 
@@ -1343,7 +1364,8 @@ namespace ShadowgainConsole
                         Fire("/set-shutdown-interval " + secs);
 
                     Fire("/shutdown");
-                    SetText("lblServer", "Shutdown initiated.");
+                    shutdownFired = true;
+                    SetText("lblServer", "Shutdown initiated. Cancel will abort it.");
                 }
             }
             catch (Exception ex) { Util.LogError(ex); }
@@ -1352,7 +1374,29 @@ namespace ShadowgainConsole
         [MVControlEvent("btnShutNo", "Click")]
         private void btnShutNo_Click(object sender, MVControlEventArgs e)
         {
-            try { Disarm("Cancelled."); }
+            try
+            {
+                // THE BUG THIS FIXES: Cancel used to call Disarm() and nothing else. Disarm only
+                // clears the plugin's own arm state, so once /shutdown had been sent the button
+                // printed "Cancelled." and sent NOTHING - while the server counted down and shut
+                // down underneath it. Chris found it by cancelling a shutdown that then happened.
+                //
+                // A confirmation control that reports success without acting is worse than no
+                // control: it is trusted precisely when it matters most.
+                if (shutdownFired)
+                {
+                    Fire("/cancel-shutdown");
+                    shutdownFired = false;
+                    armed = null;
+                    SetText("lblServer", "Cancel sent - watch chat for the server's confirmation.");
+                    return;
+                }
+
+                // Nothing was sent, so there is nothing to recall - just drop the arm. Firing
+                // /cancel-shutdown here would put a phantom entry in the audit trail for a
+                // shutdown that never started.
+                Disarm("Cancelled - no shutdown had been sent.");
+            }
             catch (Exception ex) { Util.LogError(ex); }
         }
 
