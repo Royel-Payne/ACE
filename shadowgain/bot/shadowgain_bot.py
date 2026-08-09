@@ -750,6 +750,56 @@ class ShadowgainBot(discord.Client):
             print(f"WARN: could not write inbound feed: {e}", flush=True)
             return False
 
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        """
+        Revoke a Verified Player grant the bot did not make.
+
+        Verified Player is the key to #chat, #bugs and #audit, and it is supposed to be
+        EARNED - /link plus /verify, level 10, active within ACTIVITY_HOURS - and taken back
+        by the daily sweep when someone lapses. But anyone with Manage Roles whose top role
+        outranks it can simply hand it out, and a hand-granted role has no entry in the link
+        table, so the sweep would never revoke it. Permanent access, outside the gate.
+
+        Discord's role hierarchy cannot fix this: positioning Verified Player above the mod
+        role stops him granting it, but he HOLDS that role, so it becomes his highest and he
+        can then assign the mod role itself - strictly worse. Enforcement has to live here.
+
+        Checked at grant time rather than only on the daily sweep, so the window where
+        unearned access exists is seconds instead of a day.
+
+        The bot's own grants are safe: handle_verify and /override both write the link to
+        state BEFORE calling add_roles, so by the time this fires there is a link to find.
+        """
+        if not VERIFIED_ROLE_ID:
+            return
+
+        role = after.guild.get_role(VERIFIED_ROLE_ID)
+        if role is None:
+            return
+
+        # Only react to a fresh grant, not to every nickname or presence change.
+        if role in before.roles or role not in after.roles:
+            return
+
+        if self.state.links.get(str(after.id)):
+            return                                  # earned it, or an admin /override
+
+        try:
+            await after.remove_roles(role, reason="Shadowgain: Verified Player is granted by /verify only")
+            print(f"revoked unearned Verified Player from {after}", flush=True)
+
+            # Surface it rather than silently undoing someone's action - if a mod is trying
+            # to help a player, they need to know why it did not stick.
+            ch = self.get_channel(AUDIT_CHANNEL_ID) if AUDIT_CHANNEL_ID else None
+            if ch is not None:
+                stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                await ch.send(
+                    f"`{stamp}` **bot** removed `Verified Player` from **{after}** — "
+                    f"granted outside `/verify`, so it was not earned. Have them run `/link`.",
+                    allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException as e:
+            print(f"WARN: could not revoke unearned Verified Player from {after}: {e}", flush=True)
+
     async def on_message(self, message: discord.Message):
         """
         Relay-channel messages -> game, when SG_READ_CHANNEL is on.
@@ -898,6 +948,7 @@ class ShadowgainBot(discord.Client):
                 continue
             try:
                 guild = self.get_guild(GUILD_ID)
+                g_owner_id = guild.owner_id if guild else None
                 role = guild.get_role(VERIFIED_ROLE_ID) if guild else None
                 if not role:
                     # Do NOT stamp last_sweep here - nothing was checked. Stamping would
@@ -935,6 +986,23 @@ class ShadowgainBot(discord.Client):
                         await member.remove_roles(role, reason=f"Shadowgain sweep: {reason}")
                         await self.dm(member, f"Your Shadowgain access has lapsed: {reason}. "
                                               f"Log in and run /link again to restore it.")
+
+                # Backstop for on_member_update: catch any Verified Player grant made while
+                # the bot was down, when the listener could not fire.
+                linked_ids = set(self.state.links.keys())
+                for member in list(role.members):
+                    # Never strip the server owner or an admin: they hold the role as
+                    # themselves, not as earned access, and Administrator already grants
+                    # everything it would have given them. Revoking it would be noise that
+                    # looks like a bug.
+                    if member.id == g_owner_id or member.guild_permissions.administrator:
+                        continue
+                    if str(member.id) not in linked_ids and not member.bot:
+                        try:
+                            await member.remove_roles(role, reason="Shadowgain sweep: Verified Player was never earned")
+                            print(f"sweep: removed unearned Verified Player from {member}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"WARN: could not remove unearned role from {member}: {e}", flush=True)
 
                 # Drop activity baselines for accounts nobody is linked to any more -
                 # /verify records one for every account it looks at, including the ones

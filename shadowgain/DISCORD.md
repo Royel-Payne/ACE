@@ -193,7 +193,7 @@ If the server is ever rebuilt, these are the manual pieces:
    above every human role. Two separate reasons, and the second is not obvious:
    - it cannot grant `Verified Player` from at or below that role's position;
    - **Administrator does NOT bypass role hierarchy.** A role can only be edited by someone
-     whose highest role is strictly above it — so with the bot below the `admin` role, it
+     whose highest role is strictly above it — so with the bot below the `Envoy` role, it
      could write channel overwrites for that role but could not edit the role itself. That
      is why the bot cannot edit its own role either, at any position.
 3. **Privileged intents** (dev portal → Bot → Privileged Gateway Intents):
@@ -339,7 +339,7 @@ Three principals, three different answers. All of these were verified by reading
 **effective** permissions, not by trusting the overwrite that was just written — see the
 verification trap in Troubleshooting.
 
-### Greylock (the `admin` role)
+### Greylock (the `Envoy` role)
 
 A trusted mod who is **not** the operator. He gets real power everywhere that is his, and
 none where the record lives.
@@ -351,9 +351,10 @@ none where the record lives.
 | `#rules-and-setup` | full control — **his** channel, though it sits inside a protected category |
 | `Welcome & Help` (`welcome`, `help`) | view + chat only |
 | `Game` (`chat`, `info`, `bugs`, `audit`) | chats in `#chat`; cannot alter or delete anything |
-| `#mee6-news` | **denied** — that is MEE6's only channel, and only Chris drives MEE6 |
+| `#mee6-news` | **denied** — MEE6's only channel, and only Chris drives MEE6 |
 
-The `admin` role has **no Administrator** and never did. It carries `manage_roles`,
+The `Envoy` role (renamed from `admin` on 2026-08-08 — the old name overstated it, and
+`Envoy` was a real player-facing rank in retail AC) has **no Administrator** and never did. It carries `manage_roles`,
 `manage_messages`, `kick`, `ban`, `mention_everyone`, `moderate_members` and (since
 2026-08-08) `manage_channels`.
 
@@ -416,3 +417,60 @@ it — so per-channel management can be handed out without any guild-level permi
 results. A verify pass once reported "STILL ABLE" on three channels that were in fact
 correctly locked. **Re-fetch channels after writing, then check the member's effective
 permissions** — checking the overwrite you just wrote proves only that you wrote it.
+
+---
+
+## Roles
+
+| role | colour | hoisted | notes |
+|---|---|---|---|
+| `Shadowgain` | — | no | the bot. Administrator, **must stay top of the list** |
+| `Envoy` | `#4fd6c6` arcane | **yes** | Greylock. Renamed from `admin`; see the permission model above |
+| `MEE6` / `AC Support Bot` | `#7f8b9c` muted | no | managed app roles — **their names cannot be changed by anyone**, including the owner |
+| `Member` | `#7f8b9c` muted | no | baseline |
+| `Verified Player` | `#57d98a` green | no | earned via `/verify`. Green = passed the gate |
+| `Bots` | `#8f7bd6` violet | **yes** | grouping only, no permissions. Hoisted so bots sit in their own member-list section |
+
+Colours come from the site palette (`landing/index.html`): `--arcane`, `--green`, `--violet`,
+`--muted`. **`--gold` (`#d8ac52`) is deliberately unused here** — on this server gold means the
+honour roll and the `†`, i.e. *earned the long road*. Spending it on a staff role would dilute
+the only thing it signals.
+
+**Deleted 2026-08-08:** `community manager` (duplicated `Envoy` while *exceeding* it with
+`manage_webhooks`, and was assignable by Greylock — so he could have handed someone ban
+powers) and `developers` (zero holders). `mention_everyone` was removed from `Member`, since a
+promoted stranger being able to ping everyone is a bad default on a public server.
+
+**Greylock's promotion ladder is `Member` and `Verified Player`** — neither carries a single
+elevated permission, so he can promote freely without being able to hand out anything that
+breaks a lock.
+
+---
+
+## Verified Player is enforced by the bot, not by Discord
+
+`Verified Player` is the key to `#chat`, `#bugs` and `#audit`, and it is meant to be **earned**:
+`/link` + `/verify`, level 10, active within `SG_ACTIVITY_HOURS`, revoked by the daily sweep
+when someone lapses.
+
+But anyone with `Manage Roles` whose top role outranks it can simply hand it out, and a
+hand-granted role has **no entry in the link table** — so the sweep, which only re-checks linked
+accounts, would never take it back. Permanent access, outside the gate.
+
+**Discord's role hierarchy cannot express the fix.** Positioning `Verified Player` above `Envoy`
+stops Greylock granting it — but he *holds* that role, so it becomes his highest and he can then
+assign `Envoy` itself. Strictly worse. This was tried and reverted.
+
+So enforcement lives in the bot:
+
+* **`on_member_update`** — a `Verified Player` grant with no link is removed within seconds, and
+  a note is posted to `#audit` explaining why, so a mod trying to help someone understands why
+  it did not stick.
+* **the daily sweep** — same check, as a backstop for grants made while the bot was down.
+* **the server owner and any Administrator are exempt** — they hold the role as themselves, not
+  as earned access, and revoking it would be noise that looks like a bug.
+
+The bot's own grants are safe: `handle_verify` and `/override` both write the link to state
+**before** calling `add_roles`, so by the time the listener fires there is a link to find.
+
+**Net effect: `/verify` is the only way to hold the role, regardless of who has what permission.**
