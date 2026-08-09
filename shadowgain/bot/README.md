@@ -124,10 +124,15 @@ These cannot be done over the API from here.
      inbound chat silently does nothing — the bot connects, logs no error, and drops every
      line. This is the single most likely cause of "inbound stopped working".
    - **Presence: off.** Unused.
-   - **Server Members: off.** Not needed. Every member lookup goes through
-     `resolve_member()`, which tries the cache and falls back to `fetch_member` — an API
-     call that works without the intent. Turning it on would make those lookups cheaper,
-     nothing more.
+   - **Server Members: ON** (enabled 2026-08-08), and requested by the bot only when
+     `SG_MEMBERS_INTENT=1`. Not required for normal operation — every member lookup goes
+     through `resolve_member()`, which falls back to a `fetch_member` REST call that needs
+     no intent. It buys two things: a populated member cache, so the daily sweep resolves
+     from memory instead of one HTTP call per linked account; and bulk enumeration, since
+     **discord.py refuses `fetch_members()` client-side** unless the intent is requested —
+     which is what makes "who actually holds this role?" audits possible.
+     The flag defaults **off** so a fresh deployment cannot crash-loop against a portal
+     toggle nobody set. Portal first, then the flag.
 
 3. **Invite the bot:**
    ```

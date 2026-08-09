@@ -100,6 +100,19 @@ CODE_TTL_SECONDS = _int("SG_CODE_TTL_SECONDS", 900)   # 15 minutes to type a cod
 # flag: portal toggle first, then this.
 READ_CHANNEL = os.environ.get("SG_READ_CHANNEL", "0").strip().lower() in ("1", "true", "yes")
 
+# SERVER MEMBERS privileged intent. Same portal-first rule as above, and the same crash-loop
+# risk if it is requested while switched off - hence the flag rather than a hard-coded True.
+#
+# The bot does not NEED it: every runtime lookup goes through resolve_member(), which falls
+# back to a single fetch_member REST call that works without any intent. What it buys is
+# (a) a populated member cache, so the daily sweep resolves from memory instead of one HTTP
+# call per linked account, and (b) bulk enumeration - discord.py refuses fetch_members()
+# client-side unless this is set, which is what makes "who actually holds this role?" audits
+# possible at all.
+#
+# Default OFF so a fresh deployment cannot crash-loop against a portal toggle nobody set.
+MEMBERS_INTENT = os.environ.get("SG_MEMBERS_INTENT", "0").strip().lower() in ("1", "true", "yes")
+
 # Rolling retention on the relay channel. Chat ages out so the channel is a live window,
 # not a searchable archive of everything ever said in game. 0 disables.
 #
@@ -444,6 +457,8 @@ class ShadowgainBot(discord.Client):
         intents = discord.Intents.default()
         if READ_CHANNEL:
             intents.message_content = True
+        if MEMBERS_INTENT:
+            intents.members = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.state = State.load(STATE_PATH)
