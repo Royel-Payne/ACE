@@ -25,7 +25,10 @@ SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o 
 
 # Everything meant to be publicly served. og.svg / discord-icon.svg are SOURCES for the
 # generated PNGs and are deliberately not shipped.
-DEFAULT_FILES=(index.html setup.html tuning.html honourroll.html
+# plugin.html is UNLISTED (noindex, not in the nav) but it is still a real page, so it
+# ships on a full deploy like any other. Leaving it out of this list would mean a future
+# edit plus a bare ./site-deploy.sh silently skips it.
+DEFAULT_FILES=(index.html setup.html tuning.html honourroll.html plugin.html
                favicon.svg og-image.png discord-icon-512.png)
 
 cd "$SRC"
