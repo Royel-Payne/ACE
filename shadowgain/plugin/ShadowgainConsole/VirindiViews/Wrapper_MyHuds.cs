@@ -100,6 +100,13 @@ namespace MyClasses.MetaViewWrappers.VirindiViewServiceHudControls
             myView.Icon = portalicon;
         }
 
+        public void SetIcon(System.Drawing.Bitmap bitmap)
+        {
+            // ACImage defines an implicit conversion from Bitmap, so this is the whole trick.
+            if (bitmap != null)
+                myView.Icon = bitmap;
+        }
+
         public string Title
         {
             get

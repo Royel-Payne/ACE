@@ -199,6 +199,17 @@ namespace MyClasses.MetaViewWrappers
         void SetIcon(int icon, int iconlibrary);
         void SetIcon(int portalicon);
 
+        /// <summary>
+        /// Shadowgain: set the title-bar icon from a bitmap instead of a DAT icon id.
+        ///
+        /// The int overloads pull from the client's own icon library, which is why the console
+        /// was wearing 8129 - an icon Virindi Item Tool also uses, so two unrelated windows looked
+        /// identical on the VVS bar. VVS itself never required that: ACImage has a Bitmap
+        /// constructor and an implicit conversion from one, so a plugin can supply its own art.
+        /// Only this wrapper's interface was missing the door.
+        /// </summary>
+        void SetIcon(System.Drawing.Bitmap bitmap);
+
         string Title { get; set; }
         bool Visible { get; set; }
 #if !VVS_WRAPPERS_PUBLIC

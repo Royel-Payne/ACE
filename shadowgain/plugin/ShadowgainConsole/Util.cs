@@ -46,12 +46,40 @@ namespace ShadowgainConsole
 		{
 			try
 			{
+				// A CONSTANT, not Globals.PluginName. The name is only set by Globals.Init, and
+				// the first trace call deliberately runs before it - so this used to build a path
+				// with an empty segment and quietly create a file literally called " trace.txt"
+				// in the user's Documents. The one line that mattered most, the very first, went
+				// somewhere nobody would look.
 				var path = Environment.GetFolderPath(Environment.SpecialFolder.Personal)
-					+ @"\Asheron's Call\" + Globals.PluginName + " trace.txt";
+					+ @"\Asheron's Call\ShadowgainConsole trace.txt";
+
+				// Roll at a quarter of a megabyte. The console fires a command a minute while its
+				// window is open, so an unattended client would grow this forever. One previous
+				// generation is kept, because the interesting part of a crash is usually the
+				// lines just BEFORE the roll.
+				try
+				{
+					var info = new FileInfo(path);
+
+					if (info.Exists && info.Length > 256 * 1024)
+					{
+						var previous = path + ".prev";
+
+						if (File.Exists(previous))
+							File.Delete(previous);
+
+						File.Move(path, previous);
+					}
+				}
+				catch
+				{
+					// A roll that fails must not cost us the log line itself.
+				}
 
 				using (var w = new StreamWriter(path, true))
 				{
-					w.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff") + "  " + message);
+					w.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + "  " + message);
 					w.Flush();
 				}
 			}

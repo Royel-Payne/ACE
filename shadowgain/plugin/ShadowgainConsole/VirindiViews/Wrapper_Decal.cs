@@ -81,6 +81,13 @@ namespace MyClasses.MetaViewWrappers.DecalControls
             //throw new Exception("The method or operation is not implemented.");
         }
 
+        public void SetIcon(System.Drawing.Bitmap bitmap)
+        {
+            // Decal's own view system has no equivalent. Silently ignored rather than thrown:
+            // this path is only reached when VVS is absent, and a missing icon is not a reason
+            // to take the plugin down.
+        }
+
         public string Title
         {
             get

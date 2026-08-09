@@ -64,6 +64,12 @@ if ($txt -notmatch 'ShadowgainConsole\.mainView\.xml') {
 if ($txt -notmatch 'DecalControls\.Notebook') {
     throw "view XML content missing from the assembly."
 }
+# Same discipline for the icon: without it the console silently falls back to DAT icon 8129,
+# which Virindi Item Tool also uses - so the window becomes indistinguishable from theirs on the
+# VVS bar. A cosmetic failure, but a silent one, which is the kind this project keeps paying for.
+if ($txt -notmatch 'ShadowgainConsole\.icon\.png') {
+    throw "icon.png is NOT embedded - the title-bar icon would collide with Virindi Item Tool."
+}
 
 $fs = [IO.File]::OpenRead($out); $br = New-Object IO.BinaryReader($fs)
 $fs.Position = 0x3C; $pe = $br.ReadInt32(); $fs.Position = $pe + 4

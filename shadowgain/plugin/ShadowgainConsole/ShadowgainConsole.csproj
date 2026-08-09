@@ -46,6 +46,10 @@
   <ItemGroup>
     <!-- MUST be an embedded resource. If it is not, the plugin loads but never appears in-game. -->
     <EmbeddedResource Include="mainView.xml" />
+    <!-- Title-bar icon. Embedded rather than shipped beside the DLL so it cannot go missing on
+         someone else's install - this is handed out as a zip, and poi.tsv already proves a file
+         can get separated from its binary. -->
+    <EmbeddedResource Include="icon.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

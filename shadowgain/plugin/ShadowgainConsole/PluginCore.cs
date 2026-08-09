@@ -96,8 +96,6 @@ namespace ShadowgainConsole
         private bool viewCreated = false;
 
         // Deferred startup: see CharacterFilter_LoginComplete for why nothing happens inline.
-        private int ticks = 0;
-        private int chatSeen = 0;
         private bool pendingInit = false;
         private DateTime loginAt = DateTime.MinValue;
         private static readonly TimeSpan SettleTime = TimeSpan.FromSeconds(8);
@@ -253,6 +251,8 @@ namespace ShadowgainConsole
                     viewCreated = true;
                     Util.Trace("  view created");
 
+                    ApplyIcon();
+
                     Util.WriteToChat(vvs
                         ? "console ready (Virindi views)."
                         : "VirindiViewService not detected - the window will not appear. Is VVS enabled?");
@@ -263,10 +263,75 @@ namespace ShadowgainConsole
                     Util.Trace("  poi loaded");
                 }
 
+                // serverstatus is Advocate-tier, so every tier that can open this console can
+                // fill its own status strip. Without this it read "status pending" until someone
+                // happened to click Refresh.
+                pendingStatus = true;
                 Refresh();
-                Util.Trace("DeferredInit end");
+                Util.Trace("view ready");
             }
             catch (Exception ex) { Util.LogError(ex); }
+        }
+
+        // Held for the window's lifetime. A Bitmap built over a MemoryStream keeps referencing
+        // that stream, and GDI+ will fault later if either is collected while the icon is still
+        // on screen - so both are fields, not locals.
+        private System.IO.MemoryStream iconStream;
+        private System.Drawing.Bitmap iconBitmap;
+
+        /// <summary>
+        /// Put our own art in the title bar instead of a DAT icon id.
+        ///
+        /// The view XML still declares icon="8129" as a fallback, and 8129 is also what Virindi
+        /// Item Tool wears - which is exactly why this exists. Two unrelated windows were
+        /// indistinguishable on the VVS bar. VVS never required a DAT icon: ACImage takes a
+        /// Bitmap, only this wrapper's IView was missing the overload.
+        /// </summary>
+        private void ApplyIcon()
+        {
+            try
+            {
+                var view = MVWireupHelper.GetDefaultView(this);
+
+                if (view == null)
+                    return;
+
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+
+                using (var stream = asm.GetManifestResourceStream("ShadowgainConsole.icon.png"))
+                {
+                    if (stream == null)
+                    {
+                        Util.Trace("icon.png is not embedded - keeping the DAT icon");
+                        return;
+                    }
+
+                    var buffer = new byte[stream.Length];
+                    var read = 0;
+
+                    while (read < buffer.Length)
+                    {
+                        var n = stream.Read(buffer, read, buffer.Length - read);
+
+                        if (n <= 0)
+                            break;
+
+                        read += n;
+                    }
+
+                    iconStream = new System.IO.MemoryStream(buffer);
+                    iconBitmap = new System.Drawing.Bitmap(iconStream);
+                }
+
+                view.SetIcon(iconBitmap);
+                Util.Trace("  icon applied");
+            }
+            catch (Exception ex)
+            {
+                // A missing or bad icon is cosmetic. Never let it stop the console loading.
+                Util.Trace("icon failed: " + ex.Message);
+                Util.LogError(ex);
+            }
         }
 
         /// <summary>Map the server's AccessLevel name onto the three surfaces the console draws.</summary>
@@ -388,12 +453,6 @@ namespace ShadowgainConsole
         {
             try
             {
-                if (chatSeen < 3)
-                {
-                    chatSeen++;
-                    Util.Trace("chat event " + chatSeen);
-                }
-
                 // ORDER MATTERS. `capturing` is a managed field and costs nothing to read;
                 // e.Text marshals a string out of the client's memory. Reading it first meant
                 // this plugin reached into native memory on EVERY chat line the client produced,
@@ -534,7 +593,19 @@ namespace ShadowgainConsole
             }
 
             if (was == Capture.Roster)
+            {
                 RedrawRoster();
+
+                if (pendingStatus)
+                {
+                    pendingStatus = false;
+                    BeginCapture(Capture.Status);
+                    Fire("/serverstatus");
+                }
+
+                return;
+            }
+
             else if (was == Capture.Status)
                 RedrawStatus();
             else if (was == Capture.Multibox)
@@ -551,6 +622,10 @@ namespace ShadowgainConsole
 
         // ------------------------------------------------------------------ refresh
 
+        // Set when a status poll should follow the roster, so the two captures take turns
+        // instead of racing.
+        private bool pendingStatus = false;
+
         private void Refresh()
         {
             roster.Clear();
@@ -562,12 +637,6 @@ namespace ShadowgainConsole
         {
             try
             {
-                if (ticks < 12)
-                {
-                    ticks++;
-                    Util.Trace("tick " + ticks);
-                }
-
                 // Deferred startup. SettleTime is generous on purpose: this runs once per
                 // login, the console is not urgent, and the failure it avoids closes the
                 // client outright.
@@ -1326,9 +1395,13 @@ namespace ShadowgainConsole
         {
             try
             {
+                // Chained, NOT fired together. Both replies are asynchronous, so setting the
+                // status capture here used to overwrite the roster capture before the roster
+                // reply had arrived - the roster lines were then fed to the status parser and
+                // discarded, and the panel never refreshed. The bug hid because the startup
+                // path calls Refresh() on its own.
+                pendingStatus = true;
                 Refresh();
-                BeginCapture(Capture.Status);
-                Fire("/serverstatus");
             }
             catch (Exception ex) { Util.LogError(ex); }
         }
