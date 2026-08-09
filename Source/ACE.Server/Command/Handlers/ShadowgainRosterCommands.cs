@@ -18,11 +18,15 @@ namespace ACE.Server.Command.Handlers
     ///   - ACE's own `listplayers` does return the full roster, but it is AccessLevel.Developer -
     ///     above Sentinel, so the mod tier cannot call it even after a promotion.
     ///
-    /// This is the bridge: the same answer, at Sentinel.
+    /// This is the bridge: the same answer, from Advocate up (names only below Sentinel).
     ///
     /// OUTPUT DELIBERATELY MIRRORS `listplayers` - `Name : AccountId` per line, then a total.
     /// The plugin then needs ONE parser for both, and an Admin using either command gets
     /// identical text. Do not "improve" the format without changing the plugin.
+    ///
+    /// Below Sentinel the account id is omitted and the line is just `Name`. The TERMINATOR is
+    /// deliberately identical in both cases - "Total connected Players: N" - so the plugin still
+    /// has one parser and one stop condition rather than a per-tier variant to keep in step.
     ///
     /// Not a security boundary: it only reads. Like every command above Player, it is captured
     /// by the 045 audit hook, so a roster pull is on the record.
@@ -56,15 +60,28 @@ namespace ACE.Server.Command.Handlers
             CommandHandlerHelper.WriteOutputInfo(session, $"AccessLevel: {level}", ChatMessageType.Broadcast);
         }
 
-        [CommandHandler("sg-roster", AccessLevel.Sentinel, CommandHandlerFlag.None, 0,
+        [CommandHandler("sg-roster", AccessLevel.Advocate, CommandHandlerFlag.None, 0,
             "List the players currently online.",
             "\n"
             + "  Same output as @listplayers, which is Developer-only - this is the moderator-tier\n"
-            + "  equivalent, so the admin GUI can show a full roster rather than only nearby players.")]
+            + "  equivalent, so the admin GUI can show a full roster rather than only nearby players.\n"
+            + "  Advocates get NAMES ONLY; account ids are Sentinel and above.")]
         public static void HandleRoster(Session session, params string[] parameters)
         {
             try
             {
+                // WHY ADVOCATE CAN CALL THIS AT ALL. 054 set it to Sentinel, but the console's
+                // Advocate tier draws a roster and its only verb - Go to - acts on a roster
+                // SELECTION. At Sentinel-only the tier was shipped functionally dead: the one
+                // button an Advocate has could never be reached, because the list feeding it
+                // could never populate.
+                //
+                // The sensitive part was never the names, it is the ACCOUNT ID: it links
+                // characters to accounts, which is to say it reveals who is an alt of whom. So the
+                // id is what is gated, not the roster. An Advocate sees who is online, which is
+                // roughly what standing in a town square tells them anyway.
+                var showAccounts = session == null || session.AccessLevel >= AccessLevel.Sentinel;
+
                 var sb = new StringBuilder();
                 var count = 0u;
 
@@ -74,7 +91,10 @@ namespace ACE.Server.Command.Handlers
                     // is a human/GUI-facing list, and the dagger is exactly the kind of thing a
                     // moderator wants to see. Anything matching a name against the DB must strip
                     // it, the same way ShadowgainInbound and /sg-multibox already do.
-                    sb.Append($"{player.Name} : {player.Session.AccountId}\n");
+                    sb.Append(showAccounts
+                        ? $"{player.Name} : {player.Session.AccountId}\n"
+                        : $"{player.Name}\n");
+
                     count++;
                 }
 

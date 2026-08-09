@@ -433,8 +433,11 @@ namespace ShadowgainConsole
                         }
 
                         var m = RosterLine.Match(line);
+
                         if (m.Success)
                             roster.Add(m.Groups["name"].Value.Trim());
+                        else if (LooksLikeCharacterName(line))
+                            roster.Add(line);
                     }
                     else if (capturing == Capture.Status)
                     {
@@ -655,6 +658,49 @@ namespace ShadowgainConsole
                 i++;
 
             return name.Substring(i).Trim();
+        }
+
+        /// <summary>
+        /// Is this bare line plausibly a character name?
+        ///
+        /// Below Sentinel /sg-roster omits the account id, so a roster line is just the name and
+        /// the strict "Name : id" pattern stops matching. Accepting whatever is left over would be
+        /// worse than useless: the capture window is three seconds of ALL chat, so anything
+        /// arriving mid-window would become a roster row - and then a teleport target the operator
+        /// could click. This is the guard on that.
+        ///
+        /// Deliberately conservative. A rejected real name costs one missing row until the next
+        /// refresh; an accepted piece of chat puts a fictional player in a moderator's list.
+        /// </summary>
+        private static bool LooksLikeCharacterName(string line)
+        {
+            if (line.Length < 2 || line.Length > 34)
+                return false;
+
+            // The account-id form is handled by the strict pattern; a colon here means this is
+            // some other message entirely.
+            if (line.IndexOf(':') >= 0)
+                return false;
+
+            var letters = 0;
+
+            foreach (var c in line)
+            {
+                if (char.IsLetter(c)) { letters++; continue; }
+
+                if (c == ' ' || c == '\'' || c == '-' || char.IsDigit(c))
+                    continue;
+
+                // Leading decoration - the progression marker, an admin '+' - arrives before any
+                // letter and is legitimate. The same character AFTER the name has begun is
+                // punctuation, which means this is a sentence, not a name.
+                if (letters == 0)
+                    continue;
+
+                return false;
+            }
+
+            return letters >= 2;
         }
 
         private bool RequireTarget()

@@ -23,9 +23,34 @@ $msb = @(
 if (-not $msb) { throw "No MSBuild found. The .NET SDK cannot build an old-style v2.0 csproj." }
 
 Write-Host "==> building" -ForegroundColor Cyan
+
+# Newest source timestamp captured BEFORE the build, so "did it actually recompile?" can be
+# answered afterwards.
+$newestSrc = Get-ChildItem (Split-Path $proj) -Recurse -Include *.cs, *.xml, *.csproj |
+             Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
 & $msb $proj /p:Configuration=Release /v:minimal /nologo
 
+# CHECK THE EXIT CODE. $ErrorActionPreference = "Stop" does NOT apply to a native executable's
+# return value, so a failed MSBuild used to sail straight past this point. The Test-Path below
+# then passed - because the PREVIOUS build's DLL was still sitting there - and the script went on
+# to print "view embedded, 32-bit - OK" and deploy a STALE binary while reporting success.
+#
+# That is worse than a build failure: it hands over an unchanged plugin and calls it updated, so
+# the next round of testing is spent hunting a bug in code that was never compiled.
+if ($LASTEXITCODE -ne 0) { throw "MSBuild failed with exit code $LASTEXITCODE - nothing deployed." }
+
 if (-not (Test-Path $out)) { throw "Build reported success but produced no DLL at $out" }
+
+# Belt and braces: even with a zero exit code, a DLL older than its own source is not this build's
+# output. Catches an up-to-date-check that wrongly skipped, and any future failure mode where
+# MSBuild returns success without producing anything.
+$dllTime = (Get-Item $out).LastWriteTime
+
+if ($newestSrc -and $dllTime -lt $newestSrc.LastWriteTime) {
+    throw ("Stale output: {0} is older than {1}. The build did not produce this DLL." -f
+           (Split-Path $out -Leaf), $newestSrc.Name)
+}
 
 # The two silent-failure modes, checked every build rather than once:
 #   - view XML not embedded  -> plugin loads and never appears in game
