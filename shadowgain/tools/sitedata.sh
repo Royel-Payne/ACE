@@ -59,11 +59,18 @@ FROM \`character\` c
 WHERE c.is_Deleted=0 AND c.delete_Time=0
   AND NOT EXISTS (SELECT 1 FROM biota_properties_bool
                   WHERE object_Id=c.id AND type=9102 AND value=1)
-  -- Exclude characters on Developer/Admin accounts. The first run listed a level-275
-  -- character with 1.5 hours played, which is precisely what an honour roll for grinding
-  -- must not celebrate. Those are hand-boosted test characters; real players sit at
-  -- Advocate or below.
-  AND c.account_Id NOT IN (SELECT accountId FROM ace_auth.account WHERE accessLevel >= 4)
+  -- 069: ONLY accessLevel 0 is eligible. Anything above it - Advocate, Sentinel, Envoy,
+  -- Developer, Admin - is excluded from the roll entirely.
+  --
+  -- This started as a >= 4 filter because the first run listed a level-275 character with
+  -- 1.5 hours played, which is precisely what an honour roll for grinding must not
+  -- celebrate. Player-only is the stricter version of the same idea, and it buys a second
+  -- thing: staff never appear here, so their presence on the server is not publicly
+  -- trackable from the site.
+  --
+  -- Keep this in step with the Ascendant gate in shadowgain_bot.py - the reward and the
+  -- roll are meant to answer the same question, and they have drifted apart before.
+  AND c.account_Id NOT IN (SELECT accountId FROM ace_auth.account WHERE accessLevel > 0)
 ORDER BY COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) DESC,
          COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=125),0) DESC
 LIMIT 100;")

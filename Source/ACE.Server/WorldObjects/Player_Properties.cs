@@ -39,7 +39,25 @@ namespace ACE.Server.WorldObjects
                 if (IsPlussed && CloakStatus < CloakStatus.Player)
                     return "+" + base.Name;
 
-                if (IsMasochist && PropertyManager.GetBool("progression_marker_enabled").Item)
+                // 069: the Mark is for accessLevel 0 ONLY - Player, nothing above it. Same rule as
+                // the honour roll and the Ascendant reward, so the three cannot disagree about
+                // what "earned it with no privilege" means.
+                //
+                // The `+` above already hides the mark for Sentinel and up, but only because two
+                // things happen to be true at once: IsPlussed needs AccessLevel > Advocate AND
+                // Config.Server.Accounts.OverrideCharacterPermissions, which is `true` on this
+                // server today. Leaning on that would make the policy depend on a config flag
+                // nobody would think to check before flipping it. It also leaves ADVOCATE
+                // uncovered outright - `> Advocate` is false for Advocate itself, so an Advocate
+                // on the hard lane would wear a mark the policy says they cannot have.
+                //
+                // A null Session means there is no account to judge - an offline or synthetic
+                // Player object rather than a live one being shown to anyone. Eligibility that
+                // actually matters is decided per-account against the auth DB by the roll and the
+                // bot; this branch only decides what a name looks like on screen.
+                var markEligible = Session == null || Session.AccessLevel == AccessLevel.Player;
+
+                if (IsMasochist && markEligible && PropertyManager.GetBool("progression_marker_enabled").Item)
                     return PropertyManager.GetString("progression_marker_prefix").Item + base.Name;
 
                 return base.Name;
