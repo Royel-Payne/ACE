@@ -793,7 +793,20 @@ namespace ACE.Server.Command.Handlers
             var player = PlayerManager.GetOnlinePlayer(playerName);
             // If the player is found, teleport the admin to the Player's location
             if (player != null)
+            {
+                // Shadowgain 062/071: remember where the CALLER was, so "Return me" has somewhere
+                // to send them. This is the third way to move yourself - alongside /tele and
+                // /sg-tele, both covered in 062 - and it was the one left out. Chris found it by
+                // going to a player and then having no way back.
+                //
+                // The caller, not the target: teleto moves YOU. teletome is the mirror case and
+                // already records it for the person being summoned.
+                if (session.Player.Location != null)
+                    session.Player.SetPosition(PositionType.TeleportedCharacter,
+                                               new Position(session.Player.Location));
+
                 session.Player.Teleport(player.Location);
+            }
             else
                 session.Network.EnqueueSend(new GameMessageSystemChat($"Player {playerName} was not found.", ChatMessageType.Broadcast));
         }
@@ -904,6 +917,13 @@ namespace ACE.Server.Command.Handlers
                 var weenie = DatabaseManager.World.GetCachedWeenie(teleportPOI.WeenieClassId);
                 var portalDest = new Position(weenie.GetPosition(PositionType.Destination));
                 WorldObject.AdjustDungeon(portalDest);
+
+                // Shadowgain 071: same return capture as /sg-tele, so it does not matter which of
+                // the two POI commands was used - "Return me" behaves identically either way.
+                if (session.Player.Location != null)
+                    session.Player.SetPosition(PositionType.TeleportedCharacter,
+                                               new Position(session.Player.Location));
+
                 session.Player.Teleport(portalDest);
             }
         }
