@@ -91,17 +91,22 @@
           <control progid="DecalControls.StaticText" name="lblSrv2"     left="6"   top="22" width="320" height="16" text="" />
           <control progid="DecalControls.StaticText" name="lblSrv3"     left="6"   top="40" width="320" height="16" text="" />
 
-          <control progid="DecalControls.StaticText" name="lblShutInt"  left="6"   top="70" width="72"  height="16" text="Countdown" />
-          <control progid="DecalControls.Edit"       name="txtShutInt"  left="80"  top="68" width="44"  height="20" text="60" />
-          <control progid="DecalControls.StaticText" name="lblShutS"    left="128" top="70" width="14"  height="16" text="s" />
-          <control progid="DecalControls.PushButton" name="btnShutdown" left="146" top="67" width="96"  height="22" text="Shutdown" />
-          <control progid="DecalControls.PushButton" name="btnShutNo"   left="246" top="67" width="60"  height="22" text="Cancel" />
+          <!-- SHUTDOWN REMOVED (075). ACE's shutdown closes the world, drops every session and
+               then does not reliably exit - it stranded this server for seven minutes, refusing
+               logins from a real address, with the container still reporting healthy. Docker's
+               restart policy never fires because the process never dies.
 
-          <control progid="DecalControls.StaticText" name="lblStormHead" left="6"  top="96" width="320" height="16" text="Portal Storm - clears the landblock you are standing in" />
-          <control progid="DecalControls.PushButton" name="btnStorm"    left="6"   top="116" width="110" height="22" text="Portal Storm" />
-          <control progid="DecalControls.PushButton" name="btnStormNo"  left="120" top="116" width="60"  height="22" text="Cancel" />
+               There is no restart command in ACE to offer instead, and a plugin inside the game
+               client cannot restart a container. deploy.sh is the safe path and swaps the
+               container itself rather than trusting ACE to exit. A button whose only outcomes are
+               "nothing" or "server down until someone SSHes in" does not belong on a moderation
+               panel. -->
 
-          <control progid="DecalControls.StaticText" name="lblServer"   left="6"   top="144" width="320" height="16" text="Players are sent to their lifestones. You are never stormed." />
+          <control progid="DecalControls.StaticText" name="lblStormHead" left="6"  top="70" width="320" height="16" text="Portal Storm - clears the landblock you are standing in" />
+          <control progid="DecalControls.PushButton" name="btnStorm"    left="6"   top="90" width="110" height="22" text="Portal Storm" />
+          <control progid="DecalControls.PushButton" name="btnStormNo"  left="120" top="90" width="60"  height="22" text="Cancel" />
+
+          <control progid="DecalControls.StaticText" name="lblServer"   left="6"   top="118" width="320" height="16" text="Players are sent to their lifestones. You are never stormed." />
         </control>
       </page>
 

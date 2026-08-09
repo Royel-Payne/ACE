@@ -711,9 +711,9 @@ namespace ShadowgainConsole
         private bool pendingStatus = false;
 
         // Whether a destructive command has actually been SENT, as opposed to merely armed.
-        // Cancel means two completely different things either side of that line, and conflating
-        // them is what made the Cancel button print "Cancelled." while the server shut down.
-        private bool shutdownFired = false;
+        // Cancel means two completely different things either side of that line. Conflating them
+        // is what made the shutdown Cancel print "Cancelled." while the server shut down anyway -
+        // that button is gone now (075), but the distinction still governs Portal Storm.
         private bool stormFired = false;
 
         private void Refresh()
@@ -1347,55 +1347,6 @@ namespace ShadowgainConsole
                 }
 
                 Disarm("Cancelled - no storm had been sent.");
-            }
-            catch (Exception ex) { Util.LogError(ex); }
-        }
-
-        [MVControlEvent("btnShutdown", "Click")]
-        private void btnShutdown_Click(object sender, MVControlEventArgs e)
-        {
-            try
-            {
-                var secs = GetText("txtShutInt");
-
-                if (ArmOrConfirm("shutdown", "lblServer", "SHUT DOWN the server in " + secs + "s? Click Shutdown again to confirm."))
-                {
-                    if (!string.IsNullOrEmpty(secs))
-                        Fire("/set-shutdown-interval " + secs);
-
-                    Fire("/shutdown");
-                    shutdownFired = true;
-                    SetText("lblServer", "Shutdown initiated. Cancel will abort it.");
-                }
-            }
-            catch (Exception ex) { Util.LogError(ex); }
-        }
-
-        [MVControlEvent("btnShutNo", "Click")]
-        private void btnShutNo_Click(object sender, MVControlEventArgs e)
-        {
-            try
-            {
-                // THE BUG THIS FIXES: Cancel used to call Disarm() and nothing else. Disarm only
-                // clears the plugin's own arm state, so once /shutdown had been sent the button
-                // printed "Cancelled." and sent NOTHING - while the server counted down and shut
-                // down underneath it. Chris found it by cancelling a shutdown that then happened.
-                //
-                // A confirmation control that reports success without acting is worse than no
-                // control: it is trusted precisely when it matters most.
-                if (shutdownFired)
-                {
-                    Fire("/cancel-shutdown");
-                    shutdownFired = false;
-                    armed = null;
-                    SetText("lblServer", "Cancel sent - watch chat for the server's confirmation.");
-                    return;
-                }
-
-                // Nothing was sent, so there is nothing to recall - just drop the arm. Firing
-                // /cancel-shutdown here would put a phantom entry in the audit trail for a
-                // shutdown that never started.
-                Disarm("Cancelled - no shutdown had been sent.");
             }
             catch (Exception ex) { Util.LogError(ex); }
         }
