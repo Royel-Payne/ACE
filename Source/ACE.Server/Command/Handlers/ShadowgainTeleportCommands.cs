@@ -117,6 +117,12 @@ namespace ACE.Server.Command.Handlers
             // and is exactly what telepoi does.
             WorldObject.AdjustDungeon(pos);
 
+            // Capture the return point BEFORE the jump - the other half of 052's "Return me",
+            // which was specified but never built. Without it the button could only ever undo
+            // an admin summon, because that is the only thing stock ACE records.
+            if (player.Location != null)
+                player.SetPosition(PositionType.TeleportedCharacter, new ACE.Entity.Position(player.Location));
+
             Send(session, $"Teleporting to {match}.");
             player.Teleport(pos);
         }

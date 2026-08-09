@@ -196,7 +196,21 @@ namespace ACE.Server.Command.Handlers
                 $"{aceParams[1].AsPosition.PositionY}, {aceParams[1].AsPosition.PositionZ} | Facing: {aceParams[1].AsPosition.RotationX}, {aceParams[1].AsPosition.RotationY}, " +
                 $"{ aceParams[1].AsPosition.RotationZ}, {aceParams[1].AsPosition.RotationW}]", ChatMessageType.Broadcast);
 
-            aceParams[0].AsPlayer.Teleport(aceParams[1].AsPosition);
+            // Shadowgain 052: remember where they were, so "Return me" has somewhere to send
+            // them. Stock ACE only records this when an ADMIN moves someone (teletome,
+            // teleallto), so a self-teleport left no return point and telereturn answered
+            // "does not have a return position saved". The console offers travel and Return me
+            // side by side on the same tab, so both routes have to leave a breadcrumb.
+            //
+            // Applied to the target rather than the caller because /tele can move someone else,
+            // and it is the person who MOVED that needs the way back.
+            var teleportTarget = aceParams[0].AsPlayer;
+
+            if (teleportTarget?.Location != null)
+                teleportTarget.SetPosition(ACE.Entity.Enum.Properties.PositionType.TeleportedCharacter,
+                                           new ACE.Entity.Position(teleportTarget.Location));
+
+            teleportTarget.Teleport(aceParams[1].AsPosition);
         }
     }
 }
