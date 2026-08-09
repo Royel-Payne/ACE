@@ -168,12 +168,38 @@ done
 # came up, and SERVING is the proof it is still answering. Deliberately NOT using
 # `docker logs --tail` here - on a long-uptime server the marker scrolls out of any bounded
 # window and the panel would report Offline for a perfectly healthy world.
+#
+# 074: SERVING is not sufficient either. A shutdown that closes the world but never exits
+# the process keeps answering `serverstatus`, because the console is part of that process.
+# Chris hit exactly this: sessions dropped at 11:52:53, every login was refused for the
+# next seven minutes - including one from an address that was not his - and the panel read
+# healthy throughout, because all three signals were individually TRUE. The container was
+# up. The world HAD opened. The console did reply.
+#
+# So the fourth question is "did it shut down AFTER it last opened?". Ordering, not
+# presence: compare the last "World is now open" against the last shutdown notice. Line
+# numbers are a valid comparator because the log is append-only, and taking both from ONE
+# capture keeps them on the same scale - which also collapses what used to be two full
+# `docker logs` reads into one.
+LOG=""
 WORLD_EVER=0
+DRAINING=false
 if [ "$UP" = true ]; then
-  WORLD_EVER=$(timeout -s KILL 10 docker logs ace-server 2>&1 | grep -c "World is now open" || true)
+  LOG=$(timeout -s KILL 10 docker logs ace-server 2>&1 || true)
+  WORLD_EVER=$(printf '%s
+' "$LOG" | grep -c "World is now open" || true)
+
+  LAST_OPEN=$(printf '%s
+' "$LOG" | grep -n "World is now open" | tail -1 | cut -d: -f1)
+  LAST_DOWN=$(printf '%s
+' "$LOG" | grep -nE "Server is shutting down|shutting down NOW" | tail -1 | cut -d: -f1)
+
+  if [ -n "$LAST_DOWN" ] && { [ -z "$LAST_OPEN" ] || [ "$LAST_DOWN" -gt "$LAST_OPEN" ]; }; then
+    DRAINING=true
+  fi
 fi
 WORLD=false
-if [ "$UP" = true ] && [ "${WORLD_EVER:-0}" -gt 0 ] && [ "$SERVING" = true ]; then
+if [ "$UP" = true ] && [ "${WORLD_EVER:-0}" -gt 0 ] && [ "$SERVING" = true ] && [ "$DRAINING" = false ]; then
   WORLD=true
 fi
 
@@ -216,6 +242,7 @@ cat > "$OUT/.status.json.tmp" <<JSON
 {
   "generated": "$NOW",
   "online": $WORLD,
+  "draining": $DRAINING,
   "containerUp": $UP,
   "playersOnline": $ONLINE,
   "uptime": "$UPTIME",
