@@ -82,7 +82,22 @@ if ($machine -ne 0x014C) {
 Write-Host "    view embedded, 32-bit - OK" -ForegroundColor Green
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
-Copy-Item $out $dest -Force
+
+# The copy fails with a file lock whenever the client is running, and that failure is easy to
+# skim past - the compile above succeeded, so the output looks mostly normal. It nearly shipped a
+# stale DLL to the website: the packaging step read from THIS folder, which still held the
+# previous build, while the fresh one sat in bin\Release.
+#
+# Anything packaging or publishing the plugin should read bin\Release, not $dest. This message
+# exists so the failure names itself instead of scrolling by as a .NET exception.
+try {
+    Copy-Item $out $dest -Force -ErrorAction Stop
+}
+catch {
+    throw ("Could not copy to $dest - the client is almost certainly running and holding the DLL. " +
+           "CLOSE THE CLIENT and run this again. The build itself succeeded; bin\Release has the " +
+           "current binary, and $dest is now STALE.")
+}
 
 # poi.tsv rides along: the plugin reads it from beside the DLL at startup to fill the POI
 # dropdown. Shipping it here keeps the deployed copy in step with the exported one - otherwise

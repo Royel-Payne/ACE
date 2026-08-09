@@ -184,6 +184,12 @@ accident.
 Judged per **account**, not per character — an active main should not be punished for a
 level-2 mule that has not logged in for a month.
 
+**Rewards are Player-only (069).** The Ascendant role and the public honour roll both require
+`accessLevel = 0` — anything above it (Advocate, Sentinel, Envoy, Developer, Admin) is excluded
+outright. Two reasons: the reward should mean "earned with genuinely zero privilege", and staff
+then never surface publicly, so their presence on the server is not trackable from the site. Chat
+access is unaffected and still uses the level-10-plus-72-hours rule above.
+
 A **daily sweep** re-checks every linked account and revokes the role when it goes quiet.
 That sweep, not the one-time `/link`, is what "active players only" actually means. An
 `/override` link is marked exempt and survives it, so an admin decision does not silently
