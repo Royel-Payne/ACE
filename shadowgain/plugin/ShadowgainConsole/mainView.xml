@@ -11,19 +11,23 @@
   ROSTER SIDE: right of the tabs, per the mock's stated default.
 
   COLUMN WIDTHS: a <column> carries fixedwidth, NOT width - confirmed by reading the view
-  embedded in MagTools.dll rather than by guessing. A column with no fixedwidth is a HIDDEN
-  data column there (ManaItemID, ManaItemSort), which is used deliberately below: every list
-  that drives a command carries a hidden column holding the exact string to send, so what is
-  displayed and what is transmitted never have to be the same value. That is the direct fix for
-  the roster bug - the dagger marker arrives from the CP1252 chat path mangled to '?', so the
-  visible column shows a cleaned name while the hidden column carries what the server will match.
+  embedded in MagTools.dll rather than by guessing.
+
+  NO HIDDEN COLUMNS. An earlier revision gave each list an extra fixedwidth-less column to carry
+  the exact string to send, on the reading that MagTools' width-less columns (ManaItemID,
+  ManaItemSort) are hidden data columns. That reading was inferred, never proven, and it went in
+  during the same build that started closing the client on world entry. The backing List<> objects
+  in PluginCore already hold every value a command needs, so the columns bought nothing and were
+  removed rather than left as a suspect. Do not reintroduce them without testing that VVS really
+  tolerates a write to a column it gave no width.
 
   TAB LABELS are padded with spaces. MetaView sizes a tab to its label, so unpadded labels
   produce cramped tabs - MagTools pads every one of its own.
 
-  TIER NOTE: all five pages are declared here. The plugin REMOVES the ones the logged-in
-  character's AccessLevel does not permit, because the brief calls for absent rather than
-  greyed-out. Declaring them all keeps the XML static and the gating in one place.
+  TIER NOTE: all five pages are declared here and ALL FIVE ARE DRAWN, for everyone. The brief
+  calls for tabs a tier cannot use to be absent, but INotebook has no remove-page method and
+  MVWireupHelper.WireupStart takes no raw-XML overload - see PluginCore's class comment. The
+  server refuses anything the account's AccessLevel lacks, so this is cosmetic, not a hole.
 
   ASCII ONLY. The server speaks CP1252 on the chat path and this file is compiled without a
   BOM; a stray em-dash here is one more place for an encoding surprise to hide.
@@ -67,7 +71,6 @@
           <control progid="DecalControls.List"       name="lstPoi"      left="6"   top="76" width="320" height="140">
             <column progid="DecalControls.TextColumn" name="colPoiName"  fixedwidth="196" />
             <column progid="DecalControls.TextColumn" name="colPoiCoord" fixedwidth="112" />
-            <column progid="DecalControls.TextColumn" name="colPoiSend" />
           </control>
 
           <control progid="DecalControls.PushButton" name="btnPoiGo"    left="6"   top="222" width="70"  height="22" text="Tele" />
@@ -152,8 +155,6 @@
     <control progid="DecalControls.StaticText" name="lblRoster"  left="358" top="26" width="178" height="16" text="Online - 0" />
     <control progid="DecalControls.List"       name="lstRoster"  left="358" top="44" width="178" height="302">
       <column progid="DecalControls.TextColumn" name="colName" fixedwidth="166" />
-      <!-- hidden: the exact name to put on the wire, free of any display marker -->
-      <column progid="DecalControls.TextColumn" name="colSend" />
     </control>
 
     <!-- ================= command echo strip ================================== -->

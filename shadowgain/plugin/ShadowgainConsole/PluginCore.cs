@@ -78,6 +78,11 @@ namespace ShadowgainConsole
         private DateTime lastAutoRefresh = DateTime.MinValue;
         private bool viewCreated = false;
 
+        // Deferred startup: see CharacterFilter_LoginComplete for why nothing happens inline.
+        private bool pendingInit = false;
+        private DateTime loginAt = DateTime.MinValue;
+        private static readonly TimeSpan SettleTime = TimeSpan.FromSeconds(8);
+
         // -1 unknown, 0 off, 1 on. Unknown until the operator clicks, because the server does
         // not volunteer the current value and guessing "off" would make the first click a no-op.
         private int attackable = -1;
@@ -102,13 +107,16 @@ namespace ShadowgainConsole
             try
             {
                 Globals.Init("ShadowgainConsole", Host, Core);
+                Util.Trace("--- Startup ---");
 
                 // NOTE: the view is deliberately NOT created here. MVWireupHelper picks a view
                 // system by scanning LOADED assemblies for VirindiViewService, so creating the
                 // view during Startup is a race against VVS's own load order. Losing that race
                 // does not throw - it silently falls back to Decal's view system, and the plugin
-                // then runs perfectly while never drawing a window. Created at LoginComplete
-                // instead, by which point VVS is certainly loaded.
+                // then runs perfectly while never drawing a window. Created from the timer a
+                // few seconds AFTER LoginComplete instead - by which point VVS is certainly
+                // loaded and, just as importantly, the client has finished entering the world.
+                // See CharacterFilter_LoginComplete.
                 Core.ChatBoxMessage += Core_ChatBoxMessage;
 
                 timer = new Timer();
@@ -123,6 +131,8 @@ namespace ShadowgainConsole
         {
             try
             {
+                pendingInit = false;
+
                 if (timer != null) { timer.Stop(); timer.Tick -= Timer_Tick; timer = null; }
                 Core.ChatBoxMessage -= Core_ChatBoxMessage;
 
@@ -140,8 +150,31 @@ namespace ShadowgainConsole
         [BaseEvent("LoginComplete", "CharacterFilter")]
         private void CharacterFilter_LoginComplete(object sender, EventArgs e)
         {
+            // DO NOTHING HERE BUT ARM A TIMER. This handler runs while the client is still
+            // entering the world, and every previous version did its real work inline: created
+            // the VVS window, called Actions.AddChatText, and fired a command through
+            // Actions.InvokeChatParser - all from inside the callback.
+            //
+            // That crashed the client on world entry. Not a managed exception - the try/catch
+            // blocks never saw it and no error log was ever written. Windows recorded
+            // 0xc0000005 (access violation) INSIDE acclient.exe, at the same code offset every
+            // time. Touching the client's UI and chat parser from a login callback is simply
+            // not safe; the well-worn Decal pattern is to defer to a timer and let the world
+            // finish loading first.
+            Util.Trace("LoginComplete (deferring init)");
+            loginAt = DateTime.UtcNow;
+            pendingInit = true;
+        }
+
+        /// <summary>
+        /// The real startup, run from the timer once the world has settled.
+        /// </summary>
+        private void DeferredInit()
+        {
             try
             {
+                Util.Trace("DeferredInit begin");
+
                 if (!viewCreated)
                 {
                     // Report which system was chosen. A silent fallback to DecalInject is the
@@ -149,17 +182,23 @@ namespace ShadowgainConsole
                     // saying out loud rather than discovering it from an empty screen.
                     var vvs = ViewSystemSelector.IsPresent(Host, ViewSystemSelector.eViewSystem.VirindiViewService);
 
+                    Util.Trace("  WireupStart (vvs=" + vvs + ")");
                     MVWireupHelper.WireupStart(this, Host);
                     viewCreated = true;
+                    Util.Trace("  view created");
 
                     Util.WriteToChat(vvs
                         ? "console ready (Virindi views)."
                         : "VirindiViewService not detected - the window will not appear. Is VVS enabled?");
 
+                    Util.Trace("  chat greeting sent");
+
                     LoadPoi();
+                    Util.Trace("  poi loaded");
                 }
 
                 Refresh();
+                Util.Trace("DeferredInit end");
             }
             catch (Exception ex) { Util.LogError(ex); }
         }
@@ -307,6 +346,24 @@ namespace ShadowgainConsole
         {
             try
             {
+                // Deferred startup. SettleTime is generous on purpose: this runs once per
+                // login, the console is not urgent, and the failure it avoids closes the
+                // client outright.
+                if (pendingInit)
+                {
+                    if (DateTime.UtcNow - loginAt < SettleTime)
+                        return;
+
+                    pendingInit = false;
+                    DeferredInit();
+                    return;
+                }
+
+                // Nothing below may run before the deferred init has completed - every path
+                // here reaches either the client's chat parser or a VVS control.
+                if (!viewCreated)
+                    return;
+
                 // Expire an arm the operator walked away from.
                 if (armed != null && DateTime.UtcNow - armedAt > ArmWindow)
                     Disarm("Confirmation expired.");
@@ -346,6 +403,7 @@ namespace ShadowgainConsole
             try
             {
                 SetText("lblEcho", "> " + command);
+                Util.Trace("fire: " + command);
                 Globals.Host.Actions.InvokeChatParser(command);
             }
             catch (Exception ex) { Util.LogError(ex); }
@@ -444,7 +502,6 @@ namespace ShadowgainConsole
                     // CP1252 chat path, and a column of "? Name" reads like an error rather than
                     // a badge. The hidden column carries exactly what goes on the wire.
                     row[0][0] = Bare(roster[i]);
-                    row[1][0] = Bare(roster[i]);
                 }
 
                 // A selection that no longer exists would target the wrong person after a
@@ -580,7 +637,6 @@ namespace ShadowgainConsole
                     var row = list.AddRow();
                     row[0][0] = shownPoi[i].Name;
                     row[1][0] = shownPoi[i].Coords;
-                    row[2][0] = shownPoi[i].Name;
                 }
 
                 SetText("lblPoiHead", "Destination - " + shownPoi.Count + " of " + allPoi.Count + " shown");
