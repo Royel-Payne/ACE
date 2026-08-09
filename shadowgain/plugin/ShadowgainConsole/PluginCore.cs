@@ -261,6 +261,12 @@ namespace ShadowgainConsole
 
                     LoadPoi();
                     Util.Trace("  poi loaded");
+
+                    // The POI list is gone at Advocate, so its hint line ("Pick a destination.")
+                    // would be describing a control that is no longer on the tab. Repurpose it
+                    // for the one travel method the tier does have.
+                    if (tier == Tier.Advocate)
+                        SetText("lblPoi", "Coordinates look like 33.2N,56.5E");
                 }
 
                 if (tier == Tier.None)
@@ -431,17 +437,35 @@ namespace ShadowgainConsole
                 // Server / Access / Oversight are Admin-only.
                 RemoveNodes(doc, "page", "label", new string[] { "Server", "Access", "Oversight" });
 
-                // Advocate keeps the roster and Go to, but none of the verbs that act ON someone.
+                // ADVOCATE: drawn from what the tier can actually DO, not from the mock.
+                //
+                // Checked every command the console fires against its required level. An Advocate
+                // can run `attackable`, `tele` (coords), `sg-roster` and `serverstatus` - and
+                // nothing else. `teleto`, `telereturn` and `sg-tele` are all Sentinel, so Go to,
+                // Return me and POI travel would every one of them be drawn and then refused.
+                //
+                // 052's mock had Advocate keeping "Go to". That was written before anyone checked
+                // teleto's tier. Following it would ship a Players tab whose only verb does not
+                // work, which is precisely the fault 064 fixed for the roster - so the Players
+                // page goes entirely, and what is left is honest: see who is online, toggle
+                // whether monsters attack you, and travel by coordinates.
                 if (tier == Tier.Advocate)
+                {
+                    RemoveNodes(doc, "page", "label", new string[] { "Players" });
+
                     RemoveNodes(doc, "control", "name", new string[]
                     {
-                        "btnSummon", "btnSendBack", "btnGag", "btnKick", "btnKickNo",
-
-                        // Both Return me buttons: telereturn is Sentinel, so at Advocate they
-                        // would be drawn and then refused. Shipping a button that cannot work is
-                        // the same mistake 064 fixed for the roster, one tier up.
+                        // POI travel is /sg-tele - Sentinel.
+                        "lblPoiHead", "txtPoiFilter", "lstPoi", "btnPoiGo",
+                        // telereturn is Sentinel, on both tabs.
                         "btnReturn", "btnReturnMe"
                     });
+
+                    // Close the hole the POI list left, so the tab does not read as broken.
+                    SetTop(doc, "txtCoord", 34);
+                    SetTop(doc, "btnCoordGo", 33);
+                    SetTop(doc, "lblPoi", 62);
+                }
 
                 return doc.OuterXml;
             }
@@ -450,6 +474,28 @@ namespace ShadowgainConsole
                 Util.Trace("TieredXml failed, using the full view: " + ex.Message);
                 Util.LogError(ex);
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Move a control vertically in the XML before the window is built.
+        ///
+        /// Removing a control leaves its space behind - VVS has no layout engine, every position
+        /// is absolute. Stripping the POI list out of the Me tab left the coordinate box stranded
+        /// 200px down the page with nothing above it, which reads as a broken window rather than
+        /// a smaller one.
+        /// </summary>
+        private static void SetTop(XmlDocument doc, string control, int top)
+        {
+            foreach (XmlNode node in doc.GetElementsByTagName("control"))
+            {
+                var name = node.Attributes == null ? null : node.Attributes["name"];
+
+                if (name != null && name.Value == control && node is XmlElement element)
+                {
+                    element.SetAttribute("top", top.ToString());
+                    return;
+                }
             }
         }
 
