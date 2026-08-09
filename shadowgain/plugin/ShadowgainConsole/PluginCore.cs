@@ -79,6 +79,8 @@ namespace ShadowgainConsole
         private bool viewCreated = false;
 
         // Deferred startup: see CharacterFilter_LoginComplete for why nothing happens inline.
+        private int ticks = 0;
+        private int chatSeen = 0;
         private bool pendingInit = false;
         private DateTime loginAt = DateTime.MinValue;
         private static readonly TimeSpan SettleTime = TimeSpan.FromSeconds(8);
@@ -93,21 +95,22 @@ namespace ShadowgainConsole
 
         // `Name : AccountId`, the format /sg-roster shares with listplayers so one parser serves
         // both.
-        private static readonly Regex RosterLine = new Regex(@"^(?<name>.+?)\s+:\s+(?<acct>\d+)\s*$", RegexOptions.Compiled);
-        private static readonly Regex StatusPlayers = new Regex(@"(?<n>\d+)\s+players online", RegexOptions.Compiled);
-        private static readonly Regex StatusUptime = new Regex(@"Server Runtime:\s*(?<up>[^\r\n,]+)", RegexOptions.Compiled);
+        private static readonly Regex RosterLine = new Regex(@"^(?<name>.+?)\s+:\s+(?<acct>\d+)\s*$");
+        private static readonly Regex StatusPlayers = new Regex(@"(?<n>\d+)\s+players online");
+        private static readonly Regex StatusUptime = new Regex(@"Server Runtime:\s*(?<up>[^\r\n,]+)");
 
         // "  10.0.0.5 = unlimited" / "  10.0.0.5 = 2"
-        private static readonly Regex MbOverride = new Regex(@"^(?<who>\S+)\s*=\s*(?<n>\S+)$", RegexOptions.Compiled);
+        private static readonly Regex MbOverride = new Regex(@"^(?<who>\S+)\s*=\s*(?<n>\S+)$");
         // "  2026-08-09 01:22  Chris: 5 -> 8"
-        private static readonly Regex HistLine = new Regex(@"^(?<when>.+?)\s{2,}(?<who>[^:]+):\s*(?<before>.*?)\s*->\s*(?<after>.*)$", RegexOptions.Compiled);
+        private static readonly Regex HistLine = new Regex(@"^(?<when>.+?)\s{2,}(?<who>[^:]+):\s*(?<before>.*?)\s*->\s*(?<after>.*)$");
 
         protected override void Startup()
         {
             try
             {
+                Util.Trace("--- Startup: entered ---");
                 Globals.Init("ShadowgainConsole", Host, Core);
-                Util.Trace("--- Startup ---");
+                Util.Trace("Startup: Globals.Init done");
 
                 // NOTE: the view is deliberately NOT created here. MVWireupHelper picks a view
                 // system by scanning LOADED assemblies for VirindiViewService, so creating the
@@ -117,14 +120,21 @@ namespace ShadowgainConsole
                 // few seconds AFTER LoginComplete instead - by which point VVS is certainly
                 // loaded and, just as importantly, the client has finished entering the world.
                 // See CharacterFilter_LoginComplete.
-                Core.ChatBoxMessage += Core_ChatBoxMessage;
-
-                timer = new Timer();
-                timer.Interval = 1000;
-                timer.Tick += Timer_Tick;
-                timer.Start();
+                // NOTHING ELSE HAPPENS HERE. Not the chat subscription, not the timer.
+                //
+                // The breadcrumb trace showed the client dying ~2s after this method ran and
+                // BEFORE LoginComplete, which is why deferring work off the login callback did
+                // not help - the crash was never in that window. In that 2s our managed code did
+                // essentially nothing: the timer tick returned immediately with no view, and the
+                // chat handler returned immediately with no capture running.
+                //
+                // So the hooks themselves are now suspects, and the cheapest way to clear them is
+                // not to install them until the world is up. If the client still dies here with
+                // an empty Startup, the plugin's runtime code is exonerated entirely and the
+                // cause is in loading it at all.
+                Util.Trace("Startup: done (no hooks installed yet)");
             }
-            catch (Exception ex) { Util.LogError(ex); }
+            catch (Exception ex) { Util.Trace("Startup: EXCEPTION " + ex.Message); Util.LogError(ex); }
         }
 
         protected override void Shutdown()
@@ -134,7 +144,10 @@ namespace ShadowgainConsole
                 pendingInit = false;
 
                 if (timer != null) { timer.Stop(); timer.Tick -= Timer_Tick; timer = null; }
-                Core.ChatBoxMessage -= Core_ChatBoxMessage;
+                Util.Trace("--- Shutdown ---");
+
+                try { Core.ChatBoxMessage -= Core_ChatBoxMessage; }
+                catch (Exception ex) { Util.LogError(ex); }
 
                 if (viewCreated)
                 {
@@ -161,9 +174,27 @@ namespace ShadowgainConsole
             // time. Touching the client's UI and chat parser from a login callback is simply
             // not safe; the well-worn Decal pattern is to defer to a timer and let the world
             // finish loading first.
-            Util.Trace("LoginComplete (deferring init)");
-            loginAt = DateTime.UtcNow;
-            pendingInit = true;
+            try
+            {
+                Util.Trace("LoginComplete: entered");
+
+                if (timer == null)
+                {
+                    Core.ChatBoxMessage += Core_ChatBoxMessage;
+                    Util.Trace("LoginComplete: chat hook installed");
+
+                    timer = new Timer();
+                    timer.Interval = 1000;
+                    timer.Tick += Timer_Tick;
+                    timer.Start();
+                    Util.Trace("LoginComplete: timer started");
+                }
+
+                loginAt = DateTime.UtcNow;
+                pendingInit = true;
+                Util.Trace("LoginComplete: init armed");
+            }
+            catch (Exception ex) { Util.Trace("LoginComplete: EXCEPTION " + ex.Message); Util.LogError(ex); }
         }
 
         /// <summary>
@@ -209,10 +240,21 @@ namespace ShadowgainConsole
         {
             try
             {
-                if (e == null || e.Text == null)
+                if (chatSeen < 3)
+                {
+                    chatSeen++;
+                    Util.Trace("chat event " + chatSeen);
+                }
+
+                // ORDER MATTERS. `capturing` is a managed field and costs nothing to read;
+                // e.Text marshals a string out of the client's memory. Reading it first meant
+                // this plugin reached into native memory on EVERY chat line the client produced,
+                // including the burst at world entry, purely to discard the result - the console
+                // is idle almost all the time. Cheap check first.
+                if (capturing == Capture.None)
                     return;
 
-                if (capturing == Capture.None)
+                if (e == null || e.Text == null)
                     return;
 
                 // Consume it: this is the console's own plumbing talking to itself, and the
@@ -346,6 +388,12 @@ namespace ShadowgainConsole
         {
             try
             {
+                if (ticks < 12)
+                {
+                    ticks++;
+                    Util.Trace("tick " + ticks);
+                }
+
                 // Deferred startup. SettleTime is generous on purpose: this runs once per
                 // login, the console is not urgent, and the failure it avoids closes the
                 // client outright.
