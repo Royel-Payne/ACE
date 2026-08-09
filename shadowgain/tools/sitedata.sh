@@ -189,10 +189,19 @@ if [ "$UP" = true ]; then
   WORLD_EVER=$(printf '%s
 ' "$LOG" | grep -c "World is now open" || true)
 
+  # `|| true` on BOTH, and it is not decoration. This script runs under `set -euo pipefail`,
+  # and grep exits 1 when it matches nothing - which is the NORMAL case here, because a freshly
+  # restarted container has no shutdown line in its log at all. Without the guard the command
+  # substitution fails, set -e kills the generator, and status.json simply stops being written:
+  # the panel then freezes on whatever it last said and drifts further from reality every minute.
+  #
+  # Which is exactly what happened - the page read "Offline / last updated 4 min ago" while the
+  # server was up and healthy. The line above already carried `|| true` for this same reason and
+  # the guard was not carried over to the two new greps.
   LAST_OPEN=$(printf '%s
-' "$LOG" | grep -n "World is now open" | tail -1 | cut -d: -f1)
+' "$LOG" | grep -n "World is now open" | tail -1 | cut -d: -f1 || true)
   LAST_DOWN=$(printf '%s
-' "$LOG" | grep -nE "Server is shutting down|shutting down NOW" | tail -1 | cut -d: -f1)
+' "$LOG" | grep -nE "Server is shutting down|shutting down NOW" | tail -1 | cut -d: -f1 || true)
 
   if [ -n "$LAST_DOWN" ] && { [ -z "$LAST_OPEN" ] || [ "$LAST_DOWN" -gt "$LAST_OPEN" ]; }; then
     DRAINING=true
