@@ -426,6 +426,7 @@ permissions** — checking the overwrite you just wrote proves only that you wro
 |---|---|---|---|
 | `Shadowgain` | — | no | the bot. Administrator, **must stay top of the list** |
 | `Envoy` | `#4fd6c6` arcane | **yes** | Greylock. Renamed from `admin`; see the permission model above |
+| `Advocate` | `#3aa094` dim teal | **yes** | moderation helpers. Same colour family as Envoy, one rung down |
 | `MEE6` / `AC Support Bot` | `#7f8b9c` muted | no | managed app roles — **their names cannot be changed by anyone**, including the owner |
 | `Member` | `#7f8b9c` muted | no | baseline |
 | `Verified Player` | `#57d98a` green | no | earned via `/verify`. Green = passed the gate |
@@ -474,3 +475,63 @@ The bot's own grants are safe: `handle_verify` and `/override` both write the li
 **before** calling `add_roles`, so by the time the listener fires there is a link to find.
 
 **Net effect: `/verify` is the only way to hold the role, regardless of who has what permission.**
+
+---
+
+## Moderation
+
+Two mod tiers, both named after real Asheron's Call player-facing ranks, in the same order
+ACE's own access ladder uses (`Advocate < Sentinel < Envoy`).
+
+| | `Advocate` | `Envoy` |
+|---|---|---|
+| delete messages (`manage_messages`) | yes | yes |
+| timeout (`moderate_members`) | yes | yes |
+| kick | yes | yes |
+| **ban** | **no** | yes |
+| manage channels / roles | no | yes |
+
+**Advocate deliberately has no ban.** A helper should be able to stop trouble in the moment -
+delete, timeout, kick - without making a permanent, appeal-only decision. Timeout is included
+because it is the right *first* response to spam: reversible, and it does not escalate.
+
+**Where mods can act:** `#chat`, `#help`, `#bugs`, `#general`, `#screenshots`, `#rules-and-setup`.
+**Where they cannot:** `#audit` (invisible to Advocate, read-only for Envoy), `#info`,
+`#welcome-to-shadowgain`.
+
+**Correction made when the Advocate role was added:** 047's blanket deny on the `Game` category
+had left **Envoy unable to delete messages in `#chat`** - the busiest public channel, and the one
+that relays into the game. `#chat`, `#help` and `#bugs` now allow `manage_messages` for both mod
+tiers. `#bugs` still denies *sending*, so mods can clear spam without adding chatter to the
+report feed.
+
+Greylock can assign `Advocate` himself: it sits below `Envoy`, and carries nothing that can reach
+the audit trail or the curated channels.
+
+---
+
+## AutoMod
+
+Three server-wide rules, created 2026-08-08 before the server went public.
+
+| rule | trigger | action |
+|---|---|---|
+| Slurs and severe profanity | Discord keyword presets (profanity, slurs, sexual content) | block + alert |
+| Spam | Discord spam detection | block + alert |
+| Mention spam | more than 5 mentions in one message | block + alert |
+
+**Why AutoMod rather than a filter in the bot:** blocked messages never post, so nothing reaches
+`#chat` and therefore nothing reaches the *game*. Discord maintains the wordlists, so there is
+nothing here to curate or get wrong. The bot already reads every message in that channel, so a
+custom filter is possible later - but only if AutoMod proves insufficient, not before.
+
+Alerts go to **`#mod-log`** (in Admin Channels, hidden from `@everyone`, visible and writable by
+`Envoy` and `Advocate`). Deliberately **not** `#private` - that is Chris's channel with Greylock,
+and Advocates are Greylock's friends rather than Chris's.
+
+**Known risk, unresolved by design.** The bot is **not** exempt from these rules. If AutoMod
+applies to bot messages, an in-game slur is blocked before it mirrors into Discord - which is
+what you want. But a false positive would then **silently drop a legitimate relay line**, and the
+in-game speaker would never know their message did not arrive. Whether Discord applies AutoMod to
+bot messages was not verified. **If game chat ever goes missing from `#chat`, check this first** -
+exempting the `Shadowgain` role from the profanity rule is the fix.
