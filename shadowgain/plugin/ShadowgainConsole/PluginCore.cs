@@ -986,8 +986,11 @@ namespace ShadowgainConsole
                     row[3][0] = histRows[i][3];
                 }
 
-                if (histRows.Count > 0)
-                    SetText("lblOversight", histRows.Count + " change(s). Revert undoes the newest.");
+                Util.Trace("dial-history: parsed " + histRows.Count + " row(s)");
+
+                SetText("lblOversight", histRows.Count > 0
+                    ? histRows.Count + " change(s). Revert undoes the newest."
+                    : "No changes parsed for '" + queriedDial + "'.");
             }
             catch (Exception ex) { Util.LogError(ex); }
         }
@@ -1444,6 +1447,13 @@ namespace ShadowgainConsole
             try
             {
                 var dial = GetText("txtDial");
+
+                // Traced because the first in-client attempt produced an empty list and there was
+                // no way to tell WHICH step failed - an empty box, a query that never went out, or
+                // a reply the parser dropped. The regex was verified against the server's real
+                // output and matches, so the next failure needs to name its own cause.
+                Util.Trace("dial-history: box=[" + (dial ?? "<null>") + "]");
+
                 if (string.IsNullOrEmpty(dial)) { SetText("lblOversight", "Enter a dial name."); return; }
 
                 queriedDial = dial;

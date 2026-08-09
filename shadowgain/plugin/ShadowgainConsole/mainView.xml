@@ -115,10 +115,10 @@
           <control progid="DecalControls.StaticText" name="lblCapHead"  left="6"   top="4"  width="320" height="16" text="Global multibox cap" />
           <control progid="DecalControls.Edit"       name="txtCap"      left="6"   top="24" width="50"  height="20" text="" />
           <control progid="DecalControls.PushButton" name="btnCapSet"   left="62"  top="23" width="56"  height="22" text="Set" />
-          <control progid="DecalControls.StaticText" name="lblCapHint"  left="124" top="26" width="202" height="16" text="-1 = unlimited" />
+          <control progid="DecalControls.StaticText" name="lblCapHint"  left="6"   top="48" width="320" height="16" text="-1 = unlimited" />
 
-          <control progid="DecalControls.StaticText" name="lblOvHead"   left="6"   top="52" width="320" height="16" text="Per-character overrides" />
-          <control progid="DecalControls.List"       name="lstMb"       left="6"   top="72" width="320" height="118">
+          <control progid="DecalControls.StaticText" name="lblOvHead"   left="6"   top="70" width="320" height="16" text="Per-character overrides" />
+          <control progid="DecalControls.List"       name="lstMb"       left="6"   top="90" width="320" height="100">
             <column progid="DecalControls.TextColumn" name="colMbWho" fixedwidth="204" />
             <column progid="DecalControls.TextColumn" name="colMbN"   fixedwidth="104" />
           </control>
@@ -138,7 +138,7 @@
 
       <page label="  Oversight  ">
         <control progid="DecalControls.FixedLayout" clipped="">
-          <control progid="DecalControls.StaticText" name="lblOvHead2"  left="6"   top="4"  width="320" height="16" text="Dial history - every change, incl. CLI and Greylock" />
+          <control progid="DecalControls.StaticText" name="lblOvHead2"  left="6"   top="4"  width="320" height="16" text="Dial history - every change, including console and staff" />
 
           <control progid="DecalControls.StaticText" name="lblDialName" left="6"   top="26" width="32"  height="16" text="Dial:" />
           <control progid="DecalControls.Edit"       name="txtDial"     left="40"  top="24" width="180" height="20" text="" />
