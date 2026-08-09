@@ -222,6 +222,23 @@ namespace MyClasses.MetaViewWrappers
 
         public static void WireupStart(object ViewObj, Decal.Adapter.Wrappers.PluginHost Host)
         {
+            WireupStart(ViewObj, Host, null);
+        }
+
+        /// <summary>
+        /// Shadowgain: same as WireupStart, but builds the view from an XML STRING instead of the
+        /// embedded resource named by [MVView].
+        ///
+        /// Added so the console can remove the tabs a tier cannot use before the window is ever
+        /// constructed. VVS has no remove-page API - INotebook exposes only ActiveTab and Change -
+        /// so the only way to get "absent rather than greyed" is to hand it XML that never had
+        /// those pages in it. ViewSystemSelector already supported this via CreateViewXML; nothing
+        /// upstream had to change, only this entry point.
+        ///
+        /// Passing null gives the original behaviour exactly.
+        /// </summary>
+        public static void WireupStart(object ViewObj, Decal.Adapter.Wrappers.PluginHost Host, string RawXML)
+        {
             if (VInfo.ContainsKey(ViewObj))
                 WireupEnd(ViewObj);
             ViewObjectInfo info = new ViewObjectInfo();
@@ -233,7 +250,9 @@ namespace MyClasses.MetaViewWrappers
             object[] viewattrs = ObjType.GetCustomAttributes(typeof(MVViewAttribute), true);
             foreach (MVViewAttribute a in viewattrs)
             {
-                info.Views.Add(MyClasses.MetaViewWrappers.ViewSystemSelector.CreateViewResource(Host, a.Resource));
+                info.Views.Add(RawXML == null
+                    ? MyClasses.MetaViewWrappers.ViewSystemSelector.CreateViewResource(Host, a.Resource)
+                    : MyClasses.MetaViewWrappers.ViewSystemSelector.CreateViewXML(Host, RawXML));
             }
 
             //Wire up control references
@@ -307,7 +326,22 @@ namespace MyClasses.MetaViewWrappers
                     }
 
                     if (mycontrol == null)
-                        throw new Exception("Invalid control reference \"" + attr.Control + "\"");
+                    {
+                        // Shadowgain: skip instead of throwing.
+                        //
+                        // Upstream this threw, which is right when the view is fixed - a typo in
+                        // an [MVControlEvent] name should be loud. But the console now builds its
+                        // view from XML with the pages and buttons the operator's tier cannot use
+                        // REMOVED, so handlers for absent controls are expected, not a mistake.
+                        // Throwing here aborted the entire wireup and left every tier below Admin
+                        // with no window at all.
+                        //
+                        // Traced rather than swallowed: a genuine typo still shows up, in the file
+                        // that gets read when something is wrong, instead of vanishing silently -
+                        // which is the failure mode that has cost this project the most time.
+                        ShadowgainConsole.Util.Trace("wireup: no control \"" + attr.Control + "\" - handler not wired");
+                        continue;
+                    }
 
                     EventInfo ei = mycontrol.GetType().GetEvent(attr.EventName);
                     ei.AddEventHandler(mycontrol, Delegate.CreateDelegate(ei.EventHandlerType, ViewObj, mi.Name));

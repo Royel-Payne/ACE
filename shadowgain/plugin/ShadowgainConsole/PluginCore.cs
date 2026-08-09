@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Xml;
 using System.Windows.Forms;
 
 using Decal.Adapter;
@@ -16,15 +17,23 @@ namespace ShadowgainConsole
     /// operator could type, as the logged-in character, so the SERVER re-checks AccessLevel and
     /// the 045 audit hook records it. Nothing drawn here can grant power the account lacks.
     ///
-    /// TIER GATING IS NOT IMPLEMENTED, deliberately, and the probes that used to fire for it have
-    /// been REMOVED. The brief calls for tabs a tier cannot use to be absent rather than greyed,
-    /// but MetaViewWrappers' INotebook exposes only ActiveTab and Change - there is no remove-page
-    /// method - and MVWireupHelper.WireupStart takes no raw-XML overload, so the view can only be
-    /// built from the embedded resource as written. Doing it properly means bypassing the wireup
-    /// helper and calling IView.InitializeRawXML with pages stripped from the XML string; that is
-    /// a real change, not a tweak. Until then the probes were pure cost: two commands fired at
-    /// every login whose answer nothing could act on, one of which printed
-    /// "Usage: /sg-dial-history <dial>" into the operator's chat and both of which hit the audit.
+    /// TIER GATING: tabs and buttons a rank cannot use are ABSENT, per the brief, not greyed out.
+    ///
+    /// Two problems had to be solved, and the first was misdiagnosed for a while. VVS genuinely
+    /// cannot remove a page after the fact - INotebook exposes only ActiveTab and Change - but the
+    /// conclusion drawn from that, that the view could only ever come from the [MVView] resource,
+    /// was wrong. ViewSystemSelector already had CreateViewXML, and the wrapper source ships with
+    /// this plugin, so a WireupStart overload taking raw XML was a few lines in code we own. The
+    /// pages are stripped from the XML string BEFORE the window is built - see TieredXml.
+    ///
+    /// The second problem is knowing the rank at all: Decal never sees the server's AccessLevel.
+    /// The old approach guessed, by firing a command only a tier could run and watching whether it
+    /// was refused - fragile in both directions, and it printed usage text into the operator's
+    /// chat while hitting the audit trail twice per login. Replaced by asking: /sg-whoami reports
+    /// the caller's own level and nothing else.
+    ///
+    /// None of this is a security boundary. It decides what to DRAW. Every command the console
+    /// fires is re-checked server-side, so a wrong answer costs buttons that get refused.
     ///
     /// TWO MEDIUM RULES THIS FILE OBEYS:
     ///   - no modals exist in VVS, so destructive actions use inline arm -> confirm;
@@ -61,7 +70,15 @@ namespace ShadowgainConsole
         // The plugin has no API to "run a command and get output" - it fires text and watches
         // chat. So a capture is a short window during which matching lines are consumed rather
         // than ignored. Timestamped so a lost reply cannot leave capture stuck on forever.
-        private enum Capture { None, Roster, Status, Multibox, History }
+        /// <summary>What the logged-in account may actually do. Decided by the server, not guessed.</summary>
+        private enum Tier { Advocate, Sentinel, Admin }
+        private Tier tier = Tier.Advocate;
+
+        // Whether the server actually answered. Distinguishes "you are an Advocate" from "this
+        // server has no /sg-whoami", which must not be treated the same - see TieredXml.
+        private bool tierKnown = false;
+
+        private enum Capture { None, Roster, Status, Multibox, History, Whoami }
         private Capture capturing = Capture.None;
         private DateTime captureStarted = DateTime.MinValue;
         private static readonly TimeSpan CaptureWindow = TimeSpan.FromSeconds(3);
@@ -96,6 +113,7 @@ namespace ShadowgainConsole
         // `Name : AccountId`, the format /sg-roster shares with listplayers so one parser serves
         // both.
         private static readonly Regex RosterLine = new Regex(@"^(?<name>.+?)\s+:\s+(?<acct>\d+)\s*$");
+        private static readonly Regex WhoamiLine = new Regex(@"AccessLevel:\s*(?<lvl>\w+)");
         private static readonly Regex StatusPlayers = new Regex(@"(?<n>\d+)\s+players online");
         private static readonly Regex StatusUptime = new Regex(@"Server Runtime:\s*(?<up>[^\r\n,]+)");
 
@@ -206,6 +224,23 @@ namespace ShadowgainConsole
             {
                 Util.Trace("DeferredInit begin");
 
+                // Ask the server what tier we are BEFORE building the window. The tabs a rank
+                // cannot use have to be absent rather than greyed (the brief is explicit), and
+                // VVS has no remove-page call - so the pages must never be in the XML that
+                // builds the view. That means the answer is needed first.
+                BeginCapture(Capture.Whoami);
+                Fire("/sg-whoami");
+            }
+            catch (Exception ex) { Util.Trace("DeferredInit: EXCEPTION " + ex.Message); Util.LogError(ex); }
+        }
+
+        /// <summary>
+        /// Build the window, with the pages and buttons this tier cannot use stripped out.
+        /// </summary>
+        private void BuildView()
+        {
+            try
+            {
                 if (!viewCreated)
                 {
                     // Report which system was chosen. A silent fallback to DecalInject is the
@@ -213,8 +248,8 @@ namespace ShadowgainConsole
                     // saying out loud rather than discovering it from an empty screen.
                     var vvs = ViewSystemSelector.IsPresent(Host, ViewSystemSelector.eViewSystem.VirindiViewService);
 
-                    Util.Trace("  WireupStart (vvs=" + vvs + ")");
-                    MVWireupHelper.WireupStart(this, Host);
+                    Util.Trace("  WireupStart (vvs=" + vvs + ", tier=" + tier + ")");
+                    MVWireupHelper.WireupStart(this, Host, TieredXml());
                     viewCreated = true;
                     Util.Trace("  view created");
 
@@ -232,6 +267,119 @@ namespace ShadowgainConsole
                 Util.Trace("DeferredInit end");
             }
             catch (Exception ex) { Util.LogError(ex); }
+        }
+
+        /// <summary>Map the server's AccessLevel name onto the three surfaces the console draws.</summary>
+        private static Tier ToTier(string accessLevel)
+        {
+            if (string.IsNullOrEmpty(accessLevel))
+                return Tier.Advocate;
+
+            switch (accessLevel.Trim().ToLowerInvariant())
+            {
+                case "admin":
+                case "developer":
+                    return Tier.Admin;
+
+                case "envoy":
+                case "sentinel":
+                    return Tier.Sentinel;
+
+                // Player included: if a plain account somehow loads this, it gets the smallest
+                // surface rather than a guess.
+                default:
+                    return Tier.Advocate;
+            }
+        }
+
+        /// <summary>
+        /// The view XML with everything this tier cannot use removed, or null to use the embedded
+        /// resource unchanged.
+        ///
+        /// This is what makes "absent rather than greyed" possible. VVS cannot remove a page after
+        /// the fact - INotebook exposes only ActiveTab and Change - so a page a tier must not see
+        /// has to be missing from the XML the window is built from in the first place.
+        ///
+        /// Admin returns null deliberately: null means "load the embedded resource", which is the
+        /// original, already-proven path. The tier that sees everything does not need to exercise
+        /// the XML rewriting at all, so the most-used case carries the least new risk. A parse
+        /// failure returns null too - a full console is a much better failure than no console.
+        /// </summary>
+        private string TieredXml()
+        {
+            // No answer means the server predates /sg-whoami, NOT that the operator is a
+            // low tier. Degrading to the smallest surface on a timeout would hand an Admin a
+            // crippled console purely because of deploy ordering - the plugin ships to the
+            // client independently of the server. Unknown therefore falls back to the previous
+            // behaviour: draw everything, and let the server refuse what the rank lacks.
+            if (!tierKnown || tier == Tier.Admin)
+                return null;
+
+            try
+            {
+                string xml;
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+
+                using (var stream = asm.GetManifestResourceStream("ShadowgainConsole.mainView.xml"))
+                {
+                    if (stream == null)
+                        return null;
+
+                    using (var reader = new System.IO.StreamReader(stream))
+                        xml = reader.ReadToEnd();
+                }
+
+                var doc = new XmlDocument();
+                doc.LoadXml(xml);
+
+                // Server / Access / Oversight are Admin-only.
+                RemoveNodes(doc, "page", "label", new string[] { "Server", "Access", "Oversight" });
+
+                // Advocate keeps the roster and Go to, but none of the verbs that act ON someone.
+                if (tier == Tier.Advocate)
+                    RemoveNodes(doc, "control", "name",
+                        new string[] { "btnSummon", "btnSendBack", "btnGag", "btnKick", "btnKickNo" });
+
+                return doc.OuterXml;
+            }
+            catch (Exception ex)
+            {
+                Util.Trace("TieredXml failed, using the full view: " + ex.Message);
+                Util.LogError(ex);
+                return null;
+            }
+        }
+
+        private static void RemoveNodes(XmlDocument doc, string element, string attribute, string[] values)
+        {
+            var doomed = new List<XmlNode>();
+
+            foreach (XmlNode node in doc.GetElementsByTagName(element))
+            {
+                var attr = node.Attributes == null ? null : node.Attributes[attribute];
+
+                if (attr == null)
+                    continue;
+
+                foreach (var value in values)
+                {
+                    // Trimmed: page labels are padded with spaces so MetaView sizes the tab
+                    // sensibly, so "  Server  " has to match "Server".
+                    if (string.Equals(attr.Value.Trim(), value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        doomed.Add(node);
+                        break;
+                    }
+                }
+            }
+
+            // Collected first, removed second. GetElementsByTagName returns a LIVE NodeList, and
+            // removing while walking it skips whatever shifts into the vacated slot.
+            foreach (var node in doomed)
+            {
+                if (node.ParentNode != null)
+                    node.ParentNode.RemoveChild(node);
+            }
         }
 
         // ------------------------------------------------------------------ chat capture
@@ -305,6 +453,19 @@ namespace ShadowgainConsole
                             return;
                         }
                     }
+                    else if (capturing == Capture.Whoami)
+                    {
+                        var m = WhoamiLine.Match(line);
+
+                        if (m.Success)
+                        {
+                            tier = ToTier(m.Groups["lvl"].Value);
+                            tierKnown = true;
+                            Util.Trace("whoami: " + m.Groups["lvl"].Value + " -> " + tier);
+                            FinishCapture();
+                            return;
+                        }
+                    }
                     else if (capturing == Capture.Multibox)
                     {
                         if (line.StartsWith("Global cap:", StringComparison.OrdinalIgnoreCase))
@@ -359,6 +520,16 @@ namespace ShadowgainConsole
             var was = capturing;
             capturing = Capture.None;
 
+            if (was == Capture.Whoami)
+            {
+                // Reached either on the reply or on the 3s timeout. A timeout leaves tierKnown
+                // false, which TieredXml treats as "draw everything" - the server still refuses
+                // anything the rank lacks, so the worst case is buttons that do not work rather
+                // than a console missing tabs the operator has earned.
+                BuildView();
+                return;
+            }
+
             if (was == Capture.Roster)
                 RedrawRoster();
             else if (was == Capture.Status)
@@ -407,17 +578,20 @@ namespace ShadowgainConsole
                     return;
                 }
 
-                // Nothing below may run before the deferred init has completed - every path
-                // here reaches either the client's chat parser or a VVS control.
+                // Capture expiry is checked BEFORE the view guard on purpose: the whoami reply
+                // is itself a capture, and it is what builds the view. Guarding first would mean
+                // a server that never answers leaves the console permanently blank.
+                if (capturing != Capture.None && DateTime.UtcNow - captureStarted > CaptureWindow)
+                    FinishCapture();
+
+                // Nothing below may run before the window exists - every path here reaches
+                // either the client's chat parser or a VVS control.
                 if (!viewCreated)
                     return;
 
                 // Expire an arm the operator walked away from.
                 if (armed != null && DateTime.UtcNow - armedAt > ArmWindow)
                     Disarm("Confirmation expired.");
-
-                if (capturing != Capture.None && DateTime.UtcNow - captureStarted > CaptureWindow)
-                    FinishCapture();
 
                 // Auto-refresh ONLY while the window is open, and slowly.
                 //

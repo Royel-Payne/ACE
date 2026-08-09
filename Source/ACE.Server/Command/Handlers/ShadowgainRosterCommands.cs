@@ -29,6 +29,33 @@ namespace ACE.Server.Command.Handlers
     /// </summary>
     public static class ShadowgainRosterCommands
     {
+        [CommandHandler("sg-whoami", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "Report your own access level.",
+            "Answers one question: what tier is the account I am logged in on? "
+            + "Exists so the admin console can draw the tabs your rank can actually use.")]
+        public static void HandleWhoAmI(Session session, params string[] parameters)
+        {
+            // WHY A COMMAND FOR THIS. Decal never sees the server's AccessLevel, so the console
+            // previously had to GUESS its tier by firing a command only a tier could run and
+            // watching whether it was refused. That was fragile in both directions - a probe that
+            // failed for an unrelated reason silently demoted the operator, and every probe hit
+            // the audit trail and printed usage text into chat. Asking is deterministic, costs one
+            // round trip, and reads the same value the server enforces with.
+            //
+            // AccessLevel.Player because it reports ONLY the caller's own level, which they can
+            // already discover by trying a command. There is nothing here to leak: a Player asking
+            // learns they are a Player.
+            //
+            // NOT a security boundary. The console uses the answer to decide what to DRAW; every
+            // command it then fires is re-checked server-side, so a forged or wrong answer buys
+            // nothing but buttons that get refused.
+            var level = session?.AccessLevel ?? AccessLevel.Player;
+
+            // Fixed, machine-readable shape - the plugin string-matches the part after the colon.
+            // Do not localise or decorate it.
+            CommandHandlerHelper.WriteOutputInfo(session, $"AccessLevel: {level}", ChatMessageType.Broadcast);
+        }
+
         [CommandHandler("sg-roster", AccessLevel.Sentinel, CommandHandlerFlag.None, 0,
             "List the players currently online.",
             "\n"
