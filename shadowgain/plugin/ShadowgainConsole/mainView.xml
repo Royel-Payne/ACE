@@ -8,108 +8,156 @@
   across tab changes. VVS has no flow or anchoring, so every control carries absolute
   left/top/width/height.
 
+  ROSTER SIDE: right of the tabs, per the mock's stated default.
+
+  COLUMN WIDTHS: a <column> carries fixedwidth, NOT width - confirmed by reading the view
+  embedded in MagTools.dll rather than by guessing. A column with no fixedwidth is a HIDDEN
+  data column there (ManaItemID, ManaItemSort), which is used deliberately below: every list
+  that drives a command carries a hidden column holding the exact string to send, so what is
+  displayed and what is transmitted never have to be the same value. That is the direct fix for
+  the roster bug - the dagger marker arrives from the CP1252 chat path mangled to '?', so the
+  visible column shows a cleaned name while the hidden column carries what the server will match.
+
+  TAB LABELS are padded with spaces. MetaView sizes a tab to its label, so unpadded labels
+  produce cramped tabs - MagTools pads every one of its own.
+
   TIER NOTE: all five pages are declared here. The plugin REMOVES the ones the logged-in
   character's AccessLevel does not permit, because the brief calls for absent rather than
   greyed-out. Declaring them all keeps the XML static and the gating in one place.
+
+  ASCII ONLY. The server speaks CP1252 on the chat path and this file is compiled without a
+  BOM; a stray em-dash here is one more place for an encoding surprise to hide.
 -->
 <view icon="8129" title="Shadowgain Console" width="540" height="400">
   <control progid="DecalControls.FixedLayout" clipped="">
 
     <!-- ================= persistent status strip (all tiers) ================= -->
-    <control progid="DecalControls.StaticText" name="lblStatus"  left="4"   top="4"  width="440" height="16" text="Shadowgain - status pending" />
-    <control progid="DecalControls.PushButton" name="btnRefresh" left="448" top="2"  width="86"  height="20" text="Refresh" />
+    <control progid="DecalControls.StaticText" name="lblStatus"  left="4"   top="4"  width="430" height="16" text="Shadowgain - status pending" />
+    <control progid="DecalControls.PushButton" name="btnRefresh" left="440" top="2"  width="94"  height="20" text="Refresh" />
+
+    <!-- ================= tabs ================================================ -->
+    <control progid="DecalControls.Notebook" name="nbMain" left="4" top="26" width="348" height="320">
+
+      <page label="  Players  ">
+        <control progid="DecalControls.FixedLayout" clipped="">
+          <control progid="DecalControls.StaticText" name="lblTarget"   left="6"   top="4"  width="320" height="16" text="Target: (none selected)" />
+
+          <control progid="DecalControls.PushButton" name="btnGoTo"     left="6"   top="26" width="74"  height="22" text="Go to" />
+          <control progid="DecalControls.PushButton" name="btnSummon"   left="84"  top="26" width="74"  height="22" text="Summon" />
+          <control progid="DecalControls.PushButton" name="btnSendBack" left="162" top="26" width="84"  height="22" text="Send back" />
+          <control progid="DecalControls.PushButton" name="btnGag"      left="250" top="26" width="60"  height="22" text="Gag" />
+
+          <!-- arm -> confirm: btnKickNo is hidden until btnKick is armed -->
+          <control progid="DecalControls.PushButton" name="btnKick"     left="6"   top="54" width="84"  height="22" text="Kick" />
+          <control progid="DecalControls.PushButton" name="btnKickNo"   left="94"  top="54" width="60"  height="22" text="Cancel" />
+
+          <control progid="DecalControls.StaticText" name="lblPlayers"  left="6"   top="82" width="320" height="16" text="Select a player from the roster." />
+        </control>
+      </page>
+
+      <page label="  Me  ">
+        <control progid="DecalControls.FixedLayout" clipped="">
+          <!-- a toggle BUTTON carrying its own state in the caption, per the mock - not a checkbox -->
+          <control progid="DecalControls.PushButton" name="btnAttack"   left="6"   top="4"  width="124" height="22" text="Attackable: ?" />
+          <control progid="DecalControls.PushButton" name="btnReturn"   left="136" top="4"  width="90"  height="22" text="Return me" />
+
+          <control progid="DecalControls.StaticText" name="lblPoiHead"  left="6"   top="32" width="320" height="16" text="Destination - type to filter" />
+          <control progid="DecalControls.Edit"       name="txtPoiFilter" left="6"  top="52" width="220" height="20" text="" />
+
+          <control progid="DecalControls.List"       name="lstPoi"      left="6"   top="76" width="320" height="140">
+            <column progid="DecalControls.TextColumn" name="colPoiName"  fixedwidth="196" />
+            <column progid="DecalControls.TextColumn" name="colPoiCoord" fixedwidth="112" />
+            <column progid="DecalControls.TextColumn" name="colPoiSend" />
+          </control>
+
+          <control progid="DecalControls.PushButton" name="btnPoiGo"    left="6"   top="222" width="70"  height="22" text="Tele" />
+          <control progid="DecalControls.StaticText" name="lblPoi"      left="82"  top="225" width="244" height="16" text="Pick a destination." />
+
+          <control progid="DecalControls.Edit"       name="txtCoord"    left="6"   top="250" width="180" height="20" text="" />
+          <control progid="DecalControls.PushButton" name="btnCoordGo"  left="192" top="249" width="100" height="22" text="Tele coords" />
+        </control>
+      </page>
+
+      <page label="  Server  ">
+        <control progid="DecalControls.FixedLayout" clipped="">
+          <control progid="DecalControls.StaticText" name="lblSrv1"     left="6"   top="4"  width="320" height="16" text="server - not yet polled" />
+          <control progid="DecalControls.StaticText" name="lblSrv2"     left="6"   top="22" width="320" height="16" text="" />
+          <control progid="DecalControls.StaticText" name="lblSrv3"     left="6"   top="40" width="320" height="16" text="" />
+
+          <control progid="DecalControls.StaticText" name="lblShutInt"  left="6"   top="70" width="72"  height="16" text="Countdown" />
+          <control progid="DecalControls.Edit"       name="txtShutInt"  left="80"  top="68" width="44"  height="20" text="60" />
+          <control progid="DecalControls.StaticText" name="lblShutS"    left="128" top="70" width="14"  height="16" text="s" />
+          <control progid="DecalControls.PushButton" name="btnShutdown" left="146" top="67" width="96"  height="22" text="Shutdown" />
+          <control progid="DecalControls.PushButton" name="btnShutNo"   left="246" top="67" width="60"  height="22" text="Cancel" />
+
+          <control progid="DecalControls.StaticText" name="lblStormHead" left="6"  top="96" width="320" height="16" text="Portal Storm - clears the landblock you are standing in" />
+          <control progid="DecalControls.PushButton" name="btnStorm"    left="6"   top="116" width="110" height="22" text="Portal Storm" />
+          <control progid="DecalControls.PushButton" name="btnStormNo"  left="120" top="116" width="60"  height="22" text="Cancel" />
+
+          <control progid="DecalControls.StaticText" name="lblServer"   left="6"   top="144" width="320" height="16" text="Players are sent to their lifestones. You are never stormed." />
+        </control>
+      </page>
+
+      <page label="  Access  ">
+        <control progid="DecalControls.FixedLayout" clipped="">
+          <control progid="DecalControls.StaticText" name="lblCapHead"  left="6"   top="4"  width="320" height="16" text="Global multibox cap" />
+          <control progid="DecalControls.Edit"       name="txtCap"      left="6"   top="24" width="50"  height="20" text="" />
+          <control progid="DecalControls.PushButton" name="btnCapSet"   left="62"  top="23" width="56"  height="22" text="Set" />
+          <control progid="DecalControls.StaticText" name="lblCapHint"  left="124" top="26" width="202" height="16" text="-1 = unlimited" />
+
+          <control progid="DecalControls.StaticText" name="lblOvHead"   left="6"   top="52" width="320" height="16" text="Per-character overrides" />
+          <control progid="DecalControls.List"       name="lstMb"       left="6"   top="72" width="320" height="118">
+            <column progid="DecalControls.TextColumn" name="colMbWho" fixedwidth="204" />
+            <column progid="DecalControls.TextColumn" name="colMbN"   fixedwidth="104" />
+          </control>
+
+          <control progid="DecalControls.StaticText" name="lblMbName"   left="6"   top="198" width="40"  height="16" text="Name:" />
+          <control progid="DecalControls.Edit"       name="txtMbName"   left="48"  top="196" width="120" height="20" text="" />
+          <control progid="DecalControls.StaticText" name="lblMbN"      left="174" top="198" width="16"  height="16" text="N:" />
+          <control progid="DecalControls.Edit"       name="txtMbN"      left="192" top="196" width="40"  height="20" text="-1" />
+
+          <control progid="DecalControls.PushButton" name="btnMbAdd"    left="6"   top="222" width="64"  height="22" text="Add" />
+          <control progid="DecalControls.PushButton" name="btnMbRemove" left="74"  top="222" width="116" height="22" text="Remove selected" />
+          <control progid="DecalControls.PushButton" name="btnMbShow"   left="194" top="222" width="74"  height="22" text="Refresh" />
+
+          <control progid="DecalControls.StaticText" name="lblAccess"   left="6"   top="250" width="320" height="16" text="Selecting a roster row fills the name." />
+        </control>
+      </page>
+
+      <page label="  Oversight  ">
+        <control progid="DecalControls.FixedLayout" clipped="">
+          <control progid="DecalControls.StaticText" name="lblOvHead2"  left="6"   top="4"  width="320" height="16" text="Dial history - every change, incl. CLI and Greylock" />
+
+          <control progid="DecalControls.StaticText" name="lblDialName" left="6"   top="26" width="32"  height="16" text="Dial:" />
+          <control progid="DecalControls.Edit"       name="txtDial"     left="40"  top="24" width="180" height="20" text="" />
+          <control progid="DecalControls.PushButton" name="btnDialHist" left="226" top="23" width="96"  height="22" text="History" />
+
+          <control progid="DecalControls.List"       name="lstHist"     left="6"   top="50" width="320" height="170">
+            <column progid="DecalControls.TextColumn" name="colHT"     fixedwidth="72" />
+            <column progid="DecalControls.TextColumn" name="colHD"     fixedwidth="96" />
+            <column progid="DecalControls.TextColumn" name="colHDelta" fixedwidth="80" />
+            <column progid="DecalControls.TextColumn" name="colHWho"   fixedwidth="60" />
+          </control>
+
+          <control progid="DecalControls.PushButton" name="btnRevert"   left="6"   top="228" width="116" height="22" text="Revert selected" />
+          <control progid="DecalControls.PushButton" name="btnRevertNo" left="126" top="228" width="60"  height="22" text="Cancel" />
+
+          <control progid="DecalControls.StaticText" name="lblOversight" left="6"  top="256" width="320" height="16" text="Revert restores the previous recorded value." />
+        </control>
+      </page>
+
+    </control>
 
     <!-- ================= roster side panel (all tiers) ======================= -->
-    <control progid="DecalControls.StaticText" name="lblRoster"  left="4"   top="26" width="176" height="16" text="Online - 0" />
-    <control progid="DecalControls.List"       name="lstRoster"  left="4"   top="44" width="176" height="330">
-      <column progid="DecalControls.TextColumn" name="colName" />
+    <control progid="DecalControls.StaticText" name="lblRoster"  left="358" top="26" width="178" height="16" text="Online - 0" />
+    <control progid="DecalControls.List"       name="lstRoster"  left="358" top="44" width="178" height="302">
+      <column progid="DecalControls.TextColumn" name="colName" fixedwidth="166" />
+      <!-- hidden: the exact name to put on the wire, free of any display marker -->
+      <column progid="DecalControls.TextColumn" name="colSend" />
     </control>
 
-    <!-- ================= tabs, beside the panel ============================== -->
-    <control progid="DecalControls.Notebook" name="nbMain" left="186" top="26" width="350" height="348">
+    <!-- ================= command echo strip ================================== -->
+    <control progid="DecalControls.StaticText" name="lblEcho" left="4" top="352" width="532" height="16" text="" />
 
-      <page label="Players">
-        <control progid="DecalControls.FixedLayout" clipped="">
-          <control progid="DecalControls.StaticText" name="lblTarget"   left="6"  top="6"   width="330" height="16" text="Target: (none selected)" />
-
-          <control progid="DecalControls.PushButton" name="btnGoTo"     left="6"  top="30"  width="100" height="22" text="Go to" />
-          <control progid="DecalControls.PushButton" name="btnSummon"   left="112" top="30" width="100" height="22" text="Summon" />
-          <control progid="DecalControls.PushButton" name="btnSendBack" left="218" top="30" width="110" height="22" text="Send back" />
-
-          <control progid="DecalControls.PushButton" name="btnGag"      left="6"  top="60"  width="100" height="22" text="Gag" />
-          <control progid="DecalControls.PushButton" name="btnKick"     left="112" top="60" width="100" height="22" text="Kick" />
-          <control progid="DecalControls.PushButton" name="btnKickNo"   left="218" top="60" width="110" height="22" text="Cancel" />
-
-          <control progid="DecalControls.StaticText" name="lblPlayers"  left="6"  top="92"  width="330" height="16" text="Select a player from the roster." />
-        </control>
-      </page>
-
-      <page label="Me">
-        <control progid="DecalControls.FixedLayout" clipped="">
-          <control progid="DecalControls.CheckBox"   name="chkAttackable" left="6" top="6"  width="150" height="20" text="Attackable" />
-
-          <control progid="DecalControls.StaticText" name="lblPoi"      left="6"  top="34"  width="60"  height="16" text="Go to:" />
-          <control progid="DecalControls.Combo"      name="cmbPoi"      left="66" top="32"  width="180" height="20" />
-          <control progid="DecalControls.PushButton" name="btnPoiGo"    left="252" top="31" width="80"  height="22" text="Travel" />
-
-          <control progid="DecalControls.StaticText" name="lblCoord"    left="6"  top="64"  width="60"  height="16" text="Coords:" />
-          <control progid="DecalControls.Edit"       name="txtCoord"    left="66" top="62"  width="180" height="20" text="" />
-          <control progid="DecalControls.PushButton" name="btnCoordGo"  left="252" top="61" width="80"  height="22" text="Tele" />
-
-          <control progid="DecalControls.StaticText" name="lblMe"       left="6"  top="94"  width="330" height="16" text="Coordinates look like 33.2N,56.5E" />
-        </control>
-      </page>
-
-      <page label="Server">
-        <control progid="DecalControls.FixedLayout" clipped="">
-          <control progid="DecalControls.StaticText" name="lblSrvHead"  left="6"  top="6"   width="330" height="16" text="Server operations" />
-
-          <control progid="DecalControls.StaticText" name="lblStormLb"  left="6"  top="32"  width="80"  height="16" text="Landblock:" />
-          <control progid="DecalControls.Edit"       name="txtStormLb"  left="86" top="30"  width="90"  height="20" text="" />
-          <control progid="DecalControls.PushButton" name="btnStorm"    left="182" top="29" width="100" height="22" text="Portal Storm" />
-          <control progid="DecalControls.PushButton" name="btnStormNo"  left="286" top="29" width="50"  height="22" text="No" />
-
-          <control progid="DecalControls.StaticText" name="lblShutInt"  left="6"  top="62"  width="80"  height="16" text="Countdown:" />
-          <control progid="DecalControls.Edit"       name="txtShutInt"  left="86" top="60"  width="90"  height="20" text="60" />
-          <control progid="DecalControls.PushButton" name="btnShutdown" left="182" top="59" width="100" height="22" text="Shutdown" />
-          <control progid="DecalControls.PushButton" name="btnShutNo"   left="286" top="59" width="50"  height="22" text="No" />
-
-          <control progid="DecalControls.StaticText" name="lblServer"   left="6"  top="92"  width="330" height="16" text="Blank landblock = the one you are standing in." />
-        </control>
-      </page>
-
-      <page label="Access">
-        <control progid="DecalControls.FixedLayout" clipped="">
-          <control progid="DecalControls.StaticText" name="lblAccHead"  left="6"  top="6"   width="330" height="16" text="Multibox overrides" />
-
-          <control progid="DecalControls.StaticText" name="lblMbName"   left="6"  top="32"  width="50"  height="16" text="Name:" />
-          <control progid="DecalControls.Edit"       name="txtMbName"   left="56" top="30"  width="130" height="20" text="" />
-          <control progid="DecalControls.StaticText" name="lblMbN"      left="192" top="32" width="20"  height="16" text="N:" />
-          <control progid="DecalControls.Edit"       name="txtMbN"      left="212" top="30" width="40"  height="20" text="-1" />
-
-          <control progid="DecalControls.PushButton" name="btnMbSet"    left="6"  top="58"  width="90"  height="22" text="Set" />
-          <control progid="DecalControls.PushButton" name="btnMbRemove" left="102" top="58" width="90"  height="22" text="Remove" />
-          <control progid="DecalControls.PushButton" name="btnMbShow"   left="198" top="58" width="90"  height="22" text="Show" />
-
-          <control progid="DecalControls.StaticText" name="lblAccess"   left="6"  top="88"  width="330" height="16" text="N = -1 for unlimited. Roster selection fills the name." />
-        </control>
-      </page>
-
-      <page label="Oversight">
-        <control progid="DecalControls.FixedLayout" clipped="">
-          <control progid="DecalControls.StaticText" name="lblOvHead"   left="6"  top="6"   width="330" height="16" text="Dial history" />
-
-          <control progid="DecalControls.StaticText" name="lblDialName" left="6"  top="32"  width="40"  height="16" text="Dial:" />
-          <control progid="DecalControls.Edit"       name="txtDial"     left="46" top="30"  width="180" height="20" text="" />
-          <control progid="DecalControls.PushButton" name="btnDialHist" left="232" top="29" width="100" height="22" text="History" />
-
-          <control progid="DecalControls.PushButton" name="btnRevert"   left="6"  top="58"  width="100" height="22" text="Revert" />
-          <control progid="DecalControls.PushButton" name="btnRevertNo" left="112" top="58" width="50"  height="22" text="No" />
-
-          <control progid="DecalControls.StaticText" name="lblOversight" left="6" top="88"  width="330" height="16" text="Revert restores the previous recorded value." />
-        </control>
-      </page>
-
-    </control>
   </control>
 </view>

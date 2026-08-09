@@ -77,6 +77,8 @@ namespace ACE.Server.Managers
             "serverstatus",         // polled every 15s by tools/sitedata.sh
             "serverperformance",
             "allstats",
+            "sg-roster",            // polled by the admin console plugin to draw its roster panel
+            "sg-dial-history",      // reading the trail is not an action on the server
         };
 
         /// <summary>
