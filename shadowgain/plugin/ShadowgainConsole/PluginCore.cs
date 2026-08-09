@@ -656,7 +656,7 @@ namespace ShadowgainConsole
                         if (m.Success)
                             histRows.Add(new string[]
                             {
-                                m.Groups["when"].Value.Trim(),
+                                ShortTime(m.Groups["when"].Value.Trim()),
                                 m.Groups["dial"].Value.Trim(),
                                 m.Groups["before"].Value.Trim() + " -> " + m.Groups["after"].Value.Trim(),
                                 m.Groups["who"].Value.Trim()
@@ -889,6 +889,27 @@ namespace ShadowgainConsole
             }
 
             return letters >= 2;
+        }
+
+        /// <summary>
+        /// "2026-08-09T19:11:51Z" -> "19:11:51".
+        ///
+        /// The date costs 72px to tell an operator something they almost always already know, and
+        /// it was pushing the dial name - the column that answers "what was touched" - into
+        /// truncation. Anything not matching the expected shape is returned untouched, so an
+        /// unexpected timestamp format degrades to "slightly wide" rather than "blank".
+        /// </summary>
+        private static string ShortTime(string when)
+        {
+            if (string.IsNullOrEmpty(when))
+                return when;
+
+            var t = when.IndexOf('T');
+
+            if (t < 0 || t + 1 >= when.Length)
+                return when;
+
+            return when.Substring(t + 1).TrimEnd('Z');
         }
 
         private bool RequireTarget()

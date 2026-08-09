@@ -145,10 +145,15 @@
           <control progid="DecalControls.PushButton" name="btnDialHist" left="226" top="23" width="96"  height="22" text="History" />
 
           <control progid="DecalControls.List"       name="lstHist"     left="6"   top="50" width="320" height="170">
-            <column progid="DecalControls.TextColumn" name="colHT"     fixedwidth="72" />
-            <column progid="DecalControls.TextColumn" name="colHD"     fixedwidth="96" />
-            <column progid="DecalControls.TextColumn" name="colHDelta" fixedwidth="80" />
-            <column progid="DecalControls.TextColumn" name="colHWho"   fixedwidth="60" />
+            <!-- Widths reweighted (080). The dial name is the column that actually answers
+                 "what was touched" and it was the one being truncated, while a full ISO date sat
+                 beside it spending 72px to say "today" six times over. The plugin now shows the
+                 time only; the date it drops is recoverable from the audit trail if it is ever
+                 needed, and these are newest-first. -->
+            <column progid="DecalControls.TextColumn" name="colHT"     fixedwidth="50" />
+            <column progid="DecalControls.TextColumn" name="colHD"     fixedwidth="134" />
+            <column progid="DecalControls.TextColumn" name="colHDelta" fixedwidth="70" />
+            <column progid="DecalControls.TextColumn" name="colHWho"   fixedwidth="54" />
           </control>
 
           <control progid="DecalControls.PushButton" name="btnRevert"   left="6"   top="228" width="116" height="22" text="Revert selected" />
