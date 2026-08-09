@@ -433,8 +433,15 @@ namespace ShadowgainConsole
 
                 // Advocate keeps the roster and Go to, but none of the verbs that act ON someone.
                 if (tier == Tier.Advocate)
-                    RemoveNodes(doc, "control", "name",
-                        new string[] { "btnSummon", "btnSendBack", "btnGag", "btnKick", "btnKickNo" });
+                    RemoveNodes(doc, "control", "name", new string[]
+                    {
+                        "btnSummon", "btnSendBack", "btnGag", "btnKick", "btnKickNo",
+
+                        // Both Return me buttons: telereturn is Sentinel, so at Advocate they
+                        // would be drawn and then refused. Shipping a button that cannot work is
+                        // the same mistake 064 fixed for the roster, one tier up.
+                        "btnReturn", "btnReturnMe"
+                    });
 
                 return doc.OuterXml;
             }
@@ -1169,6 +1176,14 @@ namespace ShadowgainConsole
                 SetText("btnAttack", "Attackable: " + (next == 1 ? "ON" : "OFF"));
             }
             catch (Exception ex) { Util.LogError(ex); }
+        }
+
+        [MVControlEvent("btnReturnMe", "Click")]
+        private void btnReturnMe_Click(object sender, MVControlEventArgs e)
+        {
+            // The Players tab copy. Same action as the Me tab's - the moment you want it is
+            // right after Go to, and hopping tabs to reach it is the nit Chris raised.
+            btnReturn_Click(sender, e);
         }
 
         [MVControlEvent("btnReturn", "Click")]

@@ -55,6 +55,10 @@
           <control progid="DecalControls.PushButton" name="btnKick"     left="6"   top="54" width="84"  height="22" text="Kick" />
           <control progid="DecalControls.PushButton" name="btnKickNo"   left="94"  top="54" width="60"  height="22" text="Cancel" />
 
+          <!-- Self-action, deliberately set apart from the target verbs above it. Duplicates the
+               Me tab's button because the natural moment to want it is straight after Go to. -->
+          <control progid="DecalControls.PushButton" name="btnReturnMe" left="236" top="54" width="90"  height="22" text="Return me" />
+
           <control progid="DecalControls.StaticText" name="lblPlayers"  left="6"   top="82" width="320" height="16" text="Select a player from the roster." />
         </control>
       </page>
