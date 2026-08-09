@@ -117,8 +117,12 @@ namespace ShadowgainConsole
 
         // "  10.0.0.5 = unlimited" / "  10.0.0.5 = 2"
         private static readonly Regex MbOverride = new Regex(@"^(?<who>\S+)\s*=\s*(?<n>\S+)$");
-        // "  2026-08-09 01:22  Chris: 5 -> 8"
-        private static readonly Regex HistLine = new Regex(@"^(?<when>.+?)\s{2,}(?<who>[^:]+):\s*(?<before>.*?)\s*->\s*(?<after>.*)$");
+        // "2026-08-09T19:11:51Z  progression_marker_enabled  +Shadowgain: true -> false"
+        //
+        // 077 puts the dial name on every line in BOTH modes, so it is read from the line rather
+        // than assumed from whatever is typed in the box. That is what lets one parser serve both
+        // the all-dials listing and a single-dial query.
+        private static readonly Regex HistLine = new Regex(@"^(?<when>\S+)\s{2,}(?<dial>\S+)\s{2,}(?<who>[^:]+):\s*(?<before>.*?)\s*->\s*(?<after>.*)$");
 
         protected override void Startup()
         {
@@ -283,6 +287,7 @@ namespace ShadowgainConsole
                 // fill its own status strip. Without this it read "status pending" until someone
                 // happened to click Refresh.
                 pendingStatus = true;
+                pendingHistory = true;
                 Refresh();
                 Util.Trace("view ready");
             }
@@ -636,7 +641,8 @@ namespace ShadowgainConsole
                     }
                     else if (capturing == Capture.History)
                     {
-                        if (line.StartsWith("No recorded changes", StringComparison.OrdinalIgnoreCase))
+                        if (line.StartsWith("No dial changes recorded", StringComparison.OrdinalIgnoreCase)
+                            || line.StartsWith("No recorded changes", StringComparison.OrdinalIgnoreCase))
                         {
                             SetText("lblOversight", line);
                             FinishCapture();
@@ -651,7 +657,7 @@ namespace ShadowgainConsole
                             histRows.Add(new string[]
                             {
                                 m.Groups["when"].Value.Trim(),
-                                queriedDial,
+                                m.Groups["dial"].Value.Trim(),
                                 m.Groups["before"].Value.Trim() + " -> " + m.Groups["after"].Value.Trim(),
                                 m.Groups["who"].Value.Trim()
                             });
@@ -691,7 +697,22 @@ namespace ShadowgainConsole
             }
 
             else if (was == Capture.Status)
+            {
                 RedrawStatus();
+
+                // sg-dial-history is Admin-only, so no other tier should fire it and collect a
+                // refusal for a tab it cannot even see.
+                if (pendingHistory && tier == Tier.Admin)
+                {
+                    pendingHistory = false;
+                    queriedDial = "";
+                    histRows.Clear();
+                    BeginCapture(Capture.History);
+                    Fire("/sg-dial-history");
+                }
+
+                return;
+            }
             else if (was == Capture.Multibox)
                 RedrawMultibox();
             else if (was == Capture.History)
@@ -709,6 +730,11 @@ namespace ShadowgainConsole
         // Set when a status poll should follow the roster, so the two captures take turns
         // instead of racing.
         private bool pendingStatus = false;
+
+        // Oversight opens populated rather than demanding a dial name (077). Chained after the
+        // status pull for the same reason status is chained after the roster: captures are serial,
+        // and firing two at once means the second silently eats the first one's reply.
+        private bool pendingHistory = false;
 
         // Whether a destructive command has actually been SENT, as opposed to merely armed.
         // Cancel means two completely different things either side of that line. Conflating them
@@ -989,8 +1015,10 @@ namespace ShadowgainConsole
                 Util.Trace("dial-history: parsed " + histRows.Count + " row(s)");
 
                 SetText("lblOversight", histRows.Count > 0
-                    ? histRows.Count + " change(s). Revert undoes the newest."
-                    : "No changes parsed for '" + queriedDial + "'.");
+                    ? histRows.Count + " change(s). Select one, then Revert."
+                    : string.IsNullOrEmpty(queriedDial)
+                        ? "No dial changes recorded - every dial is at its shipped default."
+                        : "No changes recorded for '" + queriedDial + "'.");
             }
             catch (Exception ex) { Util.LogError(ex); }
         }
@@ -1501,6 +1529,7 @@ namespace ShadowgainConsole
                 // discarded, and the panel never refreshed. The bug hid because the startup
                 // path calls Refresh() on its own.
                 pendingStatus = true;
+                pendingHistory = true;
                 Refresh();
             }
             catch (Exception ex) { Util.LogError(ex); }

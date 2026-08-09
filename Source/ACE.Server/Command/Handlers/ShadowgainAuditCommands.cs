@@ -41,20 +41,26 @@ namespace ACE.Server.Command.Handlers
         /// </summary>
         private const int MaxLinesScanned = 20000;
 
-        [CommandHandler("sg-dial-history", AccessLevel.Admin, CommandHandlerFlag.None, 1,
-            "Show recorded changes for a Shadowgain dial, newest first.",
-            "<dial>\n"
+        [CommandHandler("sg-dial-history", AccessLevel.Admin, CommandHandlerFlag.None, 0,
+            "Show recorded dial changes, newest first.",
+            "[dial]\n"
+            + "  (no argument) - every dial that has been changed\n"
+            + "  <dial>        - just that one\n"
             + "  Reads the durable audit trail, so it survives restarts and shows who changed what.\n"
             + "  Admin only: the trail must not be readable-around by the people it records.")]
         public static void HandleDialHistory(Session session, params string[] parameters)
         {
+            // 077: no argument now means EVERY dial, rather than a usage error.
+            //
+            // The Oversight tab used to open empty and demand a dial name, which assumes the
+            // operator already knows which dial to be suspicious of. Chris: "this would be more
+            // useful if it auto-populated with any changes that are made and only stays empty when
+            // the server is on defaults." Right - the interesting question is "what has been
+            // touched", and that is unanswerable if you must name the answer to ask it.
             var dial = parameters == null || parameters.Length == 0 ? null : parameters[0].Trim();
 
-            if (string.IsNullOrWhiteSpace(dial))
-            {
-                Send(session, "Usage: /sg-dial-history <dial>");
-                return;
-            }
+            if (dial != null && dial.Length == 0)
+                dial = null;
 
             var entries = ReadDialHistory(dial, out var error);
 
@@ -66,18 +72,30 @@ namespace ACE.Server.Command.Handlers
 
             if (entries.Count == 0)
             {
-                Send(session, $"No recorded changes for '{dial}'.");
-                Send(session, "Either it has never been changed, or the change predates the audit trail.");
+                if (dial == null)
+                {
+                    Send(session, "No dial changes recorded - every dial is at its shipped default.");
+                }
+                else
+                {
+                    Send(session, $"No recorded changes for '{dial}'.");
+                    Send(session, "Either it has never been changed, or the change predates the audit trail.");
+                }
+
                 return;
             }
 
-            Send(session, $"--- {dial}: {entries.Count} recorded change{(entries.Count == 1 ? "" : "s")} ---");
+            var subject = dial ?? "all dials";
+            Send(session, $"--- {subject}: {entries.Count} recorded change{(entries.Count == 1 ? "" : "s")} ---");
 
+            // The dial name goes on EVERY line, in both modes. Redundant when one dial was asked
+            // for, and deliberately so: one output shape means the console needs one parser rather
+            // than two that can drift apart.
             var shown = 0;
             for (var i = entries.Count - 1; i >= 0 && shown < MaxShown; i--, shown++)
             {
                 var e = entries[i];
-                Send(session, $"  {e.When}  {e.Who}: {e.Before} -> {e.After}");
+                Send(session, $"  {e.When}  {e.Dial}  {e.Who}: {e.Before} -> {e.After}");
             }
 
             if (entries.Count > MaxShown)
@@ -127,6 +145,7 @@ namespace ACE.Server.Command.Handlers
 
         private struct DialChange
         {
+            public string Dial;
             public string When;
             public string Who;
             public string Before;
@@ -179,11 +198,15 @@ namespace ACE.Server.Command.Handlers
                                 if (!root.TryGetProperty("dial", out var nameEl))
                                     continue;
 
-                                if (!string.Equals(nameEl.GetString(), dial, StringComparison.OrdinalIgnoreCase))
+                                // A null dial means "every dial" - what the console asks for when
+                                // the Oversight tab is opened, so the operator sees what has been
+                                // changed without having to already know its name.
+                                if (dial != null && !string.Equals(nameEl.GetString(), dial, StringComparison.OrdinalIgnoreCase))
                                     continue;
 
                                 results.Add(new DialChange
                                 {
+                                    Dial = nameEl.GetString(),
                                     When = root.TryGetProperty("t", out var t) ? t.GetString() : "?",
                                     Who = root.TryGetProperty("who", out var w) ? w.GetString() : "?",
                                     Before = root.TryGetProperty("before", out var b) ? b.GetString() : "?",
