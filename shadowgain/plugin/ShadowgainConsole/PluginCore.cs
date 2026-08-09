@@ -71,7 +71,7 @@ namespace ShadowgainConsole
         // chat. So a capture is a short window during which matching lines are consumed rather
         // than ignored. Timestamped so a lost reply cannot leave capture stuck on forever.
         /// <summary>What the logged-in account may actually do. Decided by the server, not guessed.</summary>
-        private enum Tier { Advocate, Sentinel, Admin }
+        private enum Tier { None, Advocate, Sentinel, Admin }
         private Tier tier = Tier.Advocate;
 
         // Whether the server actually answered. Distinguishes "you are an Advocate" from "this
@@ -263,6 +263,16 @@ namespace ShadowgainConsole
                     Util.Trace("  poi loaded");
                 }
 
+                if (tier == Tier.None)
+                {
+                    // Fires nothing. serverstatus and sg-roster are both Advocate-tier, so at
+                    // Player they would only generate refusals - and a refusal is still a command
+                    // the server processed and, for anything above the read-only filter, audited.
+                    SetText("lblStatus", "Nothing to see here.");
+                    Util.Trace("view ready (Player - blank surface, no polling)");
+                    return;
+                }
+
                 // serverstatus is Advocate-tier, so every tier that can open this console can
                 // fill its own status strip. Without this it read "status pending" until someone
                 // happened to click Refresh.
@@ -350,10 +360,14 @@ namespace ShadowgainConsole
                 case "sentinel":
                     return Tier.Sentinel;
 
-                // Player included: if a plain account somehow loads this, it gets the smallest
-                // surface rather than a guess.
-                default:
+                case "advocate":
                     return Tier.Advocate;
+
+                // Player, and anything unrecognised, gets NOTHING - see TieredXml. A rank with no
+                // staff powers has no business being shown staff plumbing, and an unfamiliar level
+                // name is safer treated as "no privilege" than guessed upward.
+                default:
+                    return Tier.None;
             }
         }
 
@@ -396,6 +410,23 @@ namespace ShadowgainConsole
 
                 var doc = new XmlDocument();
                 doc.LoadXml(xml);
+
+                // Player 0: strip the lot. No tabs, no roster, no echo, no Refresh - the window
+                // opens empty and fires no commands at all.
+                //
+                // Not merely cosmetic. Every control left in place is one the operator can click,
+                // and every click is a command the server then has to refuse. Drawing a surface
+                // nobody can drive produced exactly that at Advocate (064) - a tab whose only verb
+                // depended on a roster the rank could not populate.
+                if (tier == Tier.None)
+                {
+                    RemoveNodes(doc, "control", "name", new string[]
+                    {
+                        "nbMain", "lstRoster", "lblRoster", "lblEcho", "btnRefresh"
+                    });
+
+                    return doc.OuterXml;
+                }
 
                 // Server / Access / Oversight are Admin-only.
                 RemoveNodes(doc, "page", "label", new string[] { "Server", "Access", "Oversight" });
@@ -672,6 +703,9 @@ namespace ShadowgainConsole
                 // sg-roster is now in the audit's read-only filter server-side, and the poll no
                 // longer runs at all for a console nobody is looking at.
                 if (!ViewIsOpen())
+                    return;
+
+                if (tier == Tier.None)
                     return;
 
                 if (DateTime.UtcNow - lastAutoRefresh > TimeSpan.FromSeconds(60))

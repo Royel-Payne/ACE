@@ -151,19 +151,41 @@ namespace ACE.Server.WorldObjects
 
             if (Session != null && ConfigManager.Config.Server.Accounts.OverrideCharacterPermissions)
             {
-                if (Session.AccessLevel == AccessLevel.Admin)
-                    IsAdmin = true;
-                if (Session.AccessLevel == AccessLevel.Developer)
-                    IsArch = true;
-                if (Session.AccessLevel == AccessLevel.Sentinel)
-                    IsSentinel = true;
-                if (Session.AccessLevel == AccessLevel.Envoy)
-                {
-                    IsEnvoy = true;
-                    IsSentinel = true; //IsEnvoy is not recognized by the client and therefore the client should treat the user as a Sentinel.
-                }
+                // Shadowgain 070: ASSIGN these, do not only grant them.
+                //
+                // Upstream only ever set them true. They are persisted PropertyBools on the
+                // CHARACTER, and CommandManager gates every privileged command on them rather
+                // than on the account - so a character that logged in once while its account was
+                // elevated kept the powers permanently. Demoting the account did nothing.
+                //
+                // Found the hard way: after 069 dropped two accounts to Player 0, a Player-0
+                // character still ran /sg-roster and /serverstatus (both Advocate) successfully.
+                // Five characters were carrying a stale IsAdvocate, including two that the
+                // honour roll now certifies as having earned their progress with zero privilege.
+                // Advocate carries /attackable off - monsters ignore you - which on a server
+                // built around a slow grind is a live advantage, not a cosmetic label.
+                //
+                // Assigning makes the ACCOUNT authoritative in both directions, which is exactly
+                // what OverrideCharacterPermissions claims to mean. The setters RemoveProperty on
+                // false, so a demotion now actually erases the flag at next login.
+                IsAdmin = Session.AccessLevel == AccessLevel.Admin;
+                IsArch = Session.AccessLevel == AccessLevel.Developer;
+                IsEnvoy = Session.AccessLevel == AccessLevel.Envoy;
+
+                //IsEnvoy is not recognized by the client and therefore the client should treat the user as a Sentinel.
+                IsSentinel = Session.AccessLevel == AccessLevel.Sentinel || Session.AccessLevel == AccessLevel.Envoy;
+
+                // Advocate is the one exception, because the account is NOT its only source:
+                // Entity/Advocate.cs grants it through the in-game Advocate Fane. Revoking it
+                // unconditionally would strip someone who earned it in game. So it is only
+                // cleared when there is no in-game advocate standing behind it.
+                //
+                // (Verified at the time of writing: no character on this shard has AdvocateQuest
+                // set, so every IsAdvocate present came from this account sync.)
                 if (Session.AccessLevel == AccessLevel.Advocate)
                     IsAdvocate = true;
+                else if (!AdvocateQuest)
+                    IsAdvocate = false;
             }
 
             IsOlthoiPlayer = HeritageGroup == HeritageGroup.Olthoi || HeritageGroup == HeritageGroup.OlthoiAcid;
