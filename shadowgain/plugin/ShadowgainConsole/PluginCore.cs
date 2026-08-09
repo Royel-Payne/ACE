@@ -1492,6 +1492,30 @@ namespace ShadowgainConsole
             catch (Exception ex) { Util.LogError(ex); }
         }
 
+        [MVControlEvent("lstHist", "Selected")]
+        private void lstHist_Selected(object sender, MVListSelectEventArgs e)
+        {
+            try
+            {
+                if (e.Row < 0 || e.Row >= histRows.Count)
+                    return;
+
+                // Put the selected row's DIAL into the box, which is what Revert reads.
+                //
+                // Without this the button was called "Revert selected" while selecting a row did
+                // nothing at all - it read the text box, and nothing ever wrote to it. The Access
+                // tab's list has filled its fields on selection since it was built; this one was
+                // simply never given the same handler, and the omission was invisible until the
+                // list had rows in it to click.
+                var dial = histRows[e.Row][1];
+
+                queriedDial = dial;
+                SetText("txtDial", dial);
+                SetText("lblOversight", "Selected " + dial + " (" + histRows[e.Row][2] + "). Revert undoes it.");
+            }
+            catch (Exception ex) { Util.LogError(ex); }
+        }
+
         [MVControlEvent("btnRevert", "Click")]
         private void btnRevert_Click(object sender, MVControlEventArgs e)
         {
