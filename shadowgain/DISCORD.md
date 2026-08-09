@@ -282,9 +282,39 @@ Read-only for **everyone**, including Chris. The bot is the only writer. A chann
 post in is one they can pad; one they can delete from is one they can edit. Both defeat it.
 
 **What lands there:** every *authorised* privileged command — any command whose required access
-level is above Player — from players and from the server console, with timestamp, account,
+level is above Player — from players and from the server console, with timestamp, **account tag**,
 character, required level, the command and its arguments. Dial changes add a second line with
 `before -> after`.
+
+**Account names are MASKED here (083).** `admin` appears as `acct#8c69` — a stable 4-hex tag —
+both in the actor field and wherever an account is a command argument. Chris's rule: *"account
+names should never get revealed here. character names are fine, those don't reveal any secrets."*
+An account name is half a login, and the half that is otherwise hard to obtain; a character name
+is visible to anyone standing in a town square.
+
+Masked rather than dropped, because one account holds many characters and *"were these two actions
+the same person?"* is a question the character name cannot answer — which is much of the point of a
+trail. The tag is stable, and the **same account produces the same tag as actor or as argument**,
+so a promotion still ties to the promoter.
+
+It defeats reading, not brute force: anyone who can enumerate the account list can rebuild the
+mapping, and they already had the names. **The masking happens in the BOT, not the emitter** —
+`sgaudit.jsonl` on the droplet keeps the real names, because it is root-only and forensics should
+not lose fidelity. Only the shared surface is reduced. (The opposite call from IP masking, which
+happens at source in `ShadowgainAudit`: IPs have no forensic value here, account names do.)
+
+**The same rule applies to `#bugs`.** Its report embed used to read
+`Reported by: @user (account X)`, publishing an account name to a shared channel every time
+somebody filed a bug. Now masked with the identical tag, so a report can still be tied to the same
+account in `#audit` without the name appearing anywhere. That one was never reported by anyone -
+it was found by sweeping every surface after the `#audit` fix rather than stopping at the one Chris
+had a screenshot of.
+
+History was scrubbed retroactively with `tools/audit-scrub.py` — 80 messages scanned, 51 edited in
+place. Editing rather than deleting, because the timestamps are most of what makes the trail worth
+keeping. Note it anchors to the two shapes the bot emits rather than doing find-and-replace:
+`admin` is also the `[Admin]` access label and a character name on this server, and a blind pass
+would have rewritten all three into fiction.
 
 **Chain:** `CommandManager.GetCommandHandler` (the single chokepoint every command passes
 through) -> `ShadowgainAudit` -> `/ace/Logs/sgaudit.jsonl` (log4net, 50 x 5MB backups) -> bot
@@ -299,7 +329,9 @@ only ever targets `RELAY_CHANNEL_ID`.
 |---|---|
 | `AccessLevel.Player` commands | `/tell`, `@bug` and ordinary play would bury the staff actions, and would relay chat into #audit |
 | `serverstatus`, `serverperformance`, `allstats` | read-only, and `sitedata.sh` polls `serverstatus` **every 15s** — ~5,700 machine-written lines a day |
-| arguments to `accountcreate`, `set-accountpassword`, `passwd` | redacted to `***`. This channel is durable and mirrored, so a password here is a permanent, replicated leak. The account name is kept; the secret is not |
+| arguments to `accountcreate`, `set-accountpassword`, `passwd` | redacted to `***`. This channel is durable and mirrored, so a password here is a permanent, replicated leak |
+| account names, everywhere | masked to `acct#xxxx` (083) — see above. Applies to the actor AND to account arguments of `accountcreate`, `accountget`, `set-accountaccess`, `set-accountpassword` |
+| IPv4/IPv6 in arguments | masked at the emitter (045), e.g. `10.x.x.99` |
 
 **Tamper resistance.** `audit_commands_enabled` is a Shadowgain dial but is **excluded from
 `/sg-dial`** (which is Advocate), and `/sg-dial-history` and `/sg-revert` are **Admin-only**.
