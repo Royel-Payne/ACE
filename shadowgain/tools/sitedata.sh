@@ -263,6 +263,17 @@ fi
 # The open question this exists to answer: does ACE's memory plateau or creep? A leak
 # needs a scheduled restart; a plateau does not. Either way the answer needs uptime on
 # the same row as the memory reading, or the two cannot be correlated.
+#
+# ANSWERED ENOUGH TO ACT ON (2026-08-10, 26.1h run, 5,440 samples). Near-idle memory
+# drifts +1.28 MB/h - about 57 days of headroom - and the idle floor is flat within ~20 MB
+# across sixteen hours. No scheduled restart is warranted. Not fully closed: a naive fit
+# over the same run gives +4.26 MB/h, still under the 5 MB/h leak threshold but not zero.
+#
+# WHY THE TWO NUMBERS DIFFER, and the trap for whoever reads this series next: memAceMB
+# tracks LANDBLOCKS, so a run that ends busier than it began reads as a rising leak. This
+# run did exactly that - new players arrived in its final hours and lifted landblocks
+# 2.0 -> 13.9. Always control for occupancy (filter landblocks <= 3, or regress on
+# landblocks and time together) before calling a slope a leak. See Task.md 039 section E.
 ACE_UPTIME=null
 if [ "$UP" = true ]; then
   STARTED=$(docker inspect -f '{{.State.StartedAt}}' ace-server 2>/dev/null || true)
