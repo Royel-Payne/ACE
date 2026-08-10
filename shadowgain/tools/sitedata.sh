@@ -144,12 +144,21 @@ ONLINE=null; LANDBLOCKS=null; OBJECTS=null; CREATURES=null
 # During a graceful drain docker still reports the container Up, so a panel driven off
 # `docker ps` alone honestly reads Online for the whole shutdown. A successful serverstatus
 # is a liveness probe: if ACE cannot answer its own console it is not serving anyone.
+# 090: BOUND THIS READ. It used to find the reply by dumping the whole log twice - once to
+# count lines as a marker, once to take everything after it. Correct, and unbounded: the cost
+# grew with the container log, which grows forever. At a 49 MB log that was 4.2s per read,
+# 8.4s of the timer's 15s period spent finding two lines, and still climbing. See 039 section E.
+#
+# `--since` asks the daemon for the tail by TIME, so the cost is proportional to the window
+# rather than to uptime. A second-granularity timestamp taken before the command may include
+# up to a second of unrelated lines, which is why every field below still takes `tail -1` -
+# the newest match wins, exactly as it did under the marker scheme.
 SERVING=false
 if [ "$UP" = true ]; then
-  MARK=$(timeout -s KILL 10 docker logs ace-server 2>&1 | wc -l || echo 0)
+  T0=$(date -u +%Y-%m-%dT%H:%M:%S)
   echo "serverstatus" | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
   sleep 2
-  SS=$(timeout -s KILL 10 docker logs ace-server 2>&1 | tail -n +$((MARK+1)) || true)
+  SS=$(timeout -s KILL 10 docker logs --since "$T0" ace-server 2>&1 || true)
 
   N=$(printf '%s' "$SS" | grep -oE '[0-9]+ players online' | tail -1 | grep -oE '^[0-9]+' || true)
   if [ -n "$N" ]; then ONLINE=$N; SERVING=true; fi
@@ -223,13 +232,48 @@ done
 # numbers are a valid comparator because the log is append-only, and taking both from ONE
 # capture keeps them on the same scale - which also collapses what used to be two full
 # `docker logs` reads into one.
+#
+# 090: THE REASONING ABOVE WAS RIGHT AND THE CONCLUSION WAS WRONG. Refusing `--tail` because
+# the marker scrolls out of a bounded window is correct. Re-reading the ENTIRE log every 15s
+# to avoid that is not the only alternative - remembering what was already seen is.
+#
+# Measured: a 49 MB log took 4.2s per full read (0.6s user, 1.6s sys, 244,714 lines) and the
+# log grows ~65 MB/day, so the cost climbed with uptime and with nothing else. That is the
+# load average that rose 0.18 -> 1.44 across a 26h run while player count sat at zero.
+#
+# So: scan only what is NEW since the last pass, and carry the answers forward in a state
+# file keyed on the container's StartedAt. A restart invalidates the key and reseeds with one
+# full read - which is exactly when the log resets anyway, so the seed is cheap.
+#
+# Ordering now compares log TIMESTAMPS rather than line numbers. Line numbers were valid only
+# because both came from one whole-log capture; across incremental reads they restart at 1 and
+# would compare garbage. `--timestamps` emits RFC3339Nano UTC, which sorts lexically.
 LOG=""
 WORLD_EVER=0
 DRAINING=false
 if [ "$UP" = true ]; then
-  LOG=$(timeout -s KILL 10 docker logs ace-server 2>&1 || true)
-  WORLD_EVER=$(printf '%s
-' "$LOG" | grep -c "World is now open" || true)
+  SCAN_STATE="${SG_SCAN_STATE:-/opt/ACE/.logscan}"
+  C_STARTED=$(docker inspect -f '{{.State.StartedAt}}' ace-server 2>/dev/null || true)
+
+  ST_STARTED=""; ST_SCAN=""; ST_EVER=0; ST_OPEN=""; ST_DOWN=""
+  # shellcheck disable=SC1090
+  [ -f "$SCAN_STATE" ] && { . "$SCAN_STATE" 2>/dev/null || true; }
+
+  # Stamped BEFORE the read, so anything logged while the read is in flight is picked up next
+  # pass rather than falling down the gap between them. A re-read is harmless: every update
+  # below is idempotent.
+  NOW_SCAN=$(date -u +%Y-%m-%dT%H:%M:%S)
+
+  if [ -n "$C_STARTED" ] && [ "$ST_STARTED" = "$C_STARTED" ] && [ -n "$ST_SCAN" ]; then
+    LOG=$(timeout -s KILL 10 docker logs --timestamps --since "$ST_SCAN" ace-server 2>&1 || true)
+  else
+    ST_EVER=0; ST_OPEN=""; ST_DOWN=""
+    LOG=$(timeout -s KILL 30 docker logs --timestamps ace-server 2>&1 || true)
+  fi
+
+  NEW_OPEN=$(printf '%s\n' "$LOG" | grep "World is now open" | tail -1 | awk '{print $1}' || true)
+  [ -n "$NEW_OPEN" ] && { ST_OPEN=$NEW_OPEN; ST_EVER=1; }
+  WORLD_EVER=$ST_EVER
 
   # `|| true` on BOTH, and it is not decoration. This script runs under `set -euo pipefail`,
   # and grep exits 1 when it matches nothing - which is the NORMAL case here, because a freshly
@@ -240,14 +284,22 @@ if [ "$UP" = true ]; then
   # Which is exactly what happened - the page read "Offline / last updated 4 min ago" while the
   # server was up and healthy. The line above already carried `|| true` for this same reason and
   # the guard was not carried over to the two new greps.
-  LAST_OPEN=$(printf '%s
-' "$LOG" | grep -n "World is now open" | tail -1 | cut -d: -f1 || true)
-  LAST_DOWN=$(printf '%s
-' "$LOG" | grep -nE "Server is shutting down|shutting down NOW" | tail -1 | cut -d: -f1 || true)
+  NEW_DOWN=$(printf '%s\n' "$LOG" | grep -E "Server is shutting down|shutting down NOW" | tail -1 | awk '{print $1}' || true)
+  [ -n "$NEW_DOWN" ] && ST_DOWN=$NEW_DOWN
 
-  if [ -n "$LAST_DOWN" ] && { [ -z "$LAST_OPEN" ] || [ "$LAST_DOWN" -gt "$LAST_OPEN" ]; }; then
+  # String comparison, not numeric: these are RFC3339Nano stamps now, not line numbers.
+  # `>` inside [[ ]] is a lexical compare, which is what sorts these correctly. Using [ ]
+  # here would need it escaped and would silently do the wrong thing if it were not.
+  if [ -n "$ST_DOWN" ] && { [ -z "$ST_OPEN" ] || [[ "$ST_DOWN" > "$ST_OPEN" ]]; }; then
     DRAINING=true
   fi
+
+  # Written last, and only after the scan succeeded, so a failed pass re-scans the same window
+  # next time instead of advancing past events it never read. Temp-then-rename so a crash
+  # mid-write cannot leave a truncated state file that would silently reseed every run.
+  printf 'ST_STARTED=%s\nST_SCAN=%s\nST_EVER=%s\nST_OPEN=%s\nST_DOWN=%s\n' \
+    "'$C_STARTED'" "'$NOW_SCAN'" "'$ST_EVER'" "'$ST_OPEN'" "'$ST_DOWN'" \
+    > "$SCAN_STATE.tmp" && mv -f "$SCAN_STATE.tmp" "$SCAN_STATE"
 fi
 WORLD=false
 if [ "$UP" = true ] && [ "${WORLD_EVER:-0}" -gt 0 ] && [ "$SERVING" = true ] && [ "$DRAINING" = false ]; then
