@@ -144,7 +144,7 @@ ONLINE=null; LANDBLOCKS=null; OBJECTS=null; CREATURES=null
 # During a graceful drain docker still reports the container Up, so a panel driven off
 # `docker ps` alone honestly reads Online for the whole shutdown. A successful serverstatus
 # is a liveness probe: if ACE cannot answer its own console it is not serving anyone.
-# 090: BOUND THIS READ. It used to find the reply by dumping the whole log twice - once to
+# 039 §E: BOUND THIS READ. It used to find the reply by dumping the whole log twice - once to
 # count lines as a marker, once to take everything after it. Correct, and unbounded: the cost
 # grew with the container log, which grows forever. At a 49 MB log that was 4.2s per read,
 # 8.4s of the timer's 15s period spent finding two lines, and still climbing. See 039 section E.
@@ -233,7 +233,7 @@ done
 # capture keeps them on the same scale - which also collapses what used to be two full
 # `docker logs` reads into one.
 #
-# 090: THE REASONING ABOVE WAS RIGHT AND THE CONCLUSION WAS WRONG. Refusing `--tail` because
+# 039 §E: THE REASONING ABOVE WAS RIGHT AND THE CONCLUSION WAS WRONG. Refusing `--tail` because
 # the marker scrolls out of a bounded window is correct. Re-reading the ENTIRE log every 15s
 # to avoid that is not the only alternative - remembering what was already seen is.
 #
