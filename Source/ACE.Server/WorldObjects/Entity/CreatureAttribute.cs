@@ -77,15 +77,24 @@ namespace ACE.Server.WorldObjects.Entity
         /// <summary>
         /// Returns TRUE if this attribute has been raised the maximum # of times
         /// </summary>
-        public bool IsMaxRank
-        {
-            get
-            {
-                var attributeXPTable = DatManager.PortalDat.XpTable.AttributeXpList;
-
-                return Ranks >= (attributeXPTable.Count - 1);
-            }
-        }
+        /// <summary>
+        /// Shadowgain 104: measured against the REAL ceiling, not the dat table's 190.
+        ///
+        /// 013 raised the attribute ceiling to attribute_max_value (290) by stretching the dat's
+        /// 190-entry table across AttributeMaxRanks() = 280 ranks. This property still compared
+        /// against the table, so it read "max" from rank 190 onward - 90 ranks early.
+        ///
+        /// The visible damage was the celebration: every single gain past 190 played the
+        /// WeddingBliss effect and appended "and has reached its upper limit". Players reasonably
+        /// concluded the cap was 200 and said so in #chat - *"I'm at like 204 quick and it tells me
+        /// it hit the cap every rank"*, *"fireworks go off every attribute gain after 201"*, *"So
+        /// 200 is cap? I knew that would happen"*. The attribute was in fact still climbing fine;
+        /// the message was the lie.
+        ///
+        /// AttributeMaxRanks() returns the dat table maximum when attributes_start_at_ten is off, so
+        /// this is correct in both configurations.
+        /// </summary>
+        public bool IsMaxRank => Ranks >= Player.AttributeMaxRanks();
 
         /// <summary>
         /// Returns the Base Value Plus the Ranked Value
