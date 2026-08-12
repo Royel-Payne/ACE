@@ -247,6 +247,32 @@ namespace ACE.Server.Command.Handlers
             var fixStr = fix ? " -- fixed" : "";
             var foundIssues = false;
 
+            // Shadowgain 095c GUARD - the more dangerous of the two, because it looks harmless.
+            // Three of its repairs are direct contradictions of 005's rank uncapping:
+            //   - forces InitLevel to exactly 0 (trained) / 10 (spec), and InitLevel is where
+            //     Shadowgain CARRIES rank overflow past the top of the dat table
+            //   - recomputes rank with the CAPPED CalcSkillRank, clamping every overflowed skill
+            //   - caps PP at the trained table maximum, discarding overcap experience outright
+            // On a server where skills deliberately run past the table this is not a verifier, it is
+            // a truncation pass. Dry run left readable; fix refused.
+            if (PropertyManager.GetBool("skill_uncap_ranks").Item)
+            {
+                Console.WriteLine("*** SHADOWGAIN: this audit does not apply to this server. ***");
+                Console.WriteLine("skill_uncap_ranks is ON - ranks intentionally run past the dat table, carried in");
+                Console.WriteLine("InitLevel with XP above the table cap. This command treats all three as corruption.");
+
+                if (fix)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("REFUSING to fix: it would zero the overflow in InitLevel, re-clamp ranks with the");
+                    Console.WriteLine("capped rank calc, and truncate PP to the table maximum - discarding earned progress.");
+                    return;
+                }
+
+                Console.WriteLine("(dry run only - 'issues' below are expected on this server)");
+                Console.WriteLine();
+            }
+
             foreach (var player in players)
             {
                 var updated = false;
@@ -379,6 +405,34 @@ namespace ACE.Server.Command.Handlers
             var players = PlayerManager.GetAllOffline();
 
             var fix = parameters.Length > 0 && parameters[0].Equals("fix");
+
+            // Shadowgain 095c GUARD. This command sums the dat's TrainedCost for every trained skill
+            // and calls the shortfall a bug. Training all 38 forced skills costs 190 credits at dat
+            // prices against a 52 heritage grant, so on this server it sees a ~138-credit hole on
+            // EVERY character, concludes each one has overspent, and its repair path is
+            // UntrainSkills() - which zeroes PP and LevelFromPP. That is every rank on the server.
+            //
+            // The premise it audits does not hold here: training is free (see Player.GetTrainingCost),
+            // so credits used is identically credits spent on specialization. The dry run is left
+            // available because reading it is harmless; the fix is refused.
+            if (PropertyManager.GetBool("all_skills_trained").Item)
+            {
+                Console.WriteLine("*** SHADOWGAIN: this audit does not apply to this server. ***");
+                Console.WriteLine("It bills every trained skill at the dat's TrainedCost (190 credits for the 38 forced");
+                Console.WriteLine("skills) against a 52-credit heritage grant, so it will report every character as having");
+                Console.WriteLine("overspent. Training is FREE here - credits are only ever spent on specialization.");
+
+                if (fix)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("REFUSING to fix: the repair path is UntrainSkills(), which zeroes PP and LevelFromPP -");
+                    Console.WriteLine("it would wipe every earned rank on the shard. Use 'sg-reconcile-skills' instead.");
+                    return;
+                }
+
+                Console.WriteLine("(dry run only - the numbers below are meaningless on this server)");
+                Console.WriteLine();
+            }
             var fixStr = fix ? " -- fixed" : "";
             var foundIssues = false;
 
@@ -704,6 +758,219 @@ namespace ACE.Server.Command.Handlers
             player.SaveBiotaToDatabase();
         }
 
+
+        /// <summary>
+        /// Shadowgain 095b: permanently clears creation-era specialization from EVERY character,
+        /// online-or-not, so that once specialization is re-enabled nobody carries a Specialized
+        /// skill they did not buy at a Temple.
+        ///
+        /// **Why a sweep and not the login reconcile.** DemoteSpecializedSkills is a login-time
+        /// repair: it rewrites the advancement class in memory each time a character enters the
+        /// world. That masks the problem for anyone who logs in and does nothing at all for anyone
+        /// who does not - and the stored value stays Specialized. The moment
+        /// `disable_specialization` goes false the repair correctly stops running (it would
+        /// otherwise eat Temple purchases) and the stale value becomes the truth: a free
+        /// specialization, a live 1.25x `spec_gain_multiplier` off Proficiency's AdvancementClass
+        /// read, and a Temple refund of credits that were never paid. The data has to be corrected,
+        /// once, rather than masked.
+        ///
+        /// **Ranks are never taken away.** ACE's own UnspecializeSkills zeroes PP and LevelFromPP -
+        /// that is the over-70-credit partial reset and it is destructive. This uses the
+        /// DemoteSpecializedSkills semantics instead: keep the rank, strip only the +10 from
+        /// InitLevel (preserving any 005 overflow carried there), and raise PP to what that rank
+        /// costs on the TRAINED curve, because a specialized rank is cheaper and leaving PP alone
+        /// would make the next recalc lower the rank.
+        ///
+        /// **Idempotent by construction** - with nothing Specialized it is a no-op, so it doubles
+        /// as the audit that proves the invariant holds. Run it dry any time to ask "is anybody
+        /// specialized who should not be".
+        ///
+        /// Skill credits are deliberately NOT touched: BackfillLevelSkillCredits owns that
+        /// computation and recomputes Available/Total at the character's next login.
+        /// </summary>
+        [CommandHandler("sg-reconcile-skills", AccessLevel.Admin, CommandHandlerFlag.ConsoleInvoke, "(Shadowgain 095b) Brings EVERY character's stored skills to the Shadowgain rule - nothing Specialized, everything Trained - including characters that never log in. Preserves ranks. Dry run unless 'fix' is passed.")]
+        public static void HandleShadowgainReconcileSkills(Session session, params string[] parameters)
+        {
+            var fix = parameters.Length > 0 && parameters[0].Equals("fix", StringComparison.OrdinalIgnoreCase);
+            var fixStr = fix ? " -- fixed" : "";
+
+            // Online characters hold their skills in memory and GetAllOffline cannot see them, so a
+            // sweep with anyone logged in would silently skip them and then be overwritten by their
+            // save. Refuse rather than half-apply.
+            var online = PlayerManager.GetAllOnline();
+
+            if (online.Count > 0)
+            {
+                Console.WriteLine($"{online.Count} player(s) still online: {string.Join(", ", online.Select(p => p.Name))}");
+                Console.WriteLine("Drain the world first - this must run with nobody logged in, or online characters are skipped and then re-saved over.");
+                return;
+            }
+
+            var trainedTable = DatManager.PortalDat.XpTable.TrainedSkillXpList;
+
+            var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
+
+            // the train-everything half only applies while that dial is on; the despecialize half
+            // is unconditional, because nothing may arrive at Specialized except via a Temple.
+            var trainAll = PropertyManager.GetBool("all_skills_trained").Item;
+
+            if (!trainAll)
+                Console.WriteLine("all_skills_trained is OFF - only removing specializations, not raising anything to Trained.");
+
+            var players = PlayerManager.GetAllOffline();
+
+            var affectedPlayers = 0;
+            var affectedSkills = 0;
+            var trainedSkills = 0;
+            var augSkipped = 0;
+            var oddities = 0;
+
+            foreach (var player in players)
+            {
+                var demotedHere = 0;
+
+                foreach (var kvp in new Dictionary<Skill, PropertiesSkill>(player.Biota.PropertiesSkill))
+                {
+                    var skill = kvp.Key;
+                    var props = kvp.Value;
+
+                    if (props.SAC != SkillAdvancementClass.Specialized)
+                        continue;
+
+                    // The tinkering/salvaging five are specialized by AUGMENTATION, which 090 keeps
+                    // as end-of-retail. Those are bought and legitimate - not creation artifacts -
+                    // and demoting one here would desync it from the augmentation that granted it.
+                    if (Player.AugSpecSkills.Contains(skill))
+                    {
+                        Console.WriteLine($"{player.Name} (0x{player.Guid}): {skill} is specialized via AUGMENTATION - left alone");
+                        augSkipped++;
+                        continue;
+                    }
+
+                    var wasInit = props.InitLevel;
+                    var wasRank = props.LevelFromPP;
+
+                    // Same rule as the in-game Player.DemoteSkillToTrained (090 item 2, revised
+                    // 2026-08-11): recompute the rank from XP on the TRAINED curve rather than
+                    // carrying it across and topping the XP up. XP is never touched. Kept in step
+                    // with that method deliberately - an earlier divergence between the reconcile's
+                    // demote and the Temple's was what cost a real skill its ranks.
+                    var computedRank = uncapped
+                        ? Player.CalcSkillRankUncapped(SkillAdvancementClass.Trained, props.PP)
+                        : Player.CalcSkillRank(SkillAdvancementClass.Trained, props.PP);
+
+                    var tableMaxRank = trainedTable.Count - 1;
+
+                    ushort newRank;
+                    uint newInit;
+
+                    if (uncapped && computedRank > tableMaxRank)
+                    {
+                        newRank = (ushort)tableMaxRank;
+                        newInit = (uint)(computedRank - tableMaxRank);
+                    }
+                    else
+                    {
+                        newRank = (ushort)computedRank;
+                        newInit = 0;
+                    }
+
+                    Console.WriteLine($"{player.Name} (0x{player.Guid}): {skill} Specialized -> Trained, " +
+                                      $"rank {wasRank}->{newRank} (recomputed from {props.PP:N0} xp on the trained curve), " +
+                                      $"initLevel {wasInit}->{newInit}{fixStr}");
+
+                    if (fix)
+                    {
+                        props.SAC = SkillAdvancementClass.Trained;
+                        props.InitLevel = newInit;
+                        props.LevelFromPP = newRank;
+                        // PP deliberately untouched - the XP was earned and is kept in full
+                    }
+
+                    demotedHere++;
+                    affectedSkills++;
+                }
+
+                // ---- part 2: raise everything below Trained UP to Trained ----
+                //
+                // EnsureAllSkillsTrained has the same coverage shape as the demote did: it is a
+                // login-time write, so a character that has not entered the world since 013 still
+                // stores Untrained skills. Correct the stored data here rather than waiting for a
+                // login that may never come.
+                if (trainAll)
+                {
+                    foreach (var skill in SkillHelper.ValidSkills)
+                    {
+                        if (!player.Biota.PropertiesSkill.TryGetValue(skill, out var props))
+                        {
+                            // no row at all - GetCreatureSkill creates it at login; nothing safe to
+                            // do from here, so report rather than fabricate one
+                            Console.WriteLine($"{player.Name} (0x{player.Guid}): {skill} has NO skill row - will be created at next login");
+                            continue;
+                        }
+
+                        if (props.SAC >= SkillAdvancementClass.Trained)
+                            continue;
+
+                        // TrainSkill zeroes rank/XP for a newly trained skill. On this server an
+                        // Untrained skill cannot gain either (Proficiency requires Trained), so
+                        // these are expected to be zero - shout if they are not rather than
+                        // discarding progress silently.
+                        if (props.LevelFromPP != 0 || props.PP != 0)
+                        {
+                            Console.WriteLine($"{player.Name} (0x{player.Guid}): {skill} is {props.SAC} but carries rank {props.LevelFromPP} / {props.PP:N0} xp - SKIPPED, inspect this by hand");
+                            oddities++;
+                            continue;
+                        }
+
+                        Console.WriteLine($"{player.Name} (0x{player.Guid}): {skill} {props.SAC} -> Trained (0 credits){fixStr}");
+
+                        if (fix)
+                        {
+                            props.SAC = SkillAdvancementClass.Trained;
+                            props.InitLevel = 0;
+                            props.LevelFromPP = 0;
+                            props.PP = 0;
+                        }
+
+                        demotedHere++;
+                        trainedSkills++;
+                    }
+                }
+
+                if (demotedHere > 0)
+                {
+                    affectedPlayers++;
+
+                    if (fix)
+                        player.SaveBiotaToDatabase();
+                }
+            }
+
+            Console.WriteLine();
+
+            if (affectedSkills == 0 && trainedSkills == 0)
+            {
+                Console.WriteLine($"Nothing specialized and nothing below Trained across {players.Count:N0} characters" +
+                                  (augSkipped > 0 ? $" ({augSkipped} augmentation specializations left in place)" : "") +
+                                  " - the invariant holds.");
+
+                if (oddities > 0)
+                    Console.WriteLine($"...but {oddities} skill(s) were skipped as odd - see above.");
+
+                return;
+            }
+
+            Console.WriteLine($"{affectedSkills} specialization(s) removed, {trainedSkills} skill(s) raised to Trained, " +
+                              $"across {affectedPlayers} character(s) of {players.Count:N0}" +
+                              (augSkipped > 0 ? $", plus {augSkipped} augmentation specialization(s) left in place" : "") +
+                              (oddities > 0 ? $", {oddities} skipped as odd" : ""));
+
+            if (!fix)
+                Console.WriteLine("Dry run completed. Type 'sg-reconcile-skills fix' to apply.");
+            else
+                Console.WriteLine("Applied. Skill credits are recomputed by the 090 backfill at each character's next login.");
+        }
 
         [CommandHandler("verify-heritage-augs", AccessLevel.Admin, CommandHandlerFlag.ConsoleInvoke, "Verifies all players have their heritage augs.")]
         public static void HandleVerifyHeritageAugs(Session session, params string[] parameters)

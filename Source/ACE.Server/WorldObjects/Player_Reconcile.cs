@@ -1,5 +1,6 @@
 using log4net;
 
+using ACE.DatLoader;
 using ACE.Entity.Enum;
 using ACE.Entity.Enum.Properties;
 using ACE.Server.Managers;
@@ -24,14 +25,20 @@ namespace ACE.Server.WorldObjects
         public void ShadowgainReconcile(bool atCreation = false)
         {
             var trained = EnsureAllSkillsTrained();
-            var demoted = DemoteSpecializedSkills();
+            var demoted = DemoteSpecializedSkills(atCreation);
             var attrs = NormalizeAttributeStartingValues();
-            var credits = ZeroUnspendableSkillCredits();
+            var credits = ZeroUnspendableSkillCredits(atCreation);
 
-            if (trained > 0 || demoted > 0 || attrs > 0 || credits > 0)
+            // 090: LAST, deliberately. It reads the current specialization set to work out what has
+            // been spent, so it has to run after DemoteSpecializedSkills has had its say - otherwise
+            // at creation it would bill the character for a specialization that is about to be
+            // stripped, and hand them a permanent deficit on their first login.
+            var rebuilt = BackfillLevelSkillCredits();
+
+            if (trained > 0 || demoted > 0 || attrs > 0 || credits > 0 || rebuilt > 0)
             {
                 log.Info($"[SHADOWGAIN 013] {Name} reconciled{(atCreation ? " at creation" : " at login")}: " +
-                         $"trained={trained} despecialized={demoted} attributesReset={attrs} creditsCleared={credits}");
+                         $"trained={trained} despecialized={demoted} attributesReset={attrs} creditsCleared={credits} creditsRebuilt={rebuilt}");
             }
         }
 
@@ -85,9 +92,17 @@ namespace ACE.Server.WorldObjects
         ///    are earned, so instead the rank stands and ExperienceSpent is raised to what that rank
         ///    costs when trained. Generous by design - the alternative is confiscating progress.
         /// </summary>
-        public int DemoteSpecializedSkills()
+        /// <summary>
+        /// 090: same shape as ZeroUnspendableSkillCredits - always at CREATION, at login only while
+        /// specialization is disabled. The character editor still offers specialization and the
+        /// server is what decides; nobody starts specialized regardless of the toggle.
+        ///
+        /// Once spec is enabled this must NOT run at login, or it would demote the specializations
+        /// players legitimately bought at a Temple.
+        /// </summary>
+        public int DemoteSpecializedSkills(bool atCreation = false)
         {
-            if (!PropertyManager.GetBool("disable_specialization").Item)
+            if (!atCreation && !PropertyManager.GetBool("disable_specialization").Item)
                 return 0;
 
             var demoted = 0;
@@ -99,21 +114,10 @@ namespace ACE.Server.WorldObjects
                 if (creatureSkill == null || creatureSkill.AdvancementClass != SkillAdvancementClass.Specialized)
                     continue;
 
-                creatureSkill.AdvancementClass = SkillAdvancementClass.Trained;
-
-                // strip only the specialization bonus, preserving any 005 overflow carried here
-                creatureSkill.InitLevel = creatureSkill.InitLevel >= 10 ? creatureSkill.InitLevel - 10 : 0;
-
-                // keep the rank; make the XP consistent with it under the trained table
-                var trainedTable = GetSkillXPTable(SkillAdvancementClass.Trained);
-
-                if (trainedTable != null && creatureSkill.Ranks < trainedTable.Count)
-                {
-                    var costOfRank = trainedTable[creatureSkill.Ranks];
-
-                    if (creatureSkill.ExperienceSpent < costOfRank)
-                        creatureSkill.ExperienceSpent = costOfRank;
-                }
+                // 090 item 2: shared with the Temple's Gem of Forgetfulness, so the two can never
+                // disagree about what "specialized -> trained" means again. The rank-preserving,
+                // overflow-preserving logic lives in DemoteSkillToTrained.
+                DemoteSkillToTrained(creatureSkill);
 
                 demoted++;
             }
@@ -170,9 +174,25 @@ namespace ACE.Server.WorldObjects
         /// Unassigned EXPERIENCE is deliberately left alone - it still has a use, notably
         /// augmentations (AugmentationDevice spends it), which is why 003 stopped short of zeroing it.
         /// </summary>
-        public int ZeroUnspendableSkillCredits()
+        /// <summary>
+        /// 090: at CREATION this always runs; at login it only runs while specialization is off.
+        ///
+        /// The old gate was `all_skills_trained &amp;&amp; disable_specialization`, which was correct
+        /// while spec was disabled and becomes a trap the moment it is re-enabled: flipping
+        /// `disable_specialization` false silently removed the wipe **including at creation**, which
+        /// is the one place it is still wanted. Nobody keeps spec or leftover credits from the
+        /// character editor - Chris's rule is that specialization is always post-creation, earned at
+        /// a Temple.
+        ///
+        /// At login the wipe must NOT run once spec is enabled, or it would eat the level-up credits
+        /// this design depends on.
+        /// </summary>
+        public int ZeroUnspendableSkillCredits(bool atCreation = false)
         {
-            if (!PropertyManager.GetBool("all_skills_trained").Item || !PropertyManager.GetBool("disable_specialization").Item)
+            if (!PropertyManager.GetBool("all_skills_trained").Item)
+                return 0;
+
+            if (!atCreation && !PropertyManager.GetBool("disable_specialization").Item)
                 return 0;
 
             var credits = AvailableSkillCredits ?? 0;
@@ -187,6 +207,181 @@ namespace ACE.Server.WorldObjects
                 Session.Network.EnqueueSend(new Network.GameMessages.Messages.GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, 0));
 
             return credits;
+        }
+
+        /// <summary>
+        /// Shadowgain 090: rebuilds a character's skill credits from what they have actually earned.
+        ///
+        /// Existing characters levelled with credits suppressed at the source
+        /// (Player_Xp only grants them when the credit economy is live), so re-enabling
+        /// specialization would otherwise strand every current player at zero while new characters
+        /// earned normally. This restores what levelling should have paid them.
+        ///
+        /// **It is a recompute, not a one-shot migration**, and that is the whole design:
+        ///
+        ///     Total     = level credits + quest credits          (what the character has earned)
+        ///     Available = Total - credits spent on specialization  (what is left to spend)
+        ///
+        /// Both sides are derived from state that is already on the character, so running it a
+        /// second time lands on the same numbers. It needs no marker property, it self-heals a
+        /// character whose credits drifted for any reason, and it costs nothing to run at every
+        /// login. A one-shot migration would have needed a marker, would have been unrepeatable,
+        /// and would have left no way to correct a mistake short of hand-editing the database.
+        ///
+        /// **Heritage credits are excluded on purpose.** The 52 (68 Olthoi) handed out at creation
+        /// is considered consumed by all_skills_trained - it is what pays for every skill being
+        /// Trained for free. Only level-earned credits fund specialization. That single rule is what
+        /// makes "training is free, specialization is the only thing credits buy" hold end to end.
+        ///
+        /// It BLUNTS the untrain-refund exploit without closing it. UntrainSkill still hands back
+        /// the skill's book cost for a skill that cost nothing, and this recompute takes that back
+        /// at the next login - but only at the next login. Within one session the credits are real
+        /// and spendable, and once they are sunk into a specialization the recompute lands on a
+        /// negative Available and clamps to 0, leaving the specializations bought with them intact.
+        /// The refund still has to be removed at the source (090 item 5); do not treat this as the
+        /// fix.
+        ///
+        /// Reads the DAT's CharacterLevelSkillCreditList directly rather than ACE's
+        /// GetAdditionalCredits helper, which stops at 250 -> 45 and omits the 275 -> 46 row.
+        /// Verified against client_portal.dat: sum(1..10) = 9, sum(1..275) = 46.
+        ///
+        /// Returns 1 if the credits changed, 0 if they were already correct.
+        /// </summary>
+        public int BackfillLevelSkillCredits()
+        {
+            if (!PropertyManager.GetBool("skill_credits_from_levels").Item)
+                return 0;
+
+            // The heritage exclusion above is only defensible while creation really does train
+            // everything for free. Without all_skills_trained the stock economy applies and the
+            // 52 is genuinely the player's to spend, so leave it entirely alone.
+            if (!PropertyManager.GetBool("all_skills_trained").Item)
+                return 0;
+
+            // While specialization is off there is nothing to buy, ZeroUnspendableSkillCredits is
+            // wiping the pool at every login by design, and granting credits here would only fight
+            // it. The backfill exists for the spec-enabled world.
+            if (PropertyManager.GetBool("disable_specialization").Item)
+                return 0;
+
+            var earned = GetLevelSkillCredits() + GetQuestSkillCredits();
+            var spent = GetSpecializedSkillCredits();
+
+            var total = earned;
+            var available = earned - spent;
+
+            if (available < 0)
+            {
+                // Specialized beyond what levelling funds - only reachable from a grant path
+                // outside this accounting (an admin hand-out, a legacy character, an unrecognised
+                // credit-awarding quest). The specializations stand and the debt is forgiven: this
+                // reconcile never takes away something a player is already using.
+                log.Warn($"[SHADOWGAIN 090] {Name} carries {spent} credits of specialization against {earned} earned - " +
+                         $"clamping available to 0 rather than demoting anything");
+
+                available = 0;
+            }
+
+            var wasTotal = TotalSkillCredits ?? 0;
+            var wasAvailable = AvailableSkillCredits ?? 0;
+
+            if (wasTotal == total && wasAvailable == available)
+                return 0;
+
+            TotalSkillCredits = total;
+            AvailableSkillCredits = available;
+            ChangesDetected = true;
+
+            if (Session != null)
+            {
+                Session.Network.EnqueueSend(
+                    new Network.GameMessages.Messages.GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, available),
+                    new Network.GameMessages.Messages.GameMessagePrivateUpdatePropertyInt(this, PropertyInt.TotalSkillCredits, total));
+            }
+
+            log.Info($"[SHADOWGAIN 090] {Name} skill credits rebuilt at level {Level ?? 1}: earned={earned} " +
+                     $"spentOnSpec={spent} | available {wasAvailable}->{available}, total {wasTotal}->{total}");
+
+            return 1;
+        }
+
+        /// <summary>
+        /// Total skill credits this character's LEVEL has paid out, straight from the DAT table that
+        /// Player_Xp reads at level-up - so a restored character and a levelled one can never
+        /// disagree. Heritage and quest credits are not included.
+        /// </summary>
+        public int GetLevelSkillCredits()
+        {
+            var creditList = DatManager.PortalDat.XpTable.CharacterLevelSkillCreditList;
+
+            var level = Level ?? 1;
+
+            if (level >= creditList.Count)
+                level = creditList.Count - 1;
+
+            var credits = 0;
+
+            // index i is the grant for REACHING level i, matching Player_Xp's post-increment read
+            // and /delevel's sum over (delevel..currentLevel]. Level 1 pays nothing.
+            for (var i = 1; i <= level; i++)
+                credits += (int)creditList[i];
+
+            return credits;
+        }
+
+        /// <summary>
+        /// The retail quests that hand out a skill credit. Nobody on this server has completed any
+        /// of them, so this returns 0 today - but the backfill is a recompute that runs at every
+        /// login, and anything it does not count it takes away. Counting them here is what stops
+        /// the first player to finish Ralirea's or Oswald's quest from losing the credit the moment
+        /// they log back in.
+        ///
+        /// Same three quest stamps ACE itself reconstructs credits from (Enlightenment.RemoveSkills,
+        /// verify-skill-credits).
+        /// </summary>
+        public int GetQuestSkillCredits()
+        {
+            if (QuestManager == null)
+                return 0;
+
+            return QuestManager.GetCurrentSolves("ArantahKill1")              // Ralirea, level 35
+                 + QuestManager.GetCurrentSolves("OswaldManualCompleted")     // Oswald, level 90
+                 + QuestManager.GetCurrentSolves("LumAugSkillQuest");         // Luminance, stamped up to twice
+        }
+
+        /// <summary>
+        /// Credits currently tied up in specializations - the one thing credits buy here.
+        ///
+        /// Charges exactly what SpecializeSkill charges (UpgradeCostFromTrainedToSpecialized, the
+        /// UPGRADE column rather than the full cost) so the recompute always agrees with what the
+        /// Temple actually deducted. Using the heritage-adjusted costs verify-skill-credits reads
+        /// would be wrong here for the same reason the heritage 52 is excluded: no live code path
+        /// charges them.
+        /// </summary>
+        public int GetSpecializedSkillCredits()
+        {
+            var spent = 0;
+
+            foreach (var skill in SkillHelper.ValidSkills)
+            {
+                var creatureSkill = GetCreatureSkill(skill);
+
+                if (creatureSkill == null || creatureSkill.AdvancementClass != SkillAdvancementClass.Specialized)
+                    continue;
+
+                // the tinkering/salvaging five can ONLY be specialized by augmentation, which calls
+                // SpecializeSkill(skill, 0) and costs no credits. They also carry >= 999 in the dat's
+                // spec column, so billing for one would zero a player's pool outright.
+                if (IsSkillSpecializedViaAugmentation(skill, out _))
+                    continue;
+
+                if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var skillBase))
+                    continue;
+
+                spent += skillBase.UpgradeCostFromTrainedToSpecialized;
+            }
+
+            return spent;
         }
 
         /// <summary>

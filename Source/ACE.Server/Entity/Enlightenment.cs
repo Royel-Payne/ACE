@@ -230,7 +230,10 @@ namespace ACE.Server.Entity
             {
                 var skill = (Skill)i;
 
-                player.ResetSkill(skill, false);
+                // Shadowgain 095h: fullWipe - Enlightenment sends the character back to level 1 and
+                // wiping every skill IS the intent here, unlike the Fianhe/Temple respec paths which
+                // now preserve earned ranks.
+                player.ResetSkill(skill, false, fullWipe: true);
             }
 
             player.AvailableExperience = 0;

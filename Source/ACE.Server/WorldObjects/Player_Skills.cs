@@ -213,12 +213,6 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public bool HandleActionTrainSkill(Skill skill, int creditsSpent)
         {
-            if (creditsSpent > AvailableSkillCredits)
-            {
-                log.Warn($"{Name}.HandleActionTrainSkill({skill}, {creditsSpent}) - not enough skill credits ({AvailableSkillCredits})");
-                return false;
-            }
-
             // get the actual cost to train the skill.
             if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var skillBase))
             {
@@ -226,14 +220,28 @@ namespace ACE.Server.WorldObjects
                 return false;
             }
 
-            if (creditsSpent != skillBase.TrainedCost)
+            // Shadowgain 095c: the SERVER decides the price, not the client. The client reads
+            // TrainedCost out of the dat and will always send that, so under free training its
+            // number and ours legitimately disagree - rejecting on the mismatch (as stock ACE does)
+            // would make the skill panel's Train button silently fail. Charge our cost and ignore
+            // theirs. Still logged when they differ, because outside all_skills_trained a mismatch
+            // is the client-tampering signal the original check was there to catch.
+            var trainingCost = GetTrainingCost(skillBase);
+
+            if (creditsSpent != trainingCost)
+                log.Debug($"{Name}.HandleActionTrainSkill({skill}, {creditsSpent}) - client value differs from server cost ({trainingCost}); charging the server value");
+
+            // affordability is checked against OUR price, after it is known. Checking the client's
+            // figure first (as stock ACE does) rejected free training outright, because the client
+            // sends the dat's cost while the player may hold 0 credits.
+            if (trainingCost > (AvailableSkillCredits ?? 0))
             {
-                log.Warn($"{Name}.HandleActionTrainSkill({skill}, {creditsSpent}) - client value differs from skillBase.TrainedCost({skillBase.TrainedCost})");
+                log.Warn($"{Name}.HandleActionTrainSkill({skill}) - not enough skill credits ({AvailableSkillCredits}) for cost {trainingCost}");
                 return false;
             }
 
             // attempt to train the specified skill
-            var success = TrainSkill(skill, creditsSpent);
+            var success = TrainSkill(skill, trainingCost);
 
             var availableSkillCredits = $"You now have {AvailableSkillCredits} credits available.";
 
@@ -252,6 +260,40 @@ namespace ACE.Server.WorldObjects
             return success;
         }
 
+        /// <summary>
+        /// Shadowgain 095c: what training a skill COSTS in skill credits.
+        ///
+        /// The governing rule: *"training needs to be free, spec is the only thing with fees or
+        /// credits."* Under all_skills_trained the heritage grant (52, or 68 Olthoi) is considered
+        /// consumed at creation paying for every skill at once, so no individual training ever
+        /// debits again - and, symmetrically, untraining refunds nothing, because nothing was paid.
+        ///
+        /// **This must never be done by zeroing TrainedCost itself.** The specialization price is
+        /// DERIVED - `UpgradeCostFromTrainedToSpecialized => SpecializedCost - TrainedCost` - so
+        /// zeroing the trained column would silently promote every specialization to the full
+        /// column: War Magic 12 -> 28, Melee Defense 10 -> 20, Two Handed 8 -> 16. Against a
+        /// 46-credit lifetime pool that roughly halves what a player can ever specialize, with no
+        /// error and no log line. The cost is zeroed at the CHARGE SITES only; the dat is untouched
+        /// and every consumer of the upgrade cost keeps seeing the real number.
+        ///
+        /// Gated on all_skills_trained: with that dial off this is stock ACE again, the 52 really is
+        /// the player's to spend, and training should cost what the table says.
+        ///
+        /// Why free training also removes a whole class of hazard: nothing ever debits for training,
+        /// so "credits used" is identically "credits spent on specialization" - exactly what
+        /// BackfillLevelSkillCredits computes. There is no deficit for any checker to find. Training
+        /// all 38 forced skills would cost 190 credits at dat prices against a 52 grant, and any
+        /// audit that sums the trained column sees a ~138-credit hole (see the guards on
+        /// verify-skill-credits / verify-skills).
+        /// </summary>
+        public static int GetTrainingCost(ACE.DatLoader.Entity.SkillBase skillBase)
+        {
+            if (PropertyManager.GetBool("all_skills_trained").Item)
+                return 0;
+
+            return skillBase.TrainedCost;
+        }
+
         public bool TrainSkill(Skill skill)
         {
             // get the amount of skill credits required to train this skill
@@ -262,7 +304,7 @@ namespace ACE.Server.WorldObjects
             }
 
             // attempt to train the specified skill
-            return TrainSkill(skill, skillBase.TrainedCost);
+            return TrainSkill(skill, GetTrainingCost(skillBase));
         }
 
         /// <summary>
@@ -334,22 +376,132 @@ namespace ACE.Server.WorldObjects
 
             if (resetSkill)
             {
-                // this path only during char creation
+                // this path only during char creation - a fresh skill, no XP and so no overflow
                 creatureSkill.Ranks = 0;
                 creatureSkill.ExperienceSpent = 0;
+                creatureSkill.InitLevel = 10;
+                creatureSkill.AdvancementClass = SkillAdvancementClass.Specialized;
             }
             else
             {
                 // this path only during temple / asheron's castle
-                creatureSkill.Ranks = (ushort)CalcSkillRank(SkillAdvancementClass.Specialized, creatureSkill.ExperienceSpent);
+                PromoteSkillToSpecialized(creatureSkill);
             }
-
-            creatureSkill.InitLevel = 10;
-            creatureSkill.AdvancementClass = SkillAdvancementClass.Specialized;
 
             AvailableSkillCredits -= creditsSpent;
 
             return true;
+        }
+
+        /// <summary>
+        /// Shadowgain 090 item 1: the ONE way an EXISTING skill goes Trained -> Specialized.
+        ///
+        /// The exact mirror of DemoteSkillToTrained, and shared for the same reason - the two
+        /// promote sites (the Temple / Asheron's Castle branch of SpecializeSkill, and the
+        /// skill-specializing AUGMENTATION) had identical copies of this logic and identical bugs.
+        ///
+        /// **The bug being fixed.** Both hard-set `InitLevel = 10` and recomputed the rank with the
+        /// CAPPED CalcSkillRank. Under 005 a skill ground past the top of the dat table carries its
+        /// overflow ranks in InitLevel, so specializing such a skill overwrote the overflow with a
+        /// flat 10 and clamped the rank - silently deleting every rank earned past the cap. The
+        /// augmentation's own `// handle overages?` comment IS this bug.
+        ///
+        /// Uses the same overflow-aware shape AddSkillXp uses: compute uncapped, and past the table
+        /// top pin Ranks at the table maximum and carry the remainder in InitLevel on top of the
+        /// specialization's base 10. The client clamps Ranks at its own table max but honours
+        /// InitLevel, which is why the overflow has to live there to be visible at all.
+        ///
+        /// Rank is recomputed from ExperienceSpent rather than carried across, which is correct:
+        /// rank is a function of XP and curve, and the specialized curve is cheaper, so the same XP
+        /// legitimately buys more ranks once specialized.
+        /// </summary>
+        public void PromoteSkillToSpecialized(CreatureSkill creatureSkill)
+        {
+            creatureSkill.AdvancementClass = SkillAdvancementClass.Specialized;
+
+            var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
+
+            var computedRank = uncapped
+                ? CalcSkillRankUncapped(SkillAdvancementClass.Specialized, creatureSkill.ExperienceSpent)
+                : CalcSkillRank(SkillAdvancementClass.Specialized, creatureSkill.ExperienceSpent);
+
+            var specTable = GetSkillXPTable(SkillAdvancementClass.Specialized);
+
+            var tableMaxRank = specTable != null ? specTable.Count - 1 : computedRank;
+
+            if (uncapped && computedRank > tableMaxRank)
+            {
+                creatureSkill.Ranks = (ushort)tableMaxRank;
+                creatureSkill.InitLevel = 10u + (uint)(computedRank - tableMaxRank);
+            }
+            else
+            {
+                creatureSkill.Ranks = (ushort)computedRank;
+                creatureSkill.InitLevel = 10;
+            }
+        }
+
+        /// <summary>
+        /// Shadowgain 090 item 2: the ONE way a skill goes Specialized -> Trained.
+        ///
+        /// Both callers - the login/creation reconcile (DemoteSpecializedSkills) and the Temple's
+        /// Gem of Forgetfulness (UnspecializeSkill) - route through here so they cannot drift apart.
+        /// They had drifted: the reconcile preserved ranks while the Temple wiped them, and a player
+        /// who unspecialized lost every rank ground into the skill with no warning (found on TEST,
+        /// Two Handed Combat rank 39 -> 0).
+        ///
+        /// Two subtleties, both load-bearing:
+        ///
+        /// 1. **InitLevel is not purely the spec bonus.** SpecializeSkill sets it to 10, but 005 also
+        ///    uses InitLevel to carry rank OVERFLOW past the top of the dat table. So this subtracts
+        ///    the spec bonus rather than zeroing the field, which would silently erase overflow.
+        ///
+        /// 2. **Rank is recomputed from XP on the trained curve** (Chris, 2026-08-11) - it is NOT
+        ///    carried across, and the XP is NOT topped up.
+        ///
+        /// That second point replaced the original "keep the rank, top the XP up to match" rule,
+        /// which was farmable. Specializing recomputes rank on the CHEAPER specialized curve, so the
+        /// rank jumps; topping XP up on the way back made that jump permanent, and the credit refund
+        /// made the round trip free. Simulated against the real dat curves, five spec/unspec cycles
+        /// took a skill from rank 100 to 226 - the table maximum - with no XP earned and no credits
+        /// spent:
+        ///
+        ///     100 -> spec 113 -> keep 113 -> spec 131 -> keep 131 -> spec 159 -> ... -> 226
+        ///
+        /// Recomputing closes it by construction: 100 -> spec 113 -> trained 100. Nothing is
+        /// confiscated - the player keeps every point of XP they earned. What they give up is the
+        /// specialization BONUS, which is precisely what specialization is, and which they are
+        /// choosing to sell back for the credits.
+        ///
+        /// The gain RATE needs nothing here: spec_gain_multiplier is read live off AdvancementClass
+        /// (Proficiency.cs:108), so it reverts to 1.0x the moment the class changes.
+        /// </summary>
+        public void DemoteSkillToTrained(CreatureSkill creatureSkill)
+        {
+            creatureSkill.AdvancementClass = SkillAdvancementClass.Trained;
+
+            var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
+
+            var computedRank = uncapped
+                ? CalcSkillRankUncapped(SkillAdvancementClass.Trained, creatureSkill.ExperienceSpent)
+                : CalcSkillRank(SkillAdvancementClass.Trained, creatureSkill.ExperienceSpent);
+
+            var trainedTable = GetSkillXPTable(SkillAdvancementClass.Trained);
+
+            var tableMaxRank = trainedTable != null ? trainedTable.Count - 1 : computedRank;
+
+            // past the table top the remainder lives in InitLevel, whose base is 0 when Trained -
+            // the +10 specialization bonus is exactly what is being given up here
+            if (uncapped && computedRank > tableMaxRank)
+            {
+                creatureSkill.Ranks = (ushort)tableMaxRank;
+                creatureSkill.InitLevel = (uint)(computedRank - tableMaxRank);
+            }
+            else
+            {
+                creatureSkill.Ranks = (ushort)computedRank;
+                creatureSkill.InitLevel = 0;
+            }
         }
 
         /// <summary>
@@ -372,18 +524,49 @@ namespace ACE.Server.WorldObjects
             }
             else
             {
-                // refund xp and skill credits
-                RefundXP(creatureSkill.ExperienceSpent);
+                // Shadowgain 090 item 2: NO XP REFUND. Pooled experience is already astronomical
+                // here (nine figures on a levelled character) and buys nothing but augmentations, so
+                // the refund was never a reward - it was just a second currency leaking out of a
+                // skill reset. Removed at the source rather than special-cased.
 
-                // temple untraining 'always trained' skills:
-                // cannot be untrained, but skill XP can be recovered
-                if (IsSkillUntrainable(skill))
+                // UNTRAINING CANNOT STICK while all_skills_trained is on, so it must not run.
+                //
+                // EnsureAllSkillsTrained re-trains everything below Trained on the next enter-world.
+                // Proven in play (Chris, 2026-08-11): untraining Void Magic reported *"You have
+                // succeeded in untraining your Void Magic skill!"*, and after a relog the skill was
+                // Trained again - at rank 0, with every earned rank gone. A pure-loss button that
+                // reports success, with no benefit available to offset it.
+                //
+                // 093's selective skill pruning is the feature that makes untraining meaningful: it
+                // records the skill in `shadowgain_pruned_skills` so the reconcile SKIPS it, and
+                // freezes the XP instead of discarding it. Until that exists, refuse.
+                if (PropertyManager.GetBool("all_skills_trained").Item)
                 {
-                    creatureSkill.AdvancementClass = SkillAdvancementClass.Untrained;
-                    creatureSkill.InitLevel = 0;
-                    AvailableSkillCredits += creditsSpent;
+                    if (Session != null)
+                        Session.Network.EnqueueSend(new GameMessageSystemChat($"Every skill is Trained on this world, so {skill.ToSentence()} would be re-trained the moment you log in - untraining it would discard your ranks and achieve nothing. Nothing has been changed.", ChatMessageType.Broadcast));
+
+                    return false;
                 }
 
+                // An always-trained skill cannot be untrained at all; retail's consolation prize was
+                // recovering the XP, and with no refund that leaves this doing nothing but wiping
+                // ranks for free. Refuse rather than destroy progress in exchange for nothing.
+                if (!IsSkillUntrainable(skill))
+                {
+                    if (Session != null)
+                        Session.Network.EnqueueSend(new GameMessageSystemChat($"{skill.ToSentence()} cannot be untrained, and there is no experience to recover - training costs nothing on this world.", ChatMessageType.Broadcast));
+
+                    return false;
+                }
+
+                creatureSkill.AdvancementClass = SkillAdvancementClass.Untrained;
+                creatureSkill.InitLevel = 0;
+                AvailableSkillCredits += creditsSpent;
+
+                // Ranks and XP ARE discarded here, deliberately - this is the one place progress is
+                // lost, and it is the designed deterrent: untraining refunds nothing (training was
+                // free) and costs every rank ground into the skill, so there is nothing to farm.
+                // Contrast DemoteSkillToTrained, where the player keeps what they earned.
                 creatureSkill.Ranks = 0;
                 creatureSkill.ExperienceSpent = 0;
             }
@@ -392,7 +575,18 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
-        /// Lowers skill from Specialized to Trained and returns both skill credits and invested XP
+        /// Lowers a skill from Specialized back to Trained, refunding the specialization CREDITS.
+        ///
+        /// Shadowgain 090 item 2. Stock ACE refunded the credits AND the invested XP, then zeroed
+        /// Ranks and ExperienceSpent - so unspecializing wiped every rank the player had ground into
+        /// the skill. On a server where skills rise only by use, that is the player's entire
+        /// investment, and it happened silently: the client shows attribute-derived skill VALUE, so
+        /// a level-275 character losing 39 ranks still reads plausibly. Caught on TEST by checking
+        /// the database rather than the panel.
+        ///
+        /// Now: no XP refund, no wipe. The rank stands, the XP is made consistent with it under the
+        /// trained curve, and only the credits come back - because credits are the only thing
+        /// specialization ever cost.
         /// </summary>
         public bool UnspecializeSkill(Skill skill, int creditsSpent)
         {
@@ -401,20 +595,21 @@ namespace ACE.Server.WorldObjects
             if (creatureSkill == null || creatureSkill.AdvancementClass != SkillAdvancementClass.Specialized)
                 return false;
 
-            // refund xp and skill credits
-            RefundXP(creatureSkill.ExperienceSpent);
-
-            // salvaging / tinkering skills specialized through augmentation only
-            // cannot be unspecialized here, only refund xp
-            if (!IsSkillSpecializedViaAugmentation(skill, out var playerHasAugmentation) || !playerHasAugmentation)
+            // Skills specialized through an AUGMENTATION cannot be lowered here - the augmentation
+            // still grants it, so the class would simply be restored. Retail's fallback was
+            // recovering the XP; with no XP refund that leaves nothing but a rank wipe, so refuse
+            // outright instead of taking the ranks and giving nothing back.
+            if (IsSkillSpecializedViaAugmentation(skill, out var playerHasAugmentation) && playerHasAugmentation)
             {
-                creatureSkill.AdvancementClass = SkillAdvancementClass.Trained;
-                creatureSkill.InitLevel = 0;
-                AvailableSkillCredits += creditsSpent;
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessageSystemChat($"{skill.ToSentence()} is specialized by an augmentation and cannot be lowered here.", ChatMessageType.Broadcast));
+
+                return false;
             }
 
-            creatureSkill.Ranks = 0;
-            creatureSkill.ExperienceSpent = 0;
+            DemoteSkillToTrained(creatureSkill);
+
+            AvailableSkillCredits += creditsSpent;
 
             return true;
         }
@@ -1042,20 +1237,60 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
-        /// Resets the skill, refunds all experience and skill credits, if allowed.
+        /// Resets a skill.
+        ///
+        /// **Shadowgain 095h - two callers, opposite intents, now made explicit.**
+        ///
+        /// - `EmoteType.UntrainSkill` (EmoteManager) - **Fianhe at Asheron's Castle**, a respec. Chris,
+        ///   2026-08-11: *"This one needs to be the same as temples."* It now DELEGATES to the very
+        ///   methods the Temple gems use, rather than carrying its own copy of the logic, so the two
+        ///   doors cannot drift apart. Duplicated demote logic between the reconcile and the Temple
+        ///   is exactly what silently destroyed a real skill's ranks earlier the same day.
+        /// - `Enlightenment.RemoveSkills` - a full character reset back to level 1, where wiping every
+        ///   skill IS the point. That path passes `fullWipe: true` and keeps the old destructive
+        ///   behaviour.
+        ///
+        /// The old shared implementation gave Fianhe the wipe as well, so one door preserved ranks
+        /// and the other ate them.
         /// </summary>
-        public bool ResetSkill(Skill skill, bool refund = true)
+        public bool ResetSkill(Skill skill, bool refund = true, bool fullWipe = false)
         {
             var creatureSkill = GetCreatureSkill(skill, false);
 
             if (creatureSkill == null || creatureSkill.AdvancementClass < SkillAdvancementClass.Trained)
                 return false;
 
-            // gather skill credits to refund
-            DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)creatureSkill.Skill, out var skillBase);
-
-            if (skillBase == null)
+            if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)creatureSkill.Skill, out var skillBase) || skillBase == null)
                 return false;
+
+            if (!fullWipe)
+            {
+                // RESPEC. Route through the Temple's own methods - UnspecializeSkill recomputes the
+                // rank from XP on the trained curve and refunds the specialization credits;
+                // UntrainSkill refuses while all_skills_trained is on, because the reconcile would
+                // re-train the skill anyway and the only effect would be discarding ranks.
+                bool changed;
+
+                if (creatureSkill.AdvancementClass == SkillAdvancementClass.Specialized)
+                    changed = UnspecializeSkill(skill, skillBase.UpgradeCostFromTrainedToSpecialized);
+                else
+                    changed = UntrainSkill(skill, GetTrainingCost(skillBase));
+
+                if (!changed)
+                    return false;   // the callee has already told the player why
+
+                if (Session != null)
+                {
+                    Session.Network.EnqueueSend(
+                        new GameMessagePrivateUpdateSkill(this, creatureSkill),
+                        new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, AvailableSkillCredits ?? 0),
+                        new GameMessageSystemChat($"Your {skill.ToSentence()} skill has been reset.", ChatMessageType.Broadcast));
+                }
+
+                return true;
+            }
+
+            // ---- FULL WIPE (Enlightenment only) ----
 
             // salvage / tinkering skills specialized via augmentations
             // Salvaging cannot be untrained or unspecialized => skillIsSpecializedViaAugmentation && !untrainable
@@ -1073,17 +1308,18 @@ namespace ACE.Server.WorldObjects
                     AvailableSkillCredits += skillBase.UpgradeCostFromTrainedToSpecialized;
             }
 
-            // temple untraining 'always trained' skills:
-            // cannot be untrained, but skill XP can be recovered
             if (untrainable)
             {
                 creatureSkill.AdvancementClass = SkillAdvancementClass.Untrained;
                 creatureSkill.InitLevel = 0;
-                AvailableSkillCredits += skillBase.TrainedCost;
+
+                // Shadowgain 090 item 5: refund exactly what was PAID, which is zero while training
+                // is free. Enlightenment overwrites AvailableSkillCredits wholesale straight after
+                // this anyway, but leaving the leak in would make this method wrong on its own terms.
+                AvailableSkillCredits += GetTrainingCost(skillBase);
             }
 
-            if (refund)
-                RefundXP(creatureSkill.ExperienceSpent);
+            // Shadowgain 090 item 2: no XP refund, ever.
 
             creatureSkill.ExperienceSpent = 0;
             creatureSkill.Ranks = 0;
@@ -1091,8 +1327,12 @@ namespace ACE.Server.WorldObjects
             var updateSkill = new GameMessagePrivateUpdateSkill(this, creatureSkill);
             var availableSkillCredits = new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, AvailableSkillCredits ?? 0);
 
-            var msg = $"Your {(untrainable ? $"{typeOfSkill}" : "")}{skill.ToSentence()} skill has been {(untrainable ? "removed" : "reset")}. ";
-            msg += $"All the experience {(creditRefund ? "and skill credits " : "")}that you spent on this skill have been refunded to you.";
+            var specCreditsReturned = creditRefund && creatureSkill.AdvancementClass == SkillAdvancementClass.Trained;
+
+            var msg = $"Your {(untrainable ? $"{typeOfSkill}" : "")}{skill.ToSentence()} skill has been {(untrainable ? "removed" : "reset")}, and its ranks are gone. ";
+            msg += specCreditsReturned
+                ? "Your specialization credits have been refunded. Training itself costs nothing on this world, so there is nothing else to return."
+                : "Training costs nothing on this world, so there is nothing to refund.";
 
             if (refund)
                 Session.Network.EnqueueSend(updateSkill, availableSkillCredits, new GameMessageSystemChat(msg, ChatMessageType.Broadcast));

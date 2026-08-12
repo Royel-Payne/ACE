@@ -194,6 +194,15 @@ namespace ACE.Server.Factories
                         }
                     }
 
+                    // Shadowgain 095c: training is free, so creation never debits for it either.
+                    // This also removes the only way CreateResult.FailedToTrainSkill can fire - a
+                    // character whose picks cost more than the heritage grant used to fail creation
+                    // outright, which is the same latent class of bug as the specialization one
+                    // handled below. The SPEC cost is deliberately left alone: it is derived as
+                    // SpecializedCost - TrainedCost and must keep charging the upgrade column.
+                    if (PropertyManager.GetBool("all_skills_trained").Item)
+                        trainedCost = 0;
+
                     if (sac == SkillAdvancementClass.Specialized)
                     {
                         if (!player.TrainSkill((Skill)i, trainedCost))

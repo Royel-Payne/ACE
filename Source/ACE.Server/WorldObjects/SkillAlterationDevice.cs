@@ -213,7 +213,12 @@ namespace ACE.Server.WorldObjects
                     {
                         var untrainable = Player.IsSkillUntrainable(skill.Skill);
 
-                        if (player.UntrainSkill(skill.Skill, skillBase.TrainedCost))
+                        // Shadowgain 095c: refund exactly what was PAID, which under
+                        // all_skills_trained is zero - training was never bought with a spendable
+                        // credit, so untraining cannot return one. This is 090 item 5: the refund
+                        // was farmable (untrain -> +credits -> retrain free -> repeat), and Fianhe
+                        // at Asheron's Castle refunds everything in one click.
+                        if (player.UntrainSkill(skill.Skill, Player.GetTrainingCost(skillBase)))
                         {
                             var updateSkill = new GameMessagePrivateUpdateSkill(player, skill);
                             var availableSkillCredits = new GameMessagePrivateUpdatePropertyInt(player, PropertyInt.AvailableSkillCredits, player.AvailableSkillCredits ?? 0);

@@ -102,13 +102,17 @@ namespace ACE.Server.WorldObjects
             else if (AugTypeHelper.IsSkill(type))
             {
                 var playerSkill = player.GetCreatureSkill(AugTypeHelper.GetSkill(type));
-                playerSkill.AdvancementClass = SkillAdvancementClass.Specialized;
-                playerSkill.InitLevel = 10;
-                // adjust rank?
-                // handle overages?
-                // if trained skill is maxed, there will be a ~103m xp overage...
-                var specRank = Player.CalcSkillRank(SkillAdvancementClass.Specialized, playerSkill.ExperienceSpent);
-                playerSkill.Ranks = (ushort)specRank;
+
+                // Shadowgain 090 item 1. This used to hard-set InitLevel = 10 and recompute the rank
+                // with the CAPPED calc, above its own unanswered `// handle overages?` comment - and
+                // that comment was describing a real bug. Under 005 a skill ground past the top of
+                // the dat table carries its overflow ranks in InitLevel, so this silently deleted
+                // every rank earned past the cap the moment the augmentation was used.
+                //
+                // The augmentation FEATURE is unchanged and stays end-of-retail; only the overflow
+                // corruption is fixed. Shared with the Temple path so the two cannot drift.
+                player.PromoteSkillToSpecialized(playerSkill);
+
                 player.Session.Network.EnqueueSend(new GameMessagePrivateUpdateSkill(player, playerSkill));
             }
             else if (type == AugmentationType.PackSlot)
