@@ -124,16 +124,26 @@ namespace ACE.Server.WorldObjects
                     }
 
                     // ensure player won't exceed limit of 70 specialized credits after operation
-                    var specializedCost = skillBase.SpecializedCost;
-
-                    if (DatManager.PortalDat.CharGen.HeritageGroups.TryGetValue((uint)player.Heritage, out var heritageGroup))
-                    {
-                        // check for adjusted costs of Specialization due to player's heritage (e.g. Arcane Lore)
-                        var heritageAdjustedCost = heritageGroup.Skills.FirstOrDefault(i => i.SkillNum == (int)skill.Skill);
-
-                        if (heritageAdjustedCost != null)
-                            specializedCost = heritageAdjustedCost.PrimaryCost;
-                    }
+                    //
+                    // Shadowgain 090 item 6: counted against what the player PAYS - the upgrade cost -
+                    // not the full SpecializedCost. In retail these were the same number: you trained
+                    // a skill (paying TrainedCost) and then upgraded it (paying the difference), so
+                    // your outlay was the full cost and the cap measured exactly your spending.
+                    //
+                    // Free training broke that alignment and nothing re-pointed the cap, so it ran
+                    // ~2.5x faster than the wallet: a 2-credit specialization burned 6 of the 70.
+                    // Measured against the dat, a breadth build was blocked after spending 28 of its
+                    // ~50 lifetime credits, leaving 18 permanently unspendable behind a retail error
+                    // message with no in-game explanation.
+                    //
+                    // Repointing restores retail's relationship rather than removing the guard: max
+                    // lifetime spend is ~50 against a cap of 70, so it no longer binds, but it still
+                    // catches any future source that pushes credits past 70.
+                    //
+                    // Heritage-adjusted costs are deliberately not consulted, matching the charge
+                    // path - SpecializeSkill bills skillBase.UpgradeCostFromTrainedToSpecialized and
+                    // no live path charges the heritage figure (same inconsistency 095c removed).
+                    var specializedCost = skillBase.UpgradeCostFromTrainedToSpecialized;
 
                     if (GetTotalSpecializedCredits(player) + specializedCost > 70)
                     {
@@ -235,7 +245,11 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
-        /// Calculates and returns the current total number of specialized credits
+        /// Calculates and returns the current total number of specialized credits.
+        ///
+        /// Shadowgain 090 item 6: counts the UPGRADE cost of each specialization - what the player
+        /// actually paid - rather than the full SpecializedCost. See the matching note at the cap
+        /// check above for why the two diverged and why this restores retail's behaviour.
         /// </summary>
         private int GetTotalSpecializedCredits(Player player)
         {
@@ -261,17 +275,9 @@ namespace ACE.Server.WorldObjects
 
                     var skill = DatManager.PortalDat.SkillTable.SkillBaseHash[(uint)kvp.Key];
 
-                    var specializedCost = skill.SpecializedCost;
-
-                    if (DatManager.PortalDat.CharGen.HeritageGroups.TryGetValue((uint)player.Heritage, out var heritageGroup))
-                    {
-                        // check for adjusted costs of Specialization due to player's heritage (e.g. Arcane Lore)
-                        var heritageAdjustedCost = heritageGroup.Skills.FirstOrDefault(i => i.SkillNum == (int)kvp.Key);
-
-                        if (heritageAdjustedCost != null)
-                            specializedCost = heritageAdjustedCost.PrimaryCost;
-                    }
-                    specializedCreditsTotal += specializedCost;
+                    // the upgrade cost is what was charged for this specialization, so it is what
+                    // the cap must count - see the note at the check above
+                    specializedCreditsTotal += skill.UpgradeCostFromTrainedToSpecialized;
                 }
             }
 
