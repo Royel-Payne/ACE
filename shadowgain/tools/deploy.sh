@@ -104,15 +104,54 @@ echo "==> droplet: ACE graceful shutdown, ${SHUTDOWN_SECS}s warning"
 $SSH "$HOST" "
   if docker ps --format '{{.Names}}' | grep -q '^ace-server\$'; then
     send() { printf '%s\n' \"\$1\" | timeout -s KILL 10 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true; }
+    # Scope every check to lines produced AFTER this instant. A shutdown does NOT
+    # recreate the container, so 'Exiting at' from previous deploys is still sitting in
+    # the log and an unscoped grep matches stale output on the first poll.
+    SINCE=\$(date -u +%Y-%m-%dT%H:%M:%S)
+    # Clock starts HERE, before the sends - each send blocks up to 10s on its
+    # 'timeout -s KILL 10 docker attach', so starting it afterwards under-reports the
+    # wait by ~20s and makes the reported drain time meaningless against the countdown.
+    START=\$(date +%s)
+
     send 'set-shutdown-interval $SHUTDOWN_SECS'
     sleep 1
     send 'shutdown $SHUTDOWN_MSG'
-    for i in \$(seq 1 40); do
-      docker ps --format '{{.Names}}' | grep -q '^ace-server\$' || break
-      docker logs ace-server 2>&1 | tail -40 | grep -qiE 'World shut down|Shutting down world|Logging off all players' && break
+
+    # 'Exiting at' is the last line ShutdownServer writes before Environment.Exit, and
+    # it is log.Info so it actually reaches the container log.
+    #
+    # It replaces 'World shut down|Shutting down world|Logging off all players', none of
+    # which ever matched: the first two do not exist in the source at all, and 'Logging
+    # off all players...' is log.DEBUG while the appender is capped at INFO. The old loop
+    # therefore could never break early - it always burned its full 80s and always fell
+    # through to the force-kill below. Verified empirically on TEST 2026-08-12: those
+    # three markers occur 0 times across a complete shutdown, 'Exiting at' occurs twice.
+    #
+    # Budget = countdown + 5 minutes, because ACE's own stuck-player failsafe is 5
+    # minutes; a shorter deadline can expire while ACE is still legitimately draining.
+    # Wall-clock, NOT a count of sleeps. 'docker logs' on a large log takes seconds, so a
+    # sleep-counter both under-reports elapsed time and silently inflates the deadline -
+    # measured on TEST, 6s of counted sleep was ~27s of real time.
+    DEADLINE=\$(( $SHUTDOWN_SECS + 300 ))
+    DRAINED=0
+    while [ \$(( \$(date +%s) - START )) -lt \$DEADLINE ]; do
+      if ! docker ps --format '{{.Names}}' | grep -q '^ace-server\$'; then
+        echo \"    container exited after \$(( \$(date +%s) - START ))s\"; DRAINED=1; break
+      fi
+      if docker logs --since \"\$SINCE\" ace-server 2>&1 | grep -q 'Exiting at'; then
+        echo \"    drain complete after \$(( \$(date +%s) - START ))s\"; DRAINED=1; break
+      fi
       sleep 2
     done
-    docker logs ace-server 2>&1 | grep -iE 'will be shutting down|Logging off all players|shut down' | tail -3
+
+    if [ \$DRAINED -eq 0 ]; then
+      echo \"    !! DRAIN DID NOT COMPLETE within \${DEADLINE}s - players may still be online.\"
+      echo \"    !! Check 'serverstatus' before allowing the swap to force-kill them.\"
+    fi
+
+    # Progress + the stuck-player failsafe, which is the one warning worth seeing here.
+    docker logs --since \"\$SINCE\" ace-server 2>&1 \
+      | grep -iE 'Waiting for [0-9]+|Waiting for world|Saving OfflinePlayers|failsafe|Exiting at' | tail -6
   fi"
 
 echo "==> droplet: swap container to the staged image"
