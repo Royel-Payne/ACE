@@ -59,8 +59,17 @@ namespace ACE.Server.WorldObjects
 
             var newlyTrained = 0;
 
+            // Shadowgain 093: a skill the player deliberately pruned must survive the reconcile.
+            // Skipping it here is the entire mechanism that distinguishes a deliberate prune from a
+            // merely-untrained skill - without this, pruning would be undone at the next login and
+            // the feature would be a pure-loss button again (096 item 4).
+            var pruned = GetPrunedSkills();
+
             foreach (var skill in SkillHelper.ValidSkills)
             {
+                if (pruned.Contains(skill))
+                    continue;
+
                 var creatureSkill = GetCreatureSkill(skill);
 
                 if (creatureSkill == null || creatureSkill.AdvancementClass >= SkillAdvancementClass.Trained)

@@ -8,6 +8,7 @@ using ACE.Entity.Enum;
 using ACE.Entity.Enum.Properties;
 using ACE.Server.Entity.Actions;
 using ACE.Server.Managers;
+using ACE.Server.Network.GameEvent.Events;
 using ACE.Server.Network.GameMessages.Messages;
 using ACE.Server.WorldObjects.Entity;
 
@@ -294,6 +295,53 @@ namespace ACE.Server.WorldObjects
             return skillBase.TrainedCost;
         }
 
+        /// <summary>
+        /// Shadowgain 093: the skills this character has DELIBERATELY untrained.
+        ///
+        /// All 38 skills being auto-trained means VTank buffs all 38, so buff cycles are long.
+        /// Players asked to drop skills they never use to shorten it - legitimate QoL, and the
+        /// tradeoff is entirely theirs: a pruned skill cannot gain from use.
+        ///
+        /// Stored as a comma-separated id list in a single PropertyString rather than a bool per
+        /// skill, so it costs one row per character regardless of how many are pruned.
+        /// </summary>
+        public HashSet<Skill> GetPrunedSkills()
+        {
+            var pruned = new HashSet<Skill>();
+
+            var raw = GetProperty(PropertyString.ShadowgainPrunedSkills);
+
+            if (string.IsNullOrWhiteSpace(raw))
+                return pruned;
+
+            foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (int.TryParse(part.Trim(), out var id) && Enum.IsDefined(typeof(Skill), id))
+                    pruned.Add((Skill)id);
+            }
+
+            return pruned;
+        }
+
+        public void SetPrunedSkills(HashSet<Skill> pruned)
+        {
+            if (pruned == null || pruned.Count == 0)
+                RemoveProperty(PropertyString.ShadowgainPrunedSkills);
+            else
+                SetProperty(PropertyString.ShadowgainPrunedSkills, string.Join(",", pruned.Select(s => (int)s).OrderBy(i => i)));
+
+            ChangesDetected = true;
+        }
+
+        public bool IsSkillPruned(Skill skill) => GetPrunedSkills().Contains(skill);
+
+        /// <summary>
+        /// Shadowgain 093: bring a pruned skill back. Identical to the spec-to-trained demote - set
+        /// Trained and recompute the rank from the XP that was preserved - so it shares that
+        /// implementation deliberately rather than keeping a second copy that could drift.
+        /// </summary>
+        public void RestoreSkillToTrained(CreatureSkill creatureSkill) => DemoteSkillToTrained(creatureSkill);
+
         public bool TrainSkill(Skill skill)
         {
             // get the amount of skill credits required to train this skill
@@ -316,6 +364,26 @@ namespace ACE.Server.WorldObjects
 
             if (creatureSkill.AdvancementClass >= SkillAdvancementClass.Trained || creditsSpent > AvailableSkillCredits)
                 return false;
+
+            // Shadowgain 093: RE-TRAINING A PRUNED SKILL is a restore, not a fresh train. The XP was
+            // frozen when the player pruned it, so the rank is recomputed from that rather than the
+            // skill being reset to zero - which is what makes pruning "always free and fully
+            // reversible, nothing lost". Must come before the reset below, or the freeze is pointless.
+            var prunedSkills = GetPrunedSkills();
+
+            if (prunedSkills.Remove(skill))
+            {
+                SetPrunedSkills(prunedSkills);
+
+                RestoreSkillToTrained(creatureSkill);
+
+                AvailableSkillCredits -= creditsSpent;      // zero while training is free
+
+                if (IsSkillSpecializedViaAugmentation(skill, out var hasAug) && hasAug)
+                    SpecializeSkill(skill, 0, false);
+
+                return true;
+            }
 
             creatureSkill.AdvancementClass = SkillAdvancementClass.Trained;
             creatureSkill.Ranks = 0;
@@ -529,25 +597,6 @@ namespace ACE.Server.WorldObjects
                 // the refund was never a reward - it was just a second currency leaking out of a
                 // skill reset. Removed at the source rather than special-cased.
 
-                // UNTRAINING CANNOT STICK while all_skills_trained is on, so it must not run.
-                //
-                // EnsureAllSkillsTrained re-trains everything below Trained on the next enter-world.
-                // Proven in play (Chris, 2026-08-11): untraining Void Magic reported *"You have
-                // succeeded in untraining your Void Magic skill!"*, and after a relog the skill was
-                // Trained again - at rank 0, with every earned rank gone. A pure-loss button that
-                // reports success, with no benefit available to offset it.
-                //
-                // 093's selective skill pruning is the feature that makes untraining meaningful: it
-                // records the skill in `shadowgain_pruned_skills` so the reconcile SKIPS it, and
-                // freezes the XP instead of discarding it. Until that exists, refuse.
-                if (PropertyManager.GetBool("all_skills_trained").Item)
-                {
-                    if (Session != null)
-                        Session.Network.EnqueueSend(new GameMessageSystemChat($"Every skill is Trained on this world, so {skill.ToSentence()} would be re-trained the moment you log in - untraining it would discard your ranks and achieve nothing. Nothing has been changed.", ChatMessageType.Broadcast));
-
-                    return false;
-                }
-
                 // An always-trained skill cannot be untrained at all; retail's consolation prize was
                 // recovering the XP, and with no refund that leaves this doing nothing but wiping
                 // ranks for free. Refuse rather than destroy progress in exchange for nothing.
@@ -557,6 +606,37 @@ namespace ACE.Server.WorldObjects
                         Session.Network.EnqueueSend(new GameMessageSystemChat($"{skill.ToSentence()} cannot be untrained, and there is no experience to recover - training costs nothing on this world.", ChatMessageType.Broadcast));
 
                     return false;
+                }
+
+                // Shadowgain 093: DELIBERATE PRUNE. This replaces the temporary refusal added in 096
+                // item 4, which existed only because untraining was a pure-loss button - the reconcile
+                // re-trained the skill at the next login and every rank was gone.
+                //
+                // Recording the skill here is what makes the difference: EnsureAllSkillsTrained and
+                // the sg-reconcile-skills sweep both skip anything on this list, so the prune
+                // survives. Ranks and XP are FROZEN, not discarded, so re-training restores the skill
+                // exactly as it was. Always free, fully reversible, nothing lost.
+                //
+                // No exploit surface: no XP reaches the pool, no credits move, ranks do not rise. The
+                // only effect is a shorter VTank buff cycle at the cost of use-gain on that skill -
+                // the player's chosen tradeoff.
+                if (PropertyManager.GetBool("all_skills_trained").Item)
+                {
+                    var pruned = GetPrunedSkills();
+                    pruned.Add(skill);
+                    SetPrunedSkills(pruned);
+
+                    creatureSkill.AdvancementClass = SkillAdvancementClass.Untrained;
+                    creatureSkill.InitLevel = 0;
+
+                    // Ranks and ExperienceSpent are deliberately left ALONE - that is the freeze.
+
+                    // Deliberately silent. The CALLER announces the result - the Gem of Forgetfulness
+                    // sends retail's own "You have succeeded in untraining your <skill> skill!"
+                    // (WeenieErrorWithString.YouHaveSucceededUntraining_Skill). Chris asked for that
+                    // original wording kept rather than replaced or crowded by a second line.
+
+                    return true;
                 }
 
                 creatureSkill.AdvancementClass = SkillAdvancementClass.Untrained;
@@ -1284,7 +1364,13 @@ namespace ACE.Server.WorldObjects
                     Session.Network.EnqueueSend(
                         new GameMessagePrivateUpdateSkill(this, creatureSkill),
                         new GameMessagePrivateUpdatePropertyInt(this, PropertyInt.AvailableSkillCredits, AvailableSkillCredits ?? 0),
-                        new GameMessageSystemChat($"Your {skill.ToSentence()} skill has been reset.", ChatMessageType.Broadcast));
+                        // Retail's own wording for both outcomes, matching what the Temple gems send -
+                        // this path is a respec and should not announce itself differently.
+                        new GameEventWeenieErrorWithString(Session,
+                            creatureSkill.AdvancementClass == SkillAdvancementClass.Trained
+                                ? WeenieErrorWithString.YouHaveSucceededUnspecializing_Skill
+                                : WeenieErrorWithString.YouHaveSucceededUntraining_Skill,
+                            skill.ToSentence()));
                 }
 
                 return true;

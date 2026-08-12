@@ -899,8 +899,29 @@ namespace ACE.Server.Command.Handlers
                 // login that may never come.
                 if (trainAll)
                 {
+                    // Shadowgain 093: never re-train a skill the player deliberately pruned. The
+                    // in-game reconcile skips these too; the sweep has to agree or a maintenance run
+                    // would silently undo every player's pruning.
+                    var prunedRaw = player.GetProperty(PropertyString.ShadowgainPrunedSkills);
+                    var prunedSkills = new HashSet<Skill>();
+
+                    if (!string.IsNullOrWhiteSpace(prunedRaw))
+                    {
+                        foreach (var part in prunedRaw.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            if (int.TryParse(part.Trim(), out var pid) && Enum.IsDefined(typeof(Skill), pid))
+                                prunedSkills.Add((Skill)pid);
+                        }
+                    }
+
+                    if (prunedSkills.Count > 0)
+                        Console.WriteLine($"{player.Name} (0x{player.Guid}): {prunedSkills.Count} deliberately pruned skill(s) skipped");
+
                     foreach (var skill in SkillHelper.ValidSkills)
                     {
+                        if (prunedSkills.Contains(skill))
+                            continue;
+
                         if (!player.Biota.PropertiesSkill.TryGetValue(skill, out var props))
                         {
                             // no row at all - GetCreatureSkill creates it at login; nothing safe to

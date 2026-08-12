@@ -259,6 +259,182 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 092: a quest turn-in grants ATTRIBUTE progress, on top of the level XP it
+        /// already pays. Skills stay use-only and are untouched.
+        ///
+        /// **Why quests needed anything.** This redesign removed the thing quest XP bought, so a
+        /// quest reward became near-worthless and questing was strictly a worse way to play.
+        /// Greylock reported it cheerfully as a personality trait rather than as a problem, which is
+        /// how a design flaw becomes permanent.
+        ///
+        /// **The base grant is denominated in RANKS, not XP** (092 addendum 3, superseding the
+        /// original "percentage of quest XP" idea). Measured against `ace_world`, quest payouts span
+        /// 75 to 1,700,000,000 xp - twenty-three million to one - so ANY single percentage grants the
+        /// modal 1k-10k quest zero ranks while a top-tier turn-in grants around a hundred. Removing
+        /// XP magnitude from the base step is what makes the feature meaningful at both ends.
+        ///
+        ///     fraction(R) = quest_attribute_rank_fraction x (1 - R / attributeMaxRanks) ^ decay
+        ///
+        /// evaluated per attribute against ITS OWN current rank, so a low attribute gains more per
+        /// turn-in than a high one. That is 092's self-correcting property made explicit and tunable
+        /// rather than merely emergent, and it lands on Quickness, the measured laggard.
+        ///
+        /// **Solver only.** The caller hooks strictly on `xpType == XpType.Quest` at the recipient.
+        /// Verified in source rather than assumed: `Fellowship.SplitXp` re-types every non-solver
+        /// share as `XpType.Fellowship` (`Fellowship.cs`: `player == member ? XpType.Quest :
+        /// XpType.Fellowship`), and allegiance pass-up accrues to `AllegianceXPCached` without ever
+        /// making a Quest-typed grant. Repeat farming is already blocked by `QuestManager`'s
+        /// `MinDelta` / `MaxSolves`.
+        ///
+        /// Returns the number of attributes that gained at least some XP.
+        /// </summary>
+        public int AwardQuestAttributeXp(long questXp)
+        {
+            if (!PropertyManager.GetBool("quest_attribute_xp_enabled").Item)
+                return 0;
+
+            var attributeMaxRanks = AttributeMaxRanks();
+
+            if (attributeMaxRanks <= 0)
+                return 0;
+
+            var baseFraction = PropertyManager.GetDouble("quest_attribute_rank_fraction").Item;
+            var decay = PropertyManager.GetDouble("quest_attribute_rank_decay").Item;
+            var ceiling = PropertyManager.GetDouble("quest_attribute_max_ranks").Item;
+
+            if (baseFraction <= 0)
+                return 0;
+
+            if (decay < 0) decay = 0;
+
+            // The ceiling is NON-OPTIONAL and is the single thing preventing a big-tier quest from
+            // undoing the whole fix, so a nonsensical value must not disable it.
+            if (double.IsNaN(ceiling) || ceiling <= 0) ceiling = 1.0;
+
+            var tierMultiplier = GetQuestAttributeTierMultiplier(questXp);
+
+            var overcapAllowed = PropertyManager.GetBool("attribute_overcap_allow").Item;
+            var debug = PropertyManager.GetBool("attribute_debug_logging").Item;
+
+            var gained = 0;
+            var rankUps = 0;
+
+            foreach (var kvp in Attributes)
+            {
+                var creatureAttribute = kvp.Value;
+
+                if (creatureAttribute == null)
+                    continue;
+
+                var rank = (int)creatureAttribute.Ranks;
+
+                // headroom fraction: 1.0 at rank 0, 0.0 at the ceiling
+                var headroom = 1.0 - (double)rank / attributeMaxRanks;
+
+                if (headroom <= 0)
+                    continue;               // maxed - fraction is zero by construction
+
+                var step = baseFraction * Math.Pow(headroom, decay);
+
+                step *= tierMultiplier;
+
+                // HARD per-turn-in, per-attribute ceiling. Applied AFTER the tier multiplier and
+                // never bypassable - see 092 addendum 3.
+                step = Math.Min(step, ceiling);
+
+                if (double.IsNaN(step) || step <= 0)
+                    continue;
+
+                // Convert the fractional rank into XP on the STRETCHED curve at this rank.
+                // AttributeRankCost is the function that actually defines rank here; it degrades to
+                // the raw dat table when attributes_start_at_ten is off, so this is correct in both
+                // configurations. (The addendum wrote this as AttributeXpList[R+1] - AttributeXpList[R];
+                // that raw-table form would grant the wrong fraction of a rank under the stretch.)
+                var costHere = AttributeRankCost(rank);
+                var costNext = AttributeRankCost(rank + 1);
+
+                if (costNext <= costHere)
+                    continue;
+
+                var xpToNext = costNext - costHere;
+
+                var pp = (uint)Math.Min(uint.MaxValue, Math.Round(step * xpToNext));
+
+                if (pp == 0)
+                    continue;
+
+                var prevRank = creatureAttribute.Ranks;
+
+                creatureAttribute.ExperienceSpent = (uint)Math.Min((ulong)creatureAttribute.ExperienceSpent + pp, uint.MaxValue);
+
+                creatureAttribute.Ranks = (ushort)Math.Max(0, overcapAllowed
+                    ? CalcAttributeRankUncapped(creatureAttribute.ExperienceSpent)
+                    : CalcAttributeRank(creatureAttribute.ExperienceSpent));
+
+                // CreatureAttribute's setters do NOT flag the biota dirty - without this the grant
+                // is never persisted. Same trap as the usage path above.
+                ChangesDetected = true;
+
+                gained++;
+
+                if (debug)
+                {
+                    log.Info($"[092] {Name} | {kvp.Key} | questXp={questXp:N0} tier={tierMultiplier:N3}" +
+                             $" | R={rank} headroom={headroom:N3} step={step:N4} rank" +
+                             $" | pp={pp:N0} of {xpToNext:N0} | rank {prevRank}->{creatureAttribute.Ranks}");
+                }
+
+                if (Session == null)
+                    continue;
+
+                Session.Network.EnqueueSend(new GameMessagePrivateUpdateAttribute(this, creatureAttribute));
+
+                if (prevRank != creatureAttribute.Ranks)
+                {
+                    rankUps++;
+
+                    Session.Network.EnqueueSend(
+                        new GameMessageSound(Guid, Sound.RaiseTrait),
+                        new GameMessageSystemChat($"Your base {kvp.Key} is now {creatureAttribute.Base}!", ChatMessageType.Advancement));
+                }
+            }
+
+            if (rankUps > 0)
+                SyncVitalRanksToAttributes();
+
+            return gained;
+        }
+
+        /// <summary>
+        /// Shadowgain 092: optional multiplier letting bigger quests grant more, WITHOUT
+        /// reintroducing the windfall the rank-denominated model exists to prevent.
+        ///
+        /// Off by default and returns exactly 1.0 when off, so the base behaviour is the flat
+        /// per-turn-in fractional gain. Bounded by construction - it maps the quest's payout onto the
+        /// seven order-of-magnitude bands actually present in `ace_world` (under 1k, 1k-10k, ... 100M+)
+        /// and scales linearly across them, so the 23-million-to-one payout spread becomes at most a
+        /// `1 + quest_attribute_tier_factor` multiplier. The hard ceiling clamps it regardless.
+        /// </summary>
+        public static double GetQuestAttributeTierMultiplier(long questXp)
+        {
+            if (!PropertyManager.GetBool("quest_attribute_tier_scaling_enabled").Item)
+                return 1.0;
+
+            var factor = PropertyManager.GetDouble("quest_attribute_tier_factor").Item;
+
+            if (double.IsNaN(factor) || factor <= 0)
+                return 1.0;
+
+            if (questXp < 1)
+                return 1.0;
+
+            // band 0 = under 1k, band 6 = 100M and above
+            var band = Math.Clamp((int)Math.Floor(Math.Log10(questXp)) - 2, 0, 6);
+
+            return 1.0 + factor * (band / 6.0);
+        }
+
+        /// <summary>
         /// Shadowgain 004: keeps vital ranks in step with the attributes that govern them.
         ///
         /// A vital's maximum is <c>StartingValue + Ranks + attributeDerivedComponent</c>. Ranks were

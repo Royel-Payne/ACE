@@ -95,5 +95,14 @@ namespace ACE.Entity.Enum.Properties
         AllegianceCastellanTitle       = 9005,
         GodState                       = 9006,
         TinkerLog                      = 9007,
+
+        // Shadowgain 093: selective untraining (skill pruning). 9100+ is reserved for this fork,
+        // matching the convention PropertyBool already set with ShadowgainFastPath = 9101.
+        //
+        // Comma-separated Skill ids the player has DELIBERATELY untrained. This is what separates a
+        // deliberate prune from a merely-untrained skill: the login reconcile
+        // (EnsureAllSkillsTrained) and the sg-reconcile-skills sweep both SKIP anything listed here,
+        // so the prune survives, while every other skill is still forced to Trained.
+        ShadowgainPrunedSkills         = 9101,
     }
 }

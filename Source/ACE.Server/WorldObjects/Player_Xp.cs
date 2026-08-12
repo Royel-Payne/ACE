@@ -94,6 +94,20 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         private void UpdateXpAndLevel(long amount, XpType xpType)
         {
+            // Shadowgain 092: a quest turn-in ALSO grants attribute progress. Additive - the level
+            // grant below is untouched, so content gates and the roll metric behave exactly as before.
+            //
+            // THIS IS THE SOLVER-ONLY GUARD, and it is load-bearing. It sits here, at the recipient,
+            // rather than at the emote call sites, because this is the one place every path that
+            // credits a player's own XP converges. Fellowship shares arrive re-typed as
+            // XpType.Fellowship (Fellowship.SplitXp: `player == member ? XpType.Quest :
+            // XpType.Fellowship`) and allegiance pass-up never makes a Quest-typed grant at all, so
+            // testing xpType here is precisely "the person who solved it".
+            //
+            // Do not move this to a path that also sees Fellowship or Allegiance XP.
+            if (xpType == XpType.Quest)
+                AwardQuestAttributeXp(amount);
+
             // until we are max level we must make sure that we send
             var xpTable = DatManager.PortalDat.XpTable;
 
