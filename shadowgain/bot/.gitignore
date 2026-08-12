@@ -2,3 +2,14 @@ __pycache__/
 *.pyc
 bot.env
 .env
+
+# One-shot 089 scripts, kept on disk pending review rather than published.
+# Both have already been run and neither is part of the bot service:
+#   screenshots_and_verified_color.py - loosened #screenshots and gave linked
+#     players a visible colour. A migration, not a tool.
+#   whois_linked.py - read-only diagnostic for why a member was not showing the
+#     Verified Player colour.
+# Delete them once confirmed spent, or move them somewhere they are clearly
+# scratch. This repo is public, so nothing goes in by accident in the meantime.
+screenshots_and_verified_color.py
+whois_linked.py
