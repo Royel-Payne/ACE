@@ -188,23 +188,78 @@ namespace ACE.Server.WorldObjects
             }
         }
 
+        /// <summary>
+        /// Shadowgain 103: the per-skill rate at which salvaging trains each tinkering skill.
+        ///
+        /// Four knobs rather than one because the four skills draw on four different material
+        /// streams, and how often each material actually drops is not something the recipe tables
+        /// can tell us - it has to be observed and corrected per skill.
+        /// </summary>
+        public static double GetTinkerGainFromSalvage(Skill skill)
+        {
+            switch (skill)
+            {
+                case Skill.ArmorTinkering:     return PropertyManager.GetDouble("armor_tinker_gain_from_salvage").Item;
+                case Skill.WeaponTinkering:    return PropertyManager.GetDouble("weapon_tinker_gain_from_salvage").Item;
+                case Skill.ItemTinkering:      return PropertyManager.GetDouble("item_tinker_gain_from_salvage").Item;
+                case Skill.MagicItemTinkering: return PropertyManager.GetDouble("magic_item_tinker_gain_from_salvage").Item;
+                default:                       return 0.0;
+            }
+        }
+
         public void AddSalvage(List<WorldObject> salvageBags, WorldObject item, SalvageResults salvageResults)
         {
             var materialType = (MaterialType)item.MaterialType;
 
-            // Shadowgain 007: salvaging trains Salvaging. Difficulty comes from the ITEM's
-            // workmanship - external to the skill being raised - so breaking down better gear
-            // teaches more, and grinding worthless items pays the trickle floor.
+            // Shadowgain 007, reworked by 103: salvaging trains Salvaging AND the tinkering skill
+            // that this material belongs to.
+            //
+            // WHY THE TINKERING HALF EXISTS. Tinkering had no usable levelling path: the act of
+            // tinkering awarded nothing (101), and the only alternative was grinding crafting
+            // recipes, which destroys items on failure. Chris: "that's not even brutal it's just
+            // plain evil in the worst way." Salvaging is the natural teacher - you handle the
+            // material, you learn what it is - and it is non-destructive by nature, since the item
+            // was being consumed anyway.
+            //
+            // WHY THE DIFFICULTY CHANGED. It used to be `workmanship x salvage_gain_per_workmanship`,
+            // which caps at 10 x 8 = 80 because workmanship maxes at 10. Skill is uncapped (005), so
+            // past that ceiling the difficulty/Base ratio falls forever - the award SHRINKS while
+            // XP-per-rank explodes, and salvaging stalls around rank 100 (163 items per rank, rising
+            // to 10,627 by rank 150). Raising the old dial moved the wall without removing it.
+            //
+            // `workmanship x materialMod` fixes the structure. Both numbers are already here, and
+            // materialMod is the SAME table tinkering itself uses, so the two systems agree by
+            // construction. The range lands at 10 (work-1 common) to 250 (work-10 gemstone) - which
+            // is almost exactly the 232-405 skill band the tinkering skills must reach to be usable.
+            // Junk still pays the trickle floor; high-workmanship gemstone, the material that
+            // actually matters for imbues, is the fast lane.
             if (PropertyManager.GetBool("specialty_gain_from_use").Item)
             {
                 var workmanship = (uint)Math.Max(1, item.Workmanship ?? 1);
 
-                var salvageDifficulty = (uint)Math.Max(1, workmanship * PropertyManager.GetLong("salvage_gain_per_workmanship").Item);
+                var materialMod = RecipeManager.GetMaterialMod(materialType);
+
+                var difficulty = (uint)Math.Max(1, workmanship * materialMod);
 
                 var salvageSkill = GetCreatureSkill(Skill.Salvaging);
 
                 if (salvageSkill != null && salvageSkill.AdvancementClass >= SkillAdvancementClass.Trained)
-                    Proficiency.OnSuccessUse(this, salvageSkill, salvageDifficulty);
+                    Proficiency.OnSuccessUse(this, salvageSkill, difficulty, PropertyManager.GetDouble("salvage_gain_multiplier").Item);
+
+                // The matching tinkering skill, at its own independently tunable rate. Per-material
+                // rather than splitting across all four (Apex's suggestion in #chat, and the better
+                // design): the four skills then have four separate input streams, which is precisely
+                // why each needs its own knob - real drop frequency, not the number of materials,
+                // decides how fast each one moves, and nothing in the recipe tables predicts that.
+                var tinkeringSkillType = RecipeManager.GetMaterialTinkeringSkill(materialType);
+
+                if (tinkeringSkillType != null)
+                {
+                    var tinkeringSkill = GetCreatureSkill(tinkeringSkillType.Value);
+
+                    if (tinkeringSkill != null && tinkeringSkill.AdvancementClass >= SkillAdvancementClass.Trained)
+                        Proficiency.OnSuccessUse(this, tinkeringSkill, difficulty, GetTinkerGainFromSalvage(tinkeringSkillType.Value));
+                }
             }
 
             // determine the amount of salvage produced (structure)

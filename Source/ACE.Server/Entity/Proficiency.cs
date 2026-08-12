@@ -20,7 +20,16 @@ namespace ACE.Server.Entity
         /// </summary>
         public static TimeSpan FullTime = TimeSpan.FromMinutes(15);
 
-        public static void OnSuccessUse(Player player, CreatureSkill skill, uint difficulty)
+        /// <param name="weight">
+        /// Shadowgain 103: linear scale on the final award, for callers that need to pay a skill at a
+        /// different rate from the action's face value. Applied to the multiplier, so 0.5 really is
+        /// half the XP - deliberately NOT folded into `difficulty`, which appears twice in the
+        /// formula and would make a 0.5 knob pay a quarter.
+        ///
+        /// Used by the salvage path, where one action pays Salvaging at full rate and the matching
+        /// tinkering skill at its own, independently tunable rate.
+        /// </param>
+        public static void OnSuccessUse(Player player, CreatureSkill skill, uint difficulty, double weight = 1.0)
         {
             //Console.WriteLine($"Proficiency.OnSuccessUse({player.Name}, {skill.Skill}, targetDiff: {difficulty})");
 
@@ -110,6 +119,12 @@ namespace ACE.Server.Entity
             // Shadowgain 021: the character's progression lane. Applied to skill gain, attribute
             // gain and kill XP alike so power and level advance together - see Player_Progression.
             multiplier *= player.ProgressionSpeed;
+
+            // Shadowgain 103: caller-supplied rate. 1.0 for everything except the salvage path.
+            if (double.IsNaN(weight) || weight < 0)
+                weight = 0;
+
+            multiplier *= weight;
             var minAward = (uint)Math.Max(0, PropertyManager.GetLong("skill_gain_min_award").Item);
 
             // Base, deliberately NOT Current. Current applies enchantment multipliers and vitae, so

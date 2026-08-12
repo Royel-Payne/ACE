@@ -197,21 +197,37 @@ namespace ACE.Server.Managers
             return successChance;
         }
 
-        public static double? GetTinkerChance(Player player, WorldObject tool, WorldObject target, Recipe recipe)
+        /// <summary>
+        /// Shadowgain 103: the tinkering difficulty, extracted so the success CHANCE and the skill
+        /// XP AWARD read the same number.
+        ///
+        /// It has to be a function rather than a copy: this value never existed anywhere the gain
+        /// hook could see it, which is the entire reason tinkering awarded no XP. `recipe.Difficulty`
+        /// is 0 on all 102 tinkering recipes because the real difficulty is computed here, from the
+        /// item in front of you. Duplicating the formula instead of sharing it is exactly the drift
+        /// that silently destroyed a skill's ranks in 095d.
+        ///
+        /// thanks to Endy's Tinkering Calculator for this formula!
+        /// </summary>
+        public static int GetTinkerDifficulty(WorldObject tool, WorldObject target, Recipe recipe)
         {
-            // calculate % success chance
-
             var toolWorkmanship = tool.Workmanship ?? 0;
             var itemWorkmanship = target.Workmanship ?? 0;
 
-            var tinkeredCount = target.NumTimesTinkered;
+            var tinkeredCount = Math.Clamp(target.NumTimesTinkered, 0, TinkeringDifficulty.Count - 1);
 
-            var materialType = tool.MaterialType ?? MaterialType.Unknown;
-            var salvageMod = GetMaterialMod(materialType);
+            var salvageMod = GetMaterialMod(tool.MaterialType ?? MaterialType.Unknown);
 
-            var workmanshipMod = 1.0f;
-            if (toolWorkmanship >= itemWorkmanship)
-                workmanshipMod = 2.0f;
+            var workmanshipMod = toolWorkmanship >= itemWorkmanship ? 2.0f : 1.0f;
+
+            var attemptMod = TinkeringDifficulty[tinkeredCount];
+
+            return (int)Math.Floor(((salvageMod * 5.0f) + (itemWorkmanship * salvageMod * 2.0f) - (toolWorkmanship * workmanshipMod * salvageMod / 5.0f)) * attemptMod);
+        }
+
+        public static double? GetTinkerChance(Player player, WorldObject tool, WorldObject target, Recipe recipe)
+        {
+            // calculate % success chance
 
             var recipeSkill = (Skill)recipe.Skill;
 
@@ -224,10 +240,7 @@ namespace ACE.Server.Managers
                 return null;
             }
 
-            // thanks to Endy's Tinkering Calculator for this formula!
-            var attemptMod = TinkeringDifficulty[tinkeredCount];
-
-            var difficulty = (int)Math.Floor(((salvageMod * 5.0f) + (itemWorkmanship * salvageMod * 2.0f) - (toolWorkmanship * workmanshipMod * salvageMod / 5.0f)) * attemptMod);
+            var difficulty = GetTinkerDifficulty(tool, target, recipe);
 
             var playerCurrentPlusLumAugSkilledCraft = skill.Current + (uint)player.LumAugSkilledCraft;
 
@@ -247,6 +260,84 @@ namespace ACE.Server.Managers
                 successChance = 1.0;
 
             return successChance;
+        }
+
+        private static Dictionary<MaterialType, Skill> _materialTinkeringSkill;
+        private static readonly object _materialSkillLock = new object();
+
+        /// <summary>
+        /// Shadowgain 103: which tinkering skill a salvage material belongs to - Steel to Armor
+        /// Tinkering, Granite to Weapon Tinkering, and so on.
+        ///
+        /// Derived from the world database rather than hand-maintained, so it cannot drift from the
+        /// recipes it describes:
+        ///
+        ///     cook_book.source_W_C_I_D -> the salvage weenie -> its MaterialType
+        ///     cook_book.recipe_Id      -> recipe.skill       -> the tinkering skill
+        ///
+        /// Verified against the live world data: **no material maps to more than one skill**, so the
+        /// relation is a genuine function. Distribution is even enough that no skill is starved -
+        /// Magic Item 17 materials, Item 16, Weapon 13, Armor 11.
+        ///
+        /// Built once, lazily. Only the ~57 distinct salvage weenies are looked up, not the
+        /// thousands of cookbook rows, because many targets share one source.
+        ///
+        /// Returns null for a material with no tinkering recipe (or if the tables are unavailable),
+        /// in which case the salvage simply pays Salvaging and nothing else.
+        /// </summary>
+        public static Skill? GetMaterialTinkeringSkill(MaterialType material)
+        {
+            if (_materialTinkeringSkill == null)
+            {
+                lock (_materialSkillLock)
+                {
+                    if (_materialTinkeringSkill == null)
+                        _materialTinkeringSkill = BuildMaterialTinkeringSkills();
+                }
+            }
+
+            return _materialTinkeringSkill.TryGetValue(material, out var skill) ? skill : (Skill?)null;
+        }
+
+        private static Dictionary<MaterialType, Skill> BuildMaterialTinkeringSkills()
+        {
+            var map = new Dictionary<MaterialType, Skill>();
+
+            try
+            {
+                foreach (var cookbook in DatabaseManager.World.GetAllCookbooks())
+                {
+                    var recipe = DatabaseManager.World.GetCachedRecipe(cookbook.RecipeId);
+
+                    // tinkering only - ordinary crafting recipes are not a material-to-skill relation
+                    if (recipe == null || recipe.SalvageType == 0 || recipe.Skill == 0)
+                        continue;
+
+                    var skill = (Skill)recipe.Skill;
+
+                    if (!Player.TinkeringSkills.Contains(skill))
+                        continue;
+
+                    var weenie = DatabaseManager.World.GetCachedWeenie(cookbook.SourceWCID);
+
+                    var material = weenie?.GetProperty(PropertyInt.MaterialType);
+
+                    if (material == null || material == 0)
+                        continue;
+
+                    map[(MaterialType)material] = skill;
+                }
+
+                log.Info($"[SHADOWGAIN 103] material -> tinkering skill map built: {map.Count} materials");
+            }
+            catch (Exception ex)
+            {
+                // Never let this break salvaging. Without the map, salvage pays Salvaging only -
+                // which is exactly the behaviour before 103.
+                log.Error($"[SHADOWGAIN 103] could not build the material -> tinkering skill map; salvage will train Salvaging only", ex);
+            }
+
+            return map;
         }
 
         /// <summary>
@@ -379,10 +470,35 @@ namespace ACE.Server.Managers
                     UpdateObj(player, target);
             }
 
-            if (success && recipe.Skill > 0 && recipe.Difficulty > 0)
+            // Shadowgain 103: TINKERING NOW AWARDS SKILL XP.
+            //
+            // The stock condition requires `recipe.Difficulty > 0`, and every one of the 102
+            // tinkering recipes in the world database carries 0 - because a tink's difficulty is
+            // computed from the item and salvage in front of you (GetTinkerDifficulty), not stored
+            // on the recipe row. So tinkering had never awarded a single point of skill XP, while
+            // the ordinary crafting recipes under those same skills awarded normally.
+            //
+            // Successes only. A failed tink destroys the salvage and the attempt, and paying for
+            // that would make deliberate failure a strategy (Chris: "No").
+            //
+            // Imbues included - they are just tinkering with SalvageType 2 and success/3, and had
+            // the same zero.
+            //
+            // The raw computed difficulty is used, unscaled. It looks alarming at the top end - a
+            // 10th tink on a work-10 item reads 1134 - but the gain formula self-limits: the
+            // difficulty/Base ratio caps at 2.0 while XP-per-rank grows far faster, so that tink is
+            // worth about half a percent of a rank at the skill it would take to attempt it. Roughly
+            // 20 successful mid-tier tinks per rank: a real reward, never a path.
+            if (success && recipe.Skill > 0)
             {
                 var skill = player.GetCreatureSkill((Skill)recipe.Skill);
-                Proficiency.OnSuccessUse(player, skill, recipe.Difficulty);
+
+                var difficulty = recipe.IsTinkering()
+                    ? GetTinkerDifficulty(source, target, recipe)
+                    : (int)recipe.Difficulty;
+
+                if (difficulty > 0)
+                    Proficiency.OnSuccessUse(player, skill, (uint)difficulty, PropertyManager.GetDouble("tinker_gain_on_success").Item);
             }
         }
 
