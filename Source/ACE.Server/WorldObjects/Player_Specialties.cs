@@ -218,6 +218,23 @@ namespace ACE.Server.WorldObjects
             if (xpPassedUp <= 0 || !PropertyManager.GetBool("specialty_gain_from_use").Item)
                 return;
 
+            // Shadowgain 111: A MONARCH PASSES NOTHING UP, so a monarch earns no Loyalty.
+            //
+            // The caller guards on HasAllegiance, which is true for everyone IN an allegiance -
+            // including the monarch at the top, who has no patron and is loyal to nobody. So a
+            // monarch was paid Loyalty on their OWN earnings, at full rate, forever.
+            //
+            // This is why Loyalty was the first skill on the shard to reach the old ceiling, and
+            // why it read as a runaway passive: for the monarch it was not scaled by anything they
+            // passed up, because they passed up nothing - it was a second copy of every point of
+            // experience they earned. 109 treated the symptom twice (the divisor, then the
+            // ceiling) before anyone checked WHO was being paid.
+            //
+            // Guarded here rather than at the call site so it holds for any future caller: "no
+            // patron, no loyalty" is what the skill MEANS, not a property of one code path.
+            if (PatronId == null)
+                return;
+
             var skill = GetCreatureSkill(Skill.Loyalty);
 
             if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
