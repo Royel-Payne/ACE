@@ -843,6 +843,55 @@ namespace ACE.Server.WorldObjects
         /// ATTRIBUTES ARE DELIBERATELY NOT UNCAPPED (Chris, 2026-08-06) - 004's
         /// vitals-follow-attributes math is built on the 190/196 ceilings.
         /// </summary>
+        /// <summary>
+        /// Shadowgain 108: the INVERSE of CalcSkillRankUncapped - total ExperienceSpent required to
+        /// REACH a given rank. Deliberately kept adjacent to its inverse: the two must agree exactly,
+        /// and putting them in different files is how they drift.
+        ///
+        /// Returns null when the rank is unreachable. Past the table that means the XP needed exceeds
+        /// uint.MaxValue, which is the true ceiling - GameMessagePrivateUpdateSkill writes
+        /// ExperienceSpent as a uint in a fixed 37-byte packet, so the WIRE FORMAT is the limit and
+        /// widening the database column would buy nothing.
+        /// </summary>
+        public static uint? CalcSkillXpForRank(SkillAdvancementClass sac, int rank)
+        {
+            var rankXpTable = GetSkillXPTable(sac);
+
+            if (rankXpTable == null || rankXpTable.Count < 2 || rank < 0)
+                return null;
+
+            var topRank = rankXpTable.Count - 1;
+
+            if (rank <= topRank)
+                return rankXpTable[rank];
+
+            if (!PropertyManager.GetBool("skill_uncap_ranks").Item)
+                return null;        // past the table and uncapping is off: no such rank exists
+
+            // Mirror of the overcap maths in CalcSkillRankUncapped, solved for xp instead of rank.
+            var overcapCost = PropertyManager.GetDouble("skill_overcap_rank_cost").Item;
+            if (overcapCost < 1.0) overcapCost = 1.0;
+
+            var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
+            if (growth < 1.0) growth = 1.0;
+
+            var extraRanks = rank - topRank;
+
+            double extra;
+
+            if (growth - 1.0 < 0.000001)
+                extra = extraRanks * overcapCost;
+            else
+                extra = overcapCost * (Math.Pow(growth, extraRanks) - 1.0) / (growth - 1.0);
+
+            var total = rankXpTable[topRank] + extra;
+
+            if (double.IsNaN(total) || total > uint.MaxValue)
+                return null;
+
+            return (uint)total;
+        }
+
         public static int CalcSkillRankUncapped(SkillAdvancementClass sac, uint xpAmount)
         {
             var rankXpTable = GetSkillXPTable(sac);

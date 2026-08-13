@@ -22,6 +22,211 @@ namespace ACE.Server.Command.Handlers
     {
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// <summary>
+        /// Shadowgain 108: how much experience a skill has actually earned.
+        ///
+        /// Asked for by a player: *"we need a total xp command for skills. I'd like to query a skill
+        /// to know how much xp it has earned"*. The data always existed - usage gain writes straight
+        /// into ExperienceSpent - there was simply no way to see it.
+        ///
+        /// It matters more than convenience, because for a levelled character the CLIENT CANNOT SHOW
+        /// THE TRUTH. 005 carries ranks past the client's XP table in InitLevel, since the client
+        /// clamps Ranks at its own table maximum. Everything the panel derives from Ranks - most
+        /// visibly "Experience To Raise" - is therefore wrong for any skill past the cap, and 66
+        /// skills on the live shard are already carrying overflow. This reports the server's real
+        /// numbers.
+        /// </summary>
+        [CommandHandler("myskills", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "(Shadowgain) Show how much experience a skill has earned, and what the next rank costs.",
+            "[skill name]\n"
+            + "With no skill name, lists every skill you have, most experience first.\n"
+            + "Example:  @myskills war magic")]
+        public static void HandleMySkills(Session session, params string[] parameters)
+        {
+            var player = session.Player;
+
+            if (parameters == null || parameters.Length == 0)
+            {
+                HandleMySkillsSummary(session, player);
+                return;
+            }
+
+            var query = string.Join(" ", parameters).Trim();
+            var wanted = Normalize(query);
+
+            Skill? match = null;
+            var partials = new List<Skill>();
+
+            foreach (var candidate in SkillHelper.ValidSkills)
+            {
+                var name = Normalize(candidate.ToString());
+                var sentence = Normalize(candidate.ToSentence());
+
+                if (name == wanted || sentence == wanted)
+                {
+                    match = candidate;
+                    break;
+                }
+
+                if (name.StartsWith(wanted) || sentence.StartsWith(wanted))
+                    partials.Add(candidate);
+            }
+
+            // Exact wins outright; otherwise a prefix is only usable if it is unambiguous. Guessing
+            // between "Item Tinkering" and "Item Enchantment" would be worse than asking.
+            if (match == null)
+            {
+                if (partials.Count == 1)
+                    match = partials[0];
+                else if (partials.Count > 1)
+                {
+                    var names = new List<string>();
+                    foreach (var p in partials)
+                        names.Add(p.ToSentence());
+
+                    session.Network.EnqueueSend(new GameMessageSystemChat(
+                        $"\"{query}\" matches several skills: {string.Join(", ", names)}. Be more specific.",
+                        ChatMessageType.Broadcast));
+                    return;
+                }
+            }
+
+            if (match == null)
+            {
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    $"No skill matches \"{query}\". Use @myskills with no name to list yours.",
+                    ChatMessageType.Broadcast));
+                return;
+            }
+
+            ReportSkill(session, player, match.Value);
+        }
+
+        private static string Normalize(string value)
+        {
+            return value.Replace(" ", "").Replace("-", "").Replace("'", "").ToLowerInvariant();
+        }
+
+        private static void HandleMySkillsSummary(Session session, Player player)
+        {
+            var rows = new List<(string Name, uint Xp, string Line)>();
+
+            foreach (var skill in SkillHelper.ValidSkills)
+            {
+                var cs = player.GetCreatureSkill(skill, false);
+
+                if (cs == null || cs.AdvancementClass < SkillAdvancementClass.Trained)
+                    continue;
+
+                var rank = RealRank(cs);
+                var spec = cs.AdvancementClass == SkillAdvancementClass.Specialized ? " (spec)" : "";
+
+                rows.Add((skill.ToSentence(), cs.ExperienceSpent,
+                    $"{skill.ToSentence()}{spec} - rank {rank:N0}, {cs.ExperienceSpent:N0} xp earned"));
+            }
+
+            rows.Sort((a, b) => b.Xp.CompareTo(a.Xp));
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"Experience earned per skill ({rows.Count} skills), most first. Use @myskills <name> for detail.",
+                ChatMessageType.Broadcast));
+
+            foreach (var row in rows)
+                session.Network.EnqueueSend(new GameMessageSystemChat(row.Line, ChatMessageType.Broadcast));
+
+            // Pruned skills are deliberately excluded above (they are below Trained), but their XP is
+            // FROZEN rather than gone - saying so is the difference between a player thinking they
+            // set a skill aside and a player thinking they destroyed it.
+            var pruned = player.GetPrunedSkills();
+
+            if (pruned.Count > 0)
+            {
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    $"{pruned.Count} skill(s) set aside, their experience held. @myskills <name> shows what is waiting.",
+                    ChatMessageType.Broadcast));
+            }
+        }
+
+        /// <summary>
+        /// The rank the SERVER believes in. Past the client's table 005 clamps Ranks and carries the
+        /// remainder in InitLevel, so CreatureSkill.Ranks alone under-reports a levelled skill.
+        /// </summary>
+        private static int RealRank(ACE.Server.WorldObjects.Entity.CreatureSkill cs)
+        {
+            if (!PropertyManager.GetBool("skill_uncap_ranks").Item)
+                return cs.Ranks;
+
+            return Player.CalcSkillRankUncapped(cs.AdvancementClass, cs.ExperienceSpent);
+        }
+
+        private static void ReportSkill(Session session, Player player, Skill skill)
+        {
+            var cs = player.GetCreatureSkill(skill, false);
+
+            if (cs == null)
+            {
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    $"You have no {skill.ToSentence()} skill.", ChatMessageType.Broadcast));
+                return;
+            }
+
+            var name = skill.ToSentence();
+
+            if (cs.AdvancementClass < SkillAdvancementClass.Trained)
+            {
+                // Set aside (093 prune), or never trained. The XP distinguishes them, and the
+                // distinction is the whole point - one is reversible progress, the other is nothing.
+                if (cs.ExperienceSpent > 0)
+                {
+                    session.Network.EnqueueSend(new GameMessageSystemChat(
+                        $"{name} is set aside. {cs.ExperienceSpent:N0} experience is held for it - re-train it, free, and it returns exactly as it was.",
+                        ChatMessageType.Broadcast));
+                }
+                else
+                {
+                    session.Network.EnqueueSend(new GameMessageSystemChat(
+                        $"{name} is not trained, and has earned no experience.", ChatMessageType.Broadcast));
+                }
+                return;
+            }
+
+            var rank = RealRank(cs);
+            var state = cs.AdvancementClass == SkillAdvancementClass.Specialized ? "Specialized" : "Trained";
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"{name} ({state}) - base {cs.Base:N0}", ChatMessageType.Broadcast));
+
+            var table = Player.GetSkillXPTable(cs.AdvancementClass);
+            var topRank = table != null ? table.Count - 1 : 0;
+
+            var rankLine = $"  rank {rank:N0}";
+
+            if (table != null && rank > topRank)
+                rankLine += $"  ({rank - topRank:N0} past the client's table - your panel cannot show these)";
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(rankLine, ChatMessageType.Broadcast));
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"  experience earned: {cs.ExperienceSpent:N0}", ChatMessageType.Broadcast));
+
+            var nextXp = Player.CalcSkillXpForRank(cs.AdvancementClass, rank + 1);
+
+            if (nextXp == null || cs.ExperienceSpent >= uint.MaxValue)
+            {
+                // The genuine ceiling, and it is the wire format rather than the database:
+                // GameMessagePrivateUpdateSkill sends ExperienceSpent as a uint.
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    "  this skill has earned all the experience it can hold - it is finished.",
+                    ChatMessageType.Broadcast));
+                return;
+            }
+
+            var remaining = nextXp.Value > cs.ExperienceSpent ? nextXp.Value - cs.ExperienceSpent : 0;
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"  to rank {rank + 1:N0}: {remaining:N0} more", ChatMessageType.Broadcast));
+        }
+
         // pop
         [CommandHandler("pop", AccessLevel.Player, CommandHandlerFlag.None, 0,
             "Show current world population",
