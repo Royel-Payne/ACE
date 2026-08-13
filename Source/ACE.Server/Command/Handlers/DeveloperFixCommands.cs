@@ -855,8 +855,19 @@ namespace ACE.Server.Command.Handlers
                     // carrying it across and topping the XP up. XP is never touched. Kept in step
                     // with that method deliberately - an earlier divergence between the reconcile's
                     // demote and the Temple's was what cost a real skill its ranks.
+                    // 109: rank comes off the TRUE experience, not props.PP. PP is now a display
+                    // shadow clamped to uint.MaxValue, so a skill carrying overflow would re-derive
+                    // from the clamped number and lose every rank past 299 - the same silent
+                    // rank-loss shape the comment above was written about. CreatureSkill does this
+                    // read for online characters; offline ones have no CreatureSkill, so read the
+                    // property directly. Absent means the skill never exceeded a uint, and PP is
+                    // then exactly the truth.
+                    var overflowXp = player.GetProperty((PropertyInt64)((int)PropertyInt64.ShadowgainSkillXpBase + (int)skill));
+
+                    var trueXp = overflowXp.HasValue ? (ulong)overflowXp.Value : props.PP;
+
                     var computedRank = uncapped
-                        ? Player.CalcSkillRankUncapped(SkillAdvancementClass.Trained, props.PP)
+                        ? Player.CalcSkillRankUncapped(SkillAdvancementClass.Trained, trueXp)
                         : Player.CalcSkillRank(SkillAdvancementClass.Trained, props.PP);
 
                     var tableMaxRank = trainedTable.Count - 1;

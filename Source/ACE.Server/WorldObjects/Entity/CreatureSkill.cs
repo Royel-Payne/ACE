@@ -3,6 +3,7 @@ using System;
 using ACE.Common.Extensions;
 using ACE.DatLoader;
 using ACE.Entity.Enum;
+using ACE.Entity.Enum.Properties;
 using ACE.Entity.Models;
 using ACE.Server.Entity;
 
@@ -66,6 +67,16 @@ namespace ACE.Server.WorldObjects.Entity
         /// <summary>
         /// The amount of experience put into this skill,
         /// from raising directly and earned through use
+        ///
+        /// Shadowgain 109: this is now a DISPLAY SHADOW of <see cref="TrueExperienceSpent"/>, clamped
+        /// to uint.MaxValue. It exists in this shape because GameMessagePrivateUpdateSkill writes it
+        /// as a uint in a fixed 37-byte packet - the WIRE FORMAT is the ceiling, so the real total
+        /// has to live somewhere the client never sees.
+        ///
+        /// Assigning it assigns the truth: the setter drops any overflow, so every site that resets
+        /// or hard-sets a skill's XP (untrain, prune, character creation, the admin fix commands)
+        /// stays correct with no edit and cannot leave a stale overflow behind. Only code that means
+        /// "accumulate without limit" should go through TrueExperienceSpent instead.
         /// </summary>
         public uint ExperienceSpent
         {
@@ -76,8 +87,57 @@ namespace ACE.Server.WorldObjects.Entity
                     creature.ChangesDetected = true;
 
                 PropertiesSkill.PP = value;
+
+                creature.RemoveProperty(OverflowProperty);
             }
         }
+
+        /// <summary>
+        /// Shadowgain 109: the experience this skill has ACTUALLY earned, 64-bit and unclamped.
+        /// Rank derives from this; <see cref="ExperienceSpent"/> is only what the client is told.
+        ///
+        /// **Absence is the meaningful default, and it is what makes this change rank-preserving by
+        /// construction.** While the total fits in a uint the overflow property is not stored at all
+        /// and PP alone is the truth - which is exactly the state every character was already in
+        /// before this existed. So no seeding pass is needed, no existing rank re-derives from a
+        /// different number, and the shard grows no new rows until somebody genuinely passes
+        /// 4,294,967,295 in one skill. The property appears the moment they do, and disappears again
+        /// if the skill is ever reset.
+        /// </summary>
+        public ulong TrueExperienceSpent
+        {
+            get
+            {
+                var overflow = creature.GetProperty(OverflowProperty);
+
+                return overflow.HasValue ? (ulong)overflow.Value : PropertiesSkill.PP;
+            }
+            set
+            {
+                if (value > uint.MaxValue)
+                {
+                    creature.SetProperty(OverflowProperty, (long)value);
+
+                    // pin the shadow at the top of the wire format - the client is shown the largest
+                    // number it can physically hold, and the overflow rides in InitLevel as 005 does
+                    if (PropertiesSkill.PP != uint.MaxValue)
+                    {
+                        PropertiesSkill.PP = uint.MaxValue;
+                        creature.ChangesDetected = true;
+                    }
+                }
+                else
+                {
+                    // back inside the uint: the shadow IS the truth again, so the overflow row goes
+                    ExperienceSpent = (uint)value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Where this skill's overflow experience lives. See PropertyInt64.ShadowgainSkillXpBase.
+        /// </summary>
+        private PropertyInt64 OverflowProperty => (PropertyInt64)((int)PropertyInt64.ShadowgainSkillXpBase + (int)Skill);
 
         /// <summary>
         /// Returns the amount of skill experience remaining

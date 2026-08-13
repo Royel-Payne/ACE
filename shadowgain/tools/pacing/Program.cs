@@ -53,7 +53,7 @@ var policyRatio = policy switch
 const double DIFF_FLOOR = 0.05;
 const double DIFF_CAP = 2.00;
 const double ATTR_OVERLAP = 0.25;
-const double OVERCAP_RANK_COST = 1_000_000.0;
+const int OVERCAP_RATIO_WINDOW = 20;    // matches Player_Skills.OvercapRatioWindow
 const uint ATTR_START = 10;
 const int ATTR_MAX_VALUE = 290;
 
@@ -69,6 +69,15 @@ var levelTable = tables["level"];
 var attrTableMax = attrTable.Count - 1;
 var attrMaxRanks = ATTR_MAX_VALUE - (int)ATTR_START;
 var skillTableMax = trainedTable.Count - 1;
+
+// Shadowgain 109b: past the table the curve is the TABLE'S OWN final step, compounding at the
+// table's own ratio - so the model has no free parameters here either. Was a flat 1,000,000,
+// which was a workaround for the old uint wire ceiling and made rank 209 cost ~300x LESS than
+// rank 208; modelling that today would overstate high-rank progress by orders of magnitude.
+var overcapLastStep = trainedTable[skillTableMax] - trainedTable[skillTableMax - 1];
+var overcapRatio = Math.Pow(
+    overcapLastStep / (trainedTable[skillTableMax - OVERCAP_RATIO_WINDOW] - trainedTable[skillTableMax - OVERCAP_RATIO_WINDOW - 1]),
+    1.0 / OVERCAP_RATIO_WINDOW);
 
 // ------------------------------------------------------- creature tiers ----
 
@@ -140,11 +149,15 @@ double Award(double difficulty, double baseValue, double mult)
     return Math.Max(1.0, difficulty * factor * mult);
 }
 
-// Player_Skills.CalcSkillRankUncapped (trained, linear overcap growth)
+// Player_Skills.CalcSkillRankUncapped - the table, continued at its own slope (109b)
 int SkillRank(double xp)
 {
     if (xp >= trainedTable[skillTableMax])
-        return skillTableMax + (int)((xp - trainedTable[skillTableMax]) / OVERCAP_RANK_COST);
+    {
+        var firstStep = overcapLastStep * overcapRatio;
+        var extra = xp - trainedTable[skillTableMax];
+        return skillTableMax + (int)(Math.Log(1.0 + extra * (overcapRatio - 1.0) / firstStep) / Math.Log(overcapRatio));
+    }
     var lo = 0; var hi = skillTableMax;
     while (lo < hi) { var mid = (lo + hi + 1) / 2; if (trainedTable[mid] <= xp) lo = mid; else hi = mid - 1; }
     return lo;

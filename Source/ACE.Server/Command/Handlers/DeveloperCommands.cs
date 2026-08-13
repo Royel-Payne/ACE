@@ -130,6 +130,52 @@ namespace ACE.Server.Command.Handlers
                        + (rank < specialized.Count ? $" specTotal={specialized[rank]:N0}" : ""));
             }
 
+            // Shadowgain 109b: the CONTINUATION, straight out of the running server's own curve.
+            //
+            // The point is to show there is no seam. The last row comes from the dat table and the
+            // next ones from CalcSkillXpForRank, and the step ratio should not flinch as it crosses
+            // between them. Prints what the DEPLOYED code computes rather than what the design says,
+            // so it is verification and not documentation. backCheck round-trips each xp back
+            // through the forward function - it must equal the rank on the same line.
+            foreach (var sac in new[] { SkillAdvancementClass.Trained, SkillAdvancementClass.Specialized })
+            {
+                var table = Player.GetSkillXPTable(sac);
+
+                if (table == null || table.Count < 3)
+                    continue;
+
+                var top = table.Count - 1;
+
+                var prevStep = (double)table[top] - table[top - 1];
+                ulong prevXp = table[top];
+
+                log.Info($"[SG-XPTABLE] --- {sac}: continuation past rank {top} ---");
+                log.Info($"[SG-XPTABLE] {sac} rank={top} total={table[top]:N0} step={prevStep:N0} (last dat entry)");
+
+                for (var rank = top + 1; rank <= top + 5; rank++)
+                {
+                    var xp = Player.CalcSkillXpForRank(sac, rank);
+
+                    if (xp == null)
+                    {
+                        log.Info($"[SG-XPTABLE] {sac} rank={rank} UNREACHABLE");
+                        break;
+                    }
+
+                    var step = (double)xp.Value - prevXp;
+
+                    log.Info($"[SG-XPTABLE] {sac} rank={rank} total={xp.Value:N0} step={step:N0} ratio={step / prevStep:F5}"
+                           + $" backCheck={Player.CalcSkillRankUncapped(sac, xp.Value)}");
+
+                    prevStep = step;
+                    prevXp = xp.Value;
+                }
+
+                // The re-derivation 109b accepted: the old flat-1,000,000 curve handed out 91 extra
+                // trained ranks here (rank 299). The honest curve does not.
+                log.Info($"[SG-XPTABLE] {sac} rank at the old uint ceiling ({uint.MaxValue:N0}) is now {Player.CalcSkillRankUncapped(sac, uint.MaxValue)}");
+            }
+
             CommandHandlerHelper.WriteOutputInfo(session, $"Dumped skill XP table to server log (trained max rank {trained.Count - 1}).", ChatMessageType.Broadcast);
         }
 

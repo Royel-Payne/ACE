@@ -109,7 +109,7 @@ namespace ACE.Server.Command.Handlers
 
         private static void HandleMySkillsSummary(Session session, Player player)
         {
-            var rows = new List<(string Name, uint Xp, string Line)>();
+            var rows = new List<(string Name, ulong Xp, string Line)>();
 
             foreach (var skill in SkillHelper.ValidSkills)
             {
@@ -121,8 +121,12 @@ namespace ACE.Server.Command.Handlers
                 var rank = RealRank(cs);
                 var spec = cs.AdvancementClass == SkillAdvancementClass.Specialized ? " (spec)" : "";
 
-                rows.Add((skill.ToSentence(), cs.ExperienceSpent,
-                    $"{skill.ToSentence()}{spec} - rank {rank:N0}, {cs.ExperienceSpent:N0} xp earned"));
+                // 109: the TRUE total. Past 4,294,967,295 the skill panel's own figure is a clamped
+                // shadow, so this command is the only place the real number can be seen at all.
+                var xp = cs.TrueExperienceSpent;
+
+                rows.Add((skill.ToSentence(), xp,
+                    $"{skill.ToSentence()}{spec} - rank {rank:N0}, {xp:N0} xp earned"));
             }
 
             rows.Sort((a, b) => b.Xp.CompareTo(a.Xp));
@@ -156,7 +160,7 @@ namespace ACE.Server.Command.Handlers
             if (!PropertyManager.GetBool("skill_uncap_ranks").Item)
                 return cs.Ranks;
 
-            return Player.CalcSkillRankUncapped(cs.AdvancementClass, cs.ExperienceSpent);
+            return Player.CalcSkillRankUncapped(cs.AdvancementClass, cs.TrueExperienceSpent);
         }
 
         private static void ReportSkill(Session session, Player player, Skill skill)
@@ -176,10 +180,10 @@ namespace ACE.Server.Command.Handlers
             {
                 // Set aside (093 prune), or never trained. The XP distinguishes them, and the
                 // distinction is the whole point - one is reversible progress, the other is nothing.
-                if (cs.ExperienceSpent > 0)
+                if (cs.TrueExperienceSpent > 0)
                 {
                     session.Network.EnqueueSend(new GameMessageSystemChat(
-                        $"{name} is set aside. {cs.ExperienceSpent:N0} experience is held for it - re-train it, free, and it returns exactly as it was.",
+                        $"{name} is set aside. {cs.TrueExperienceSpent:N0} experience is held for it - re-train it, free, and it returns exactly as it was.",
                         ChatMessageType.Broadcast));
                 }
                 else
@@ -206,22 +210,34 @@ namespace ACE.Server.Command.Handlers
 
             session.Network.EnqueueSend(new GameMessageSystemChat(rankLine, ChatMessageType.Broadcast));
 
+            var xp = cs.TrueExperienceSpent;
+
             session.Network.EnqueueSend(new GameMessageSystemChat(
-                $"  experience earned: {cs.ExperienceSpent:N0}", ChatMessageType.Broadcast));
+                $"  experience earned: {xp:N0}", ChatMessageType.Broadcast));
+
+            // 109: past 4,294,967,295 the skill panel is showing a clamped shadow of this number,
+            // and says so, because a player comparing the two would otherwise think one was broken.
+            if (xp > uint.MaxValue)
+            {
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    $"  (your skill panel can only count to {uint.MaxValue:N0}, so it stopped there - this is the real total)",
+                    ChatMessageType.Broadcast));
+            }
 
             var nextXp = Player.CalcSkillXpForRank(cs.AdvancementClass, rank + 1);
 
-            if (nextXp == null || cs.ExperienceSpent >= uint.MaxValue)
+            if (nextXp == null)
             {
-                // The genuine ceiling, and it is the wire format rather than the database:
-                // GameMessagePrivateUpdateSkill sends ExperienceSpent as a uint.
+                // 109 removed the wire-format ceiling that used to end skills here. What remains is
+                // the storage limit on the 64-bit total, which is ~9.2 trillion ranks away - so this
+                // is now effectively unreachable rather than something a player grinds into.
                 session.Network.EnqueueSend(new GameMessageSystemChat(
                     "  this skill has earned all the experience it can hold - it is finished.",
                     ChatMessageType.Broadcast));
                 return;
             }
 
-            var remaining = nextXp.Value > cs.ExperienceSpent ? nextXp.Value - cs.ExperienceSpent : 0;
+            var remaining = nextXp.Value > xp ? nextXp.Value - xp : 0;
 
             session.Network.EnqueueSend(new GameMessageSystemChat(
                 $"  to rank {rank + 1:N0}: {remaining:N0} more", ChatMessageType.Broadcast));

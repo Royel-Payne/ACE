@@ -101,6 +101,9 @@ namespace ACE.Server.WorldObjects
                 return false;
             }
 
+            // 109: deliberately still the uint shadow. This path is fenced off above by IsMaxRank
+            // and ExperienceLeft, both of which stop at the TOP OF THE TABLE - so it is unreachable
+            // for any skill carrying overflow, and below the table top the shadow is the truth.
             creatureSkill.ExperienceSpent += amount;
 
             // calculate new rank
@@ -119,8 +122,13 @@ namespace ACE.Server.WorldObjects
         ///
         /// Leveling is unaffected: Level derives from TotalExperience, which this never touches.
         ///
-        /// Returns true if any XP was applied. Caps at the top of the skill's XP table
-        /// (entry 005 is what lifts that ceiling).
+        /// Returns true if any XP was applied.
+        ///
+        /// Shadowgain 109: with uncapping on there is no longer any cap to apply. XP accumulates
+        /// into CreatureSkill.TrueExperienceSpent, a 64-bit value the client never sees, and the
+        /// uint the packet carries becomes a clamped shadow of it. Before this, gains were silently
+        /// DISCARDED once a skill reached 4,294,967,295 - which Loyalty had already done on 43 live
+        /// characters, five days in.
         /// </summary>
         public bool AwardSkillUsageXP(CreatureSkill creatureSkill, uint amount)
         {
@@ -138,9 +146,13 @@ namespace ACE.Server.WorldObjects
             // rank formula continues past it. Without it, behaviour is unchanged from 003.
             var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
 
-            var maxXP = uncapped ? uint.MaxValue : skillXPTable[skillXPTable.Count - 1];
+            // 109: the only remaining ceiling is what a PropertyInt64 can physically store, and it
+            // is ~2 billion times further away than the one it replaced. Capped mode is unchanged.
+            var maxXP = uncapped ? MaxTrueSkillXp : skillXPTable[skillXPTable.Count - 1];
 
-            if (creatureSkill.ExperienceSpent >= maxXP)
+            var currentXP = creatureSkill.TrueExperienceSpent;
+
+            if (currentXP >= maxXP)
                 return false;
 
             var prevRank = creatureSkill.Ranks;
@@ -150,14 +162,13 @@ namespace ACE.Server.WorldObjects
             // starts - the player would see the number climb with no feedback that it had.
             var prevInitLevel = creatureSkill.InitLevel;
 
-            // widen before adding so a large award cannot wrap uint
-            var newXP = Math.Min((ulong)creatureSkill.ExperienceSpent + amount, maxXP);
+            var newXP = maxXP - currentXP < amount ? maxXP : currentXP + amount;
 
-            creatureSkill.ExperienceSpent = (uint)newXP;
+            creatureSkill.TrueExperienceSpent = newXP;
 
             var computedRank = uncapped
-                ? CalcSkillRankUncapped(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent)
-                : CalcSkillRank(creatureSkill.AdvancementClass, creatureSkill.ExperienceSpent);
+                ? CalcSkillRankUncapped(creatureSkill.AdvancementClass, newXP)
+                : CalcSkillRank(creatureSkill.AdvancementClass, (uint)newXP);
 
             var tableMaxRank = skillXPTable.Count - 1;
 
@@ -170,6 +181,7 @@ namespace ACE.Server.WorldObjects
             //
             // Base is attrFormula + InitLevel + Ranks either way, so the server-side value is
             // identical; this only changes which field carries it so the client will render it.
+            //
             if (uncapped && computedRank > tableMaxRank)
             {
                 var baseInitLevel = creatureSkill.AdvancementClass == SkillAdvancementClass.Specialized ? 10u : 0u;
@@ -489,8 +501,10 @@ namespace ACE.Server.WorldObjects
 
             var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
 
+            // 109: from the TRUE total, not the uint shadow - a skill past 4,294,967,295 would
+            // otherwise re-derive from a clamped number and lose every overflow rank on specializing
             var computedRank = uncapped
-                ? CalcSkillRankUncapped(SkillAdvancementClass.Specialized, creatureSkill.ExperienceSpent)
+                ? CalcSkillRankUncapped(SkillAdvancementClass.Specialized, creatureSkill.TrueExperienceSpent)
                 : CalcSkillRank(SkillAdvancementClass.Specialized, creatureSkill.ExperienceSpent);
 
             var specTable = GetSkillXPTable(SkillAdvancementClass.Specialized);
@@ -550,8 +564,9 @@ namespace ACE.Server.WorldObjects
 
             var uncapped = PropertyManager.GetBool("skill_uncap_ranks").Item;
 
+            // 109: from the TRUE total - see PromoteSkillToSpecialized
             var computedRank = uncapped
-                ? CalcSkillRankUncapped(SkillAdvancementClass.Trained, creatureSkill.ExperienceSpent)
+                ? CalcSkillRankUncapped(SkillAdvancementClass.Trained, creatureSkill.TrueExperienceSpent)
                 : CalcSkillRank(SkillAdvancementClass.Trained, creatureSkill.ExperienceSpent);
 
             var trainedTable = GetSkillXPTable(SkillAdvancementClass.Trained);
@@ -823,37 +838,22 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
-        /// Returns the maximum rank that can be purchased with an xp amount
+        /// Shadowgain 108: the INVERSE of CalcSkillRankUncapped - the total experience required to
+        /// REACH a given rank. The two must agree EXACTLY, or "@myskills" tells a player they need
+        /// 0 more experience for a rank that has not ticked over.
+        ///
+        /// 109 stopped mirroring the closed-form maths and started SEARCHING the forward function
+        /// instead. The mirror was not exact: at growth &gt; 1.0 the Math.Pow/Math.Log pair loses low
+        /// bits, and the truncation lands a hair BELOW the threshold - measured 1,741 disagreeing
+        /// ranks in the first 5,000 past the wall, off by 1 experience at the near end and by
+        /// ~867,000 out where the numbers get large. A binary search over the forward function
+        /// cannot drift from it by construction, costs ~63 iterations of cheap arithmetic on a
+        /// command a player types, and deletes the duplicated curve entirely.
+        ///
+        /// Returns null when the rank is genuinely unreachable - which now means the 64-bit store,
+        /// or the ushort the client's rank field is, rather than the uint packet ceiling 109 removed.
         /// </summary>
-        /// <param name="sac">Trained or specialized skill</param>
-        /// <param name="xpAmount">The amount of xp used to make the purchase</param>
-        /// <summary>
-        /// Shadowgain 005: rank from XP, extended PAST the top of the dat XP table.
-        ///
-        /// Upstream rank is a table lookup, so a skill hard-stops at <c>table.Count - 1</c>. For
-        /// "effectively unlimited" progression the curve has to continue past the table's end, so
-        /// beyond the top we keep going geometrically from the table's own final step:
-        ///
-        ///     cost of rank (top + k) = lastTableDelta * growth^(k-1)
-        ///
-        /// which inverts to a closed form for k. growth = 1.0 continues linearly at the final
-        /// delta; higher values make each further rank progressively more expensive, preserving the
-        /// "slow to master" feel rather than flattening once the table runs out.
-        ///
-        /// ATTRIBUTES ARE DELIBERATELY NOT UNCAPPED (Chris, 2026-08-06) - 004's
-        /// vitals-follow-attributes math is built on the 190/196 ceilings.
-        /// </summary>
-        /// <summary>
-        /// Shadowgain 108: the INVERSE of CalcSkillRankUncapped - total ExperienceSpent required to
-        /// REACH a given rank. Deliberately kept adjacent to its inverse: the two must agree exactly,
-        /// and putting them in different files is how they drift.
-        ///
-        /// Returns null when the rank is unreachable. Past the table that means the XP needed exceeds
-        /// uint.MaxValue, which is the true ceiling - GameMessagePrivateUpdateSkill writes
-        /// ExperienceSpent as a uint in a fixed 37-byte packet, so the WIRE FORMAT is the limit and
-        /// widening the database column would buy nothing.
-        /// </summary>
-        public static uint? CalcSkillXpForRank(SkillAdvancementClass sac, int rank)
+        public static ulong? CalcSkillXpForRank(SkillAdvancementClass sac, int rank)
         {
             var rankXpTable = GetSkillXPTable(sac);
 
@@ -868,75 +868,158 @@ namespace ACE.Server.WorldObjects
             if (!PropertyManager.GetBool("skill_uncap_ranks").Item)
                 return null;        // past the table and uncapping is off: no such rank exists
 
-            // Mirror of the overcap maths in CalcSkillRankUncapped, solved for xp instead of rank.
-            var overcapCost = PropertyManager.GetDouble("skill_overcap_rank_cost").Item;
-            if (overcapCost < 1.0) overcapCost = 1.0;
-
-            var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
-            if (growth < 1.0) growth = 1.0;
-
-            var extraRanks = rank - topRank;
-
-            double extra;
-
-            if (growth - 1.0 < 0.000001)
-                extra = extraRanks * overcapCost;
-            else
-                extra = overcapCost * (Math.Pow(growth, extraRanks) - 1.0) / (growth - 1.0);
-
-            var total = rankXpTable[topRank] + extra;
-
-            if (double.IsNaN(total) || total > uint.MaxValue)
+            if (CalcSkillRankUncapped(sac, MaxTrueSkillXp) < rank)
                 return null;
 
-            return (uint)total;
+            // smallest xp whose rank is >= the one asked for
+            ulong lo = rankXpTable[topRank];
+            ulong hi = MaxTrueSkillXp;
+
+            while (lo < hi)
+            {
+                var mid = lo + (hi - lo) / 2;
+
+                if (CalcSkillRankUncapped(sac, mid) >= rank)
+                    hi = mid;
+                else
+                    lo = mid + 1;
+            }
+
+            return lo;
         }
 
-        public static int CalcSkillRankUncapped(SkillAdvancementClass sac, uint xpAmount)
+        /// <summary>
+        /// Shadowgain 109: the largest true skill experience that can be STORED.
+        ///
+        /// PropertyInt64 is signed, so this is long.MaxValue rather than ulong's. It is not a design
+        /// ceiling in any meaningful sense - at the flat overcap cost it is ~9.2 trillion ranks - it
+        /// exists so accumulation can never wrap into a negative and re-derive a nonsense rank.
+        /// </summary>
+        public const ulong MaxTrueSkillXp = long.MaxValue;
+
+        /// <summary>
+        /// Shadowgain 109b: how many of the table's own final steps are averaged to get the ratio
+        /// the curve continues at. The trained table is geometric to six decimal places, so any
+        /// window gives 1.078750; the specialized table's tail is noisier (single-step ratios swing
+        /// 1.078 - 1.128), and averaging is what stops one ragged step from setting the slope of
+        /// every rank thereafter.
+        /// </summary>
+        private const int OvercapRatioWindow = 20;
+
+        private static readonly Dictionary<SkillAdvancementClass, (double LastStep, double Ratio)> overcapCurves = new();
+
+        /// <summary>
+        /// Shadowgain 109b: the shape of progression past the top of the dat XP table - which is
+        /// simply THE TABLE'S OWN SHAPE, CONTINUED.
+        ///
+        ///     cost of rank (top + k) = lastTableStep * ratio^k
+        ///
+        /// Both numbers are read from the dat, so the curve past the table is the same curve as the
+        /// table: rank 209 costs 1.079x what rank 208 cost, exactly as rank 208 cost 1.079x rank
+        /// 207. There is no seam, nothing to tune, and nothing to get wrong.
+        ///
+        /// **This is what 005 originally described and could not deliver.** The trained table's
+        /// final step is 306,860,483 while the old uint wire format left only 91,147,799 of
+        /// headroom above it - the honest next step did not FIT, so anchoring to it yielded zero
+        /// extra ranks in a live test. 1,000,000 flat was reverse-engineered to make ~91 ranks fit
+        /// the space that existed, and the result was a ~300x COST COLLAPSE at the table top: rank
+        /// 208 cost 306,860,483 and rank 209 cost 1,000,000. The grind got two orders of magnitude
+        /// EASIER at exactly the point it should have got harder.
+        ///
+        /// 109 removed the uint ceiling, which removed the reason for the workaround. Chris:
+        /// *"they need to be transparent to the user and just appear as a continuation of the first
+        /// 299/420, 300 should cost more to reach than 299 and 421 should cost more than 420 took."*
+        ///
+        /// **This re-derives ranks that only ever existed because of the collapse**, and that was
+        /// accepted deliberately (2026-08-13): a skill sitting at the old ceiling drops from rank
+        /// 299 to 208, because 91,147,799 of overflow does not buy even one honest 331,024,096 rank.
+        /// Nothing at or below the table top moves. The alternative - grandfathering a hidden
+        /// per-skill credit - would have made rank stop being a function of XP, so two characters
+        /// with identical experience would show different ranks with no way to see why.
+        ///
+        /// Cached because the dat is immutable at runtime and CalcSkillXpForRank binary-searches
+        /// this ~63 times per call.
+        /// </summary>
+        private static (double LastStep, double Ratio) GetOvercapCurve(SkillAdvancementClass sac)
+        {
+            lock (overcapCurves)
+            {
+                if (overcapCurves.TryGetValue(sac, out var cached))
+                    return cached;
+
+                var table = GetSkillXPTable(sac);
+
+                var top = table != null ? table.Count - 1 : 0;
+
+                if (table == null || top < 2)
+                    return (1.0, 1.0);
+
+                var lastStep = (double)table[top] - table[top - 1];
+
+                // geometric mean over the tail: ratio^n = lastStep / step(top - n)
+                var n = Math.Min(OvercapRatioWindow, top - 1);
+
+                var olderStep = (double)table[top - n] - table[top - n - 1];
+
+                var ratio = olderStep > 0 ? Math.Pow(lastStep / olderStep, 1.0 / n) : 1.0;
+
+                // A table that flattens or reverses must not make ranks free or negative, and a
+                // ragged one must not make them unreachable. Neither guard fires on the real dat.
+                if (double.IsNaN(ratio) || ratio < 1.0) ratio = 1.0;
+                if (ratio > 2.0) ratio = 2.0;
+
+                if (lastStep < 1.0) lastStep = 1.0;
+
+                var curve = (lastStep, ratio);
+
+                overcapCurves[sac] = curve;
+
+                return curve;
+            }
+        }
+
+        /// <summary>
+        /// Shadowgain 005: rank from XP, extended PAST the top of the dat XP table. Upstream rank is
+        /// a table lookup, so a skill hard-stops at <c>table.Count - 1</c>; for "effectively
+        /// unlimited" progression the curve has to continue past the table's end.
+        ///
+        /// Shadowgain 109: takes the TRUE 64-bit experience. It was a uint, which quietly made this
+        /// function the ceiling itself - rank is a function of XP, so an XP limit was a rank limit,
+        /// and skills were never actually unlimited. See CreatureSkill.TrueExperienceSpent.
+        ///
+        /// Shadowgain 109b: ONE region, no seam. The continuation is the table's own final step
+        /// compounding at the table's own ratio - see <see cref="GetOvercapCurve"/>. Inverting
+        ///
+        ///     extra = lastStep * ratio * (ratio^n - 1) / (ratio - 1)
+        ///
+        /// for n gives the closed form below.
+        ///
+        /// ATTRIBUTES ARE DELIBERATELY NOT UNCAPPED (Chris, 2026-08-06) - 004's
+        /// vitals-follow-attributes math is built on the 190/196 ceilings.
+        /// </summary>
+        public static int CalcSkillRankUncapped(SkillAdvancementClass sac, ulong xpAmount)
         {
             var rankXpTable = GetSkillXPTable(sac);
 
             if (rankXpTable == null || rankXpTable.Count < 2)
-                return CalcSkillRank(sac, xpAmount);
+                return CalcSkillRank(sac, ClampToUint(xpAmount));
 
             var topRank = rankXpTable.Count - 1;
             var topXp = rankXpTable[topRank];
 
             if (xpAmount < topXp)
-                return CalcSkillRank(sac, xpAmount);
+                return CalcSkillRank(sac, (uint)xpAmount);
 
-            // Cost of the FIRST rank past the table.
-            //
-            // This deliberately does NOT use the table's own final step. Measured 2026-08-06: the
-            // specialized table tops out at 4,100,490,438 and ExperienceSpent is a uint capped at
-            // 4,294,967,295, leaving only ~194M of headroom - while the table's final step is LARGER
-            // than that entire remainder. Anchoring to it produced literally zero extra ranks in a
-            // live test at 149.5M above the cap.
-            //
-            // Widening the field would not help either: GameMessagePrivateUpdateSkill writes
-            // ExperienceSpent as a uint in a fixed 37-byte packet, so the wire format is the real
-            // ceiling and changing it would break the retail client.
-            //
-            // The cost of ranks beyond the table is ours to define, so it is a config value sized to
-            // fit the remaining headroom: at 1,000,000 the ~194M buys ~194 further ranks. "Slow to
-            // master" is delivered by the gain RATE (a few tens of xp per use at this level, so tens
-            // of thousands of uses per rank), not by a per-rank cost we cannot afford.
-            var overcapCost = PropertyManager.GetDouble("skill_overcap_rank_cost").Item;
-
-            if (overcapCost < 1.0)
-                overcapCost = 1.0;
-
-            var growth = PropertyManager.GetDouble("skill_overcap_growth").Item;
-            if (growth < 1.0) growth = 1.0;
+            var curve = GetOvercapCurve(sac);
 
             var extra = (double)xpAmount - topXp;
 
-            double extraRanks;
+            // first step past the table, already carrying one ratio - rank 209 costs MORE than 208
+            var firstStep = curve.LastStep * curve.Ratio;
 
-            if (growth - 1.0 < 0.000001)
-                extraRanks = extra / overcapCost;
-            else
-                extraRanks = Math.Log(1.0 + extra * (growth - 1.0) / overcapCost) / Math.Log(growth);
+            var extraRanks = curve.Ratio <= 1.0 + RatioEpsilon
+                ? extra / firstStep
+                : Math.Log(1.0 + extra * (curve.Ratio - 1.0) / firstStep) / Math.Log(curve.Ratio);
 
             if (double.IsNaN(extraRanks) || extraRanks < 0)
                 extraRanks = 0;
@@ -947,6 +1030,15 @@ namespace ACE.Server.WorldObjects
             return (int)Math.Min(total, ushort.MaxValue - 1);
         }
 
+        private const double RatioEpsilon = 0.000001;
+
+        private static uint ClampToUint(ulong value) => value > uint.MaxValue ? uint.MaxValue : (uint)value;
+
+        /// <summary>
+        /// Returns the maximum rank that can be purchased with an xp amount
+        /// </summary>
+        /// <param name="sac">Trained or specialized skill</param>
+        /// <param name="xpAmount">The amount of xp used to make the purchase</param>
         public static int CalcSkillRank(SkillAdvancementClass sac, uint xpAmount)
         {
             var rankXpTable = GetSkillXPTable(sac);
