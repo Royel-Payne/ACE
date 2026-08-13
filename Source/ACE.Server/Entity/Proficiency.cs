@@ -152,7 +152,21 @@ namespace ACE.Server.Entity
             var pp = (uint)Math.Min(uint.MaxValue, Math.Max(minAward, Math.Round(awarded)));
 
             var prevRank = skill.Ranks;
-            var prevXP = skill.ExperienceSpent;
+
+            // Shadowgain 109e: log the TRUE total and the overflow field, not the clamped shadow.
+            //
+            // This line lied on LIVE within minutes of 109 shipping. Past the table top BOTH of the
+            // fields it printed are pinned - ExperienceSpent at uint.MaxValue and Ranks at the table
+            // maximum, because the overflow rides in InitLevel - so a skill banking 4.1 MILLION
+            // experience logged as
+            //
+            //     rank 208->208 xp 4294967295->4294967295
+            //
+            // which reads as "nothing happened" when the award had in fact landed. Only the database
+            // told the truth. That is exactly the blindness 109 existed to remove, reintroduced in
+            // the one place someone would go to check whether 109 was working.
+            var prevInitLevel = skill.InitLevel;
+            var prevXP = skill.TrueExperienceSpent;
 
             // Direct write. Deliberately bypasses GrantXP/HandleActionRaiseSkill, and with them the
             // unassigned-XP pool, the IsMaxLevel early-return, and the GetRemainingXP(maxLevel)
@@ -166,7 +180,7 @@ namespace ACE.Server.Entity
                          $" | difficulty={difficulty} vs base={baseValue} ratio={ratio:N3}" +
                          $" | factor={difficultyFactor:N3} mult={multiplier:N2}" +
                          $" | pp={pp}" +
-                         $" | rank {prevRank}->{skill.Ranks} xp {prevXP}->{skill.ExperienceSpent}" +
+                         $" | rank {prevRank}->{skill.Ranks} init {prevInitLevel}->{skill.InitLevel} xp {prevXP}->{skill.TrueExperienceSpent}" +
                          $" | sinceLastUse={timeDiff:N1}s prevDifficulty={last_difficulty}");
             }
         }
