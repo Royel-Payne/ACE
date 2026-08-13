@@ -28,6 +28,7 @@ and nothing else (see setup.sql). It never writes game state.
 
 import asyncio
 import datetime
+import hashlib
 import json
 import os
 import random
@@ -376,11 +377,12 @@ async def account_is_ascendant(account_name: str) -> bool:
       2. on the HARD lane - no ShadowgainForfeitedMarker (PropertyBool 9102). Gold means
          "earned the long road". A fast-lane character reaching the cap has not, which is
          exactly why the honour roll refuses them too;
-      3. NOT on a staff account (accessLevel < 4) - the same filter the honour roll uses,
-         because hand-boosted test characters sit at 275 and 999 right now and would
-         otherwise claim it on the first sweep;
+      3. on an accessLevel-0 account - Player and nothing above it (069). The same filter the
+         honour roll uses, and they must stay in step. It began as "< 4" to keep hand-boosted
+         test characters at 275 and 999 off the first sweep; Player-only is the stricter form,
+         and it also means staff never surface publicly through this reward;
       4. with real playtime behind it (Age >= ASCENDANT_MIN_HOURS). Condition 3 only catches
-         boosts on STAFF accounts - a character boosted on a Player account would pass it.
+         boosts on PRIVILEGED accounts - a character boosted on a Player account would pass it.
          Playtime is what actually distinguishes earned from granted: the two boosted
          characters today show 1.5 and 1.9 hours at levels 275 and 999.
 
@@ -392,7 +394,7 @@ async def account_is_ascendant(account_name: str) -> bool:
         JOIN ace_auth.account a ON a.accountId = c.account_Id
         WHERE c.is_Deleted = 0 AND c.delete_Time = 0
           AND a.accountName = %s
-          AND a.accessLevel < 4
+          AND a.accessLevel = 0
           AND COALESCE((SELECT value FROM biota_properties_int
                         WHERE object_Id = c.id AND type = 25), 1) >= %s
           AND COALESCE((SELECT value FROM biota_properties_int
@@ -569,6 +571,36 @@ class ShadowgainBot(discord.Client):
 
             await asyncio.sleep(1.0)
 
+    # Commands whose FIRST argument is an account name. Kept explicit rather than pattern-matched:
+    # guessing which arguments are accounts would eventually mask a character name (harmless but
+    # confusing) or miss a new command (the failure that matters).
+    ACCOUNT_ARG_COMMANDS = {"accountcreate", "accountget", "set-accountaccess", "set-accountpassword"}
+
+    @staticmethod
+    def mask_account(name: str) -> str:
+        """
+        Replace an account name with a stable short tag: `admin` -> `acct#7f3a`.
+
+        WHY. #audit is readable by every staff member, and an account name is half of a login -
+        the half that is normally hard to obtain. Character names are public and identify the
+        actor perfectly well in game; account names add nothing a reader needs and hand an
+        attacker the part they cannot see by standing in a town square.
+
+        Hashed rather than dropped, because the account genuinely answers a question the character
+        cannot: one account holds many characters, and "were these two actions the same person?"
+        matters for oversight. The tag is stable, so that question is still answerable - and the
+        SAME account produces the SAME tag whether it appears as the actor or as a command
+        argument, so a promotion can be tied to the promoter.
+
+        Not a secret-grade hash and not meant to be: it defeats reading, not brute force. Anyone
+        who can enumerate the account list can rebuild the mapping, which is fine - they already
+        had the names. The full values stay in sgaudit.jsonl on the server, which is root-only,
+        so real forensics loses nothing.
+        """
+        if not name:
+            return "?"
+        return "acct#" + hashlib.sha256(name.strip().lower().encode("utf-8")).hexdigest()[:4]
+
     async def handle_audit(self, rec: dict):
         """
         Mirror one audit line into #audit.
@@ -595,8 +627,21 @@ class ShadowgainBot(discord.Client):
             # account is who is actually responsible, and one account can hold many characters.
             acct = rec.get("account")
             if acct and rec.get("character") and acct != rec.get("character"):
-                who = f"{rec.get('character')} ({acct})"
+                who = f"{rec.get('character')} ({self.mask_account(acct)})"
+            elif acct and not rec.get("character"):
+                # Console lines have no character. CONSOLE is not an account name, so it is left
+                # alone - masking it would hide WHICH surface acted, which is the useful part.
+                who = acct if acct == "CONSOLE" else self.mask_account(acct)
+
             args = rec.get("args") or ""
+
+            # An account name in an argument is exactly as sensitive as one in the actor field -
+            # `@set-accountaccess <account> Sentinel` published the name outright.
+            cmd = (rec.get("command") or "").lower()
+            if cmd in self.ACCOUNT_ARG_COMMANDS and args:
+                parts = args.split()
+                parts[0] = self.mask_account(parts[0])
+                args = " ".join(parts)
             sudo = " *(sudo)*" if rec.get("sudo") else ""
             line = (f"`{rec.get('t','?')}` **{who}** `[{rec.get('access','?')}]` "
                     f"ran `@{rec.get('command','?')} {args}`".rstrip() + f"{sudo}")
@@ -1031,8 +1076,13 @@ class ShadowgainBot(discord.Client):
                         await member.add_roles(role, reason="Shadowgain sweep: active again")
                     elif not ok and has:
                         await member.remove_roles(role, reason=f"Shadowgain sweep: {reason}")
+                        # The old wording told them to run /link again. That was WRONG and
+                        # created work for no reason: the link survives a revoke, and the
+                        # branch directly above re-grants the role the moment the account
+                        # qualifies again. Re-linking was never required - only playing is.
                         await self.dm(member, f"Your Shadowgain access has lapsed: {reason}. "
-                                              f"Log in and run /link again to restore it.")
+                                              f"Just log back in and play - the role returns by itself, "
+                                              f"usually within the hour. You do not need to /link again.")
 
                     # Gold. Granted once and NEVER revoked - it is a ratchet like the
                     # dagger itself: an achievement, not a status that can lapse. That is
@@ -1128,8 +1178,11 @@ async def bug(interaction: discord.Interaction, summary: str, detail: str = ""):
                           colour=0x5865F2, timestamp=discord.utils.utcnow())
     if detail:
         embed.add_field(name="Detail", value=detail[:1024], inline=False)
+    # Masked, same rule as #audit: an account name is half a login, and #bugs is a shared channel.
+    # The Discord mention already identifies the reporter to a human; the tag is here so a bug can
+    # be tied to the same account in the audit trail without publishing the name.
     embed.add_field(name="Reported by", value=f"{interaction.user.mention}"
-                                              f"{f' (account `{account}`)' if account else ''}",
+                                              f"{f' ({ShadowgainBot.mask_account(account)})' if account else ''}",
                     inline=False)
     embed.set_footer(text="filed from Discord")
 

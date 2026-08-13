@@ -61,8 +61,28 @@ To be granted **Verified Player**, an account needs a character that is:
 - **logged in within 72 hours**
 
 Judged **per account, not per character** — an active main shouldn't be punished for a
-level-2 mule. A **daily sweep** re-checks every link and revokes the role when an account
+level-2 mule. An **hourly sweep** re-checks every link and revokes the role when an account
 goes quiet. That sweep, not the one-time `/link`, is what "active players only" means.
+
+### Coming back after a lapse — no `/link` needed
+
+**Losing the role does not lose the link.** The sweep re-checks *every* link, including
+revoked ones, and the same pass that revokes is the pass that restores:
+
+```python
+if ok and not has:      await member.add_roles(role, reason="Shadowgain sweep: active again")
+elif not ok and has:    await member.remove_roles(role, reason=...)
+```
+
+So a lapsed player just **logs in and plays**; the role comes back on the next sweep, within
+the hour. Re-running `/link` is never required — it would issue a fresh code and re-link an
+account that is already linked.
+
+This was only half-true in practice until 2026-08-13: the mechanism always worked, but the DM
+sent on revoke said *"Log in and run /link again to restore it"*, which sent people to do work
+that was never needed. The DM now says what actually happens. The sweep was also lowered from
+daily to hourly at the same time, because a 24-hour worst case to regain access is most of a
+play session.
 
 ### Admin override — the escape hatch
 
@@ -123,7 +143,7 @@ Bot-side settings live in `/opt/ACE/bot.env` (restart the bot to apply):
 | `SG_CHAT_RETENTION_HOURS` | `24` | rolling retention on the relay channel; `0` disables |
 | `SG_READ_CHANNEL` | `1` | read #chat directly (needs the Message Content intent). **Since 034 this is the only inbound path** — turning it off disables Discord→game entirely |
 | `SG_MIN_LEVEL` / `SG_ACTIVITY_HOURS` | `10` / `72` | the verification gate |
-| `SG_SWEEP_HOURS` | `24` | how often the role sweep re-checks links |
+| `SG_SWEEP_HOURS` | `1` (LIVE) / `24` (code default) | how often the role sweep re-checks links — **and therefore the worst-case wait to get the role back.** Lowered to hourly 2026-08-13; the sweep only calls the Discord API when a role actually changes, so the extra passes are DB reads and cache hits |
 
 **Kill switch:** `/sg-dial discord_inbound_enabled false` stops Discord→game instantly.
 
