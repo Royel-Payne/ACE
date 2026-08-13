@@ -1004,6 +1004,150 @@ namespace ACE.Server.Command.Handlers
                 Console.WriteLine("Applied. Skill credits are recomputed by the 090 backfill at each character's next login.");
         }
 
+        /// <summary>
+        /// Shadowgain 109c: re-derive Ranks and InitLevel for EVERY character from the experience
+        /// they actually hold, restoring the invariant
+        ///
+        ///     Ranks     = min(rank, tableMax)
+        ///     InitLevel = baseInitLevel + max(0, rank - tableMax)      (base 0 trained / 10 spec)
+        ///
+        /// **Why a sweep and not a repair at login.** InitLevel is not derived from anything at load
+        /// time - it is only ever written when a skill gains, so a stale value survives indefinitely
+        /// on any skill the character stops using, and "fix it on the next award" silently means
+        /// "never" for exactly the skills nobody looks at. Correcting the stored data once is the
+        /// difference between a shard that is right and a shard that is right where anyone checked.
+        ///
+        /// 109b is what made this necessary in bulk: every skill parked at the old uint ceiling
+        /// re-derives from rank 299 to 208, and the pre-109c award path only ever wrote InitLevel on
+        /// the way UP - so those 91 overflow ranks would have stayed in the field forever, inflating
+        /// the player's visible base while @myskills correctly reported 208.
+        ///
+        /// Dry run unless 'fix' is passed. Refuses to run with anyone online, for the same reason
+        /// sg-reconcile-skills does: online characters hold their skills in memory, GetAllOffline
+        /// cannot see them, and their next save would overwrite whatever this wrote.
+        /// </summary>
+        [CommandHandler("sg-fix-initlevel", AccessLevel.Admin, CommandHandlerFlag.ConsoleInvoke, "(Shadowgain 109c) Re-derives every character's skill Ranks/InitLevel from the experience they hold, clearing overflow ranks left stranded in InitLevel. Dry run unless 'fix' is passed.")]
+        public static void HandleShadowgainFixInitLevel(Session session, params string[] parameters)
+        {
+            var fix = parameters.Length > 0 && parameters[0].Equals("fix", StringComparison.OrdinalIgnoreCase);
+            var fixStr = fix ? " -- fixed" : "";
+
+            var online = PlayerManager.GetAllOnline();
+
+            if (online.Count > 0)
+            {
+                Console.WriteLine($"{online.Count} player(s) still online: {string.Join(", ", online.Select(p => p.Name))}");
+                Console.WriteLine("Drain the world first - this must run with nobody logged in, or online characters are skipped and then re-saved over.");
+                return;
+            }
+
+            if (!PropertyManager.GetBool("skill_uncap_ranks").Item)
+            {
+                Console.WriteLine("skill_uncap_ranks is OFF - overflow ranks are not a concept in that mode, and this sweep would zero InitLevel for no reason. Refusing.");
+                return;
+            }
+
+            var players = PlayerManager.GetAllOffline();
+
+            var affectedPlayers = 0;
+            var affectedSkills = 0;
+            var godsSkipped = 0;
+
+            foreach (var player in players)
+            {
+                // NEVER touch a god. /god parks Ranks = 226 / InitLevel = 5000 on every skill and
+                // snapshots the real values into GodState for /ungod to restore; re-deriving those
+                // fields from XP would both wreck the character and orphan the restore. Their
+                // numbers are also meaningless as evidence - Chris: *"the /god switch may poison the
+                // results"*. Same test as Player.IsInGodMode, on the stored property.
+                var godState = player.GetProperty(PropertyString.GodState);
+
+                if (godState != null && godState.StartsWith("1"))
+                {
+                    Console.WriteLine($"{player.Name} (0x{player.Guid}): IN GOD MODE - skipped entirely (use /ungod first if this character needs correcting)");
+                    godsSkipped++;
+                    continue;
+                }
+
+                var changedHere = 0;
+
+                foreach (var kvp in new Dictionary<Skill, PropertiesSkill>(player.Biota.PropertiesSkill))
+                {
+                    var skill = kvp.Key;
+                    var props = kvp.Value;
+
+                    if (props.SAC < SkillAdvancementClass.Trained)
+                        continue;
+
+                    var table = Player.GetSkillXPTable(props.SAC);
+
+                    if (table == null || table.Count < 2)
+                        continue;
+
+                    // the TRUE total, so a skill carrying 109 overflow is not re-derived from the
+                    // clamped uint shadow and stripped of the ranks it genuinely earned
+                    var overflowXp = player.GetProperty((PropertyInt64)((int)PropertyInt64.ShadowgainSkillXpBase + (int)skill));
+
+                    var trueXp = overflowXp.HasValue ? (ulong)overflowXp.Value : props.PP;
+
+                    var rank = Player.CalcSkillRankUncapped(props.SAC, trueXp);
+
+                    var tableMax = table.Count - 1;
+
+                    var baseInit = props.SAC == SkillAdvancementClass.Specialized ? 10u : 0u;
+
+                    var wantRank = (ushort)Math.Min(rank, tableMax);
+                    var wantInit = baseInit + (uint)(rank > tableMax ? rank - tableMax : 0);
+
+                    if (props.LevelFromPP == wantRank && props.InitLevel == wantInit)
+                        continue;
+
+                    var wasBase = props.LevelFromPP + props.InitLevel;
+                    var nowBase = wantRank + wantInit;
+
+                    Console.WriteLine($"{player.Name} (0x{player.Guid}): {skill} rank {props.LevelFromPP}->{wantRank}, " +
+                                      $"initLevel {props.InitLevel}->{wantInit} " +
+                                      $"(derived rank {rank} from {trueXp:N0} xp; skill base contribution {wasBase}->{nowBase}){fixStr}");
+
+                    if (fix)
+                    {
+                        props.LevelFromPP = wantRank;
+                        props.InitLevel = wantInit;
+                        // PP and the 109 overflow property are deliberately untouched - the XP was
+                        // earned and is kept in full. Only the DERIVED fields are rewritten.
+                    }
+
+                    changedHere++;
+                    affectedSkills++;
+                }
+
+                if (changedHere > 0)
+                {
+                    affectedPlayers++;
+
+                    if (fix)
+                        player.SaveBiotaToDatabase();
+                }
+            }
+
+            Console.WriteLine();
+
+            var godNote = godsSkipped > 0 ? $" ({godsSkipped} character(s) in god mode skipped)" : "";
+
+            if (affectedSkills == 0)
+            {
+                Console.WriteLine($"Every skill on all {players.Count:N0} characters already matches its experience - the invariant holds.{godNote}");
+                return;
+            }
+
+            Console.WriteLine($"{affectedSkills} skill(s) across {affectedPlayers} character(s) of {players.Count:N0} disagree with their experience.{godNote}");
+
+            if (!fix)
+                Console.WriteLine("Dry run completed. Type 'sg-fix-initlevel fix' to apply.");
+            else
+                Console.WriteLine("Applied.");
+        }
+
         [CommandHandler("verify-heritage-augs", AccessLevel.Admin, CommandHandlerFlag.ConsoleInvoke, "Verifies all players have their heritage augs.")]
         public static void HandleVerifyHeritageAugs(Session session, params string[] parameters)
         {

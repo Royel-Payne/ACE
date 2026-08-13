@@ -113,6 +113,19 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 109c: is this character currently a god?
+        ///
+        /// /god writes a snapshot of the real skill and attribute values into GodState and then
+        /// overwrites the live ones; /ungod parses that string back. The leading "1" is the flag -
+        /// this is the same test DoGodMode itself uses, kept in one place so the skill code and the
+        /// admin code cannot disagree about who is a god.
+        ///
+        /// Anything that RE-DERIVES a skill's Ranks or InitLevel has to skip these characters, or it
+        /// silently rewrites the very fields /ungod is holding a restore for.
+        /// </summary>
+        public bool IsInGodMode => GodState != null && GodState.StartsWith("1");
+
+        /// <summary>
         /// Shadowgain: writes usage-based skill XP DIRECTLY into the skill.
         ///
         /// Deliberately does NOT go through HandleActionRaiseSkill/SpendSkillXp. That path spends
@@ -182,14 +195,43 @@ namespace ACE.Server.WorldObjects
             // Base is attrFormula + InitLevel + Ranks either way, so the server-side value is
             // identical; this only changes which field carries it so the client will render it.
             //
-            if (uncapped && computedRank > tableMaxRank)
+            // Shadowgain 109c: BOTH fields are now written on every award, enforcing
+            //
+            //     Ranks     = min(rank, tableMax)
+            //     InitLevel = baseInitLevel + max(0, rank - tableMax)
+            //
+            // The old shape only assigned InitLevel on the way UP, so a skill whose rank FELL back
+            // to the table max kept its stale overflow forever - the field is not re-derived from
+            // anything, so nothing would ever clear it. 109b made that reachable in bulk: every
+            // skill sitting at the old uint ceiling re-derives to 208, takes the non-overflow path,
+            // and would have kept the 91 phantom ranks in InitLevel while @myskills correctly
+            // reported 208. Base and rank would have disagreed permanently, and the base is what
+            // the player's panel shows.
+            //
+            // Safe because InitLevel carries nothing else FOR A MORTAL: measured on TEST, trained is
+            // 0 on 1,931 rows across 52 characters and specialized is 10 on all 17. Augmentation
+            // bonuses go through GetAugBonus_Base, not this field.
+            //
+            // THE EXCEPTION IS GOD MODE, and it is why this is guarded rather than unconditional.
+            // /god parks Ranks = 226 and InitLevel = 5000 on every skill and snapshots the real
+            // values into GodState for /ungod to restore. Re-deriving either field from XP would
+            // collapse a god's skills on their very next kill, and leave the restore describing a
+            // state that no longer exists. The pre-109c code never hit this because /god's XP
+            // (4,100,490,438) derives to rank 207 on the trained curve - under the table max - so
+            // the overflow branch never fired. Making the write unconditional is exactly what would
+            // have exposed it. Chris: *"the /god switch may poison the results"*.
+            //
+            // XP still accumulates truthfully underneath; only the derived fields are left alone.
+            if (uncapped && !IsInGodMode)
             {
                 var baseInitLevel = creatureSkill.AdvancementClass == SkillAdvancementClass.Specialized ? 10u : 0u;
 
-                creatureSkill.Ranks = (ushort)tableMaxRank;
-                creatureSkill.InitLevel = baseInitLevel + (uint)(computedRank - tableMaxRank);
+                var overflowRanks = computedRank > tableMaxRank ? computedRank - tableMaxRank : 0;
+
+                creatureSkill.Ranks = (ushort)Math.Min(computedRank, tableMaxRank);
+                creatureSkill.InitLevel = baseInitLevel + (uint)overflowRanks;
             }
-            else
+            else if (!IsInGodMode)
                 creatureSkill.Ranks = (ushort)computedRank;
 
             if (Session == null)
