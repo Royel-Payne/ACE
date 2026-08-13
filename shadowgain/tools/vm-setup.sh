@@ -50,7 +50,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.fast
-    restart: "no"
+    # Comes up with the VM. Was "no", which meant every boot left sg-db healthy and sg-server
+    # Exited(143) - looking exactly like a failure, and needing a manual start before any testing
+    # could begin. The VM gets shut down between test sessions, so that was every single time.
+    restart: unless-stopped
     # Bound to every interface ON PURPOSE - the whole reason this is a VM rather than WSL is
     # so a client on the LAN can reach it over UDP without a forwarding layer in the way.
     ports: !override
