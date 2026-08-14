@@ -1,0 +1,23 @@
+# Shadowgain 124: pin LF on everything that is EXECUTED, not just read.
+#
+# The repo root sets `* text=auto`, and this machine has core.autocrlf=true. Together those
+# store LF and check out CRLF on Windows - which is fine for C# and fine for anything only ever
+# opened in an editor, and NOT fine for these:
+#
+#   *.sh              run in Git Bash locally, and shipped to the droplet. A `#!/usr/bin/env
+#                     bash\r` shebang fails with "bad interpreter: no such file or directory",
+#                     and every heredoc terminator gains an invisible \r that stops matching.
+#   *.service         systemd parses CRLF unit files as values with trailing \r - an ExecStart
+#                     path that then does not exist.
+#   Caddyfile*        the caddyfile adapter is whitespace-sensitive.
+#   *.sql             piped into `mysql` over ssh.
+#
+# The failure mode all four share is that the file looks perfect in an editor and breaks only on
+# the machine it was shipped to. Pinning them costs nothing and removes the class.
+*.sh        text eol=lf
+*.service   text eol=lf
+*.sql       text eol=lf
+Caddyfile*  text eol=lf
+
+# Generated icon PNGs - binary, never diffed, never munged.
+*.png       binary
