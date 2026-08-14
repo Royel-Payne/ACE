@@ -346,7 +346,8 @@ namespace ACE.Server.WorldObjects
                 // Shadowgain 007: appraising trains the assess skill. difficulty here is already the
                 // target's Deception - the very thing the roll is made against - so it is external to
                 // the skill being raised.
-                AwardAssessUse(skill, (uint)System.Math.Max(0, difficulty));
+                // Shadowgain 119: the assessed creature goes in for the PvP gate.
+                AwardAssessUse(skill, (uint)System.Math.Max(0, difficulty), creature);
 
                 if (difficulty == 0 || player == this || player != null && !player.GetCharacterOption(CharacterOption.AttemptToDeceiveOtherPlayers))
                     chance = 1.0f;

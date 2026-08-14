@@ -222,12 +222,18 @@ namespace ACE.Server.WorldObjects
             var attackSkill = GetCreatureSkill(GetCurrentWeaponSkill());
             var difficulty = GetTargetEffectiveDefenseSkill(target);
 
-            Proficiency.OnSuccessUse(this, attackSkill, difficulty);
+            // Shadowgain 119: the target goes in so the PvP gate is decided centrally - see
+            // Proficiency.AllowsUsageGain. This call site is half of what Jkurs reported.
+            Proficiency.OnSuccessUse(this, attackSkill, difficulty, opponent: target);
 
             // Shadowgain 004: the same target-derived difficulty feeds the attributes this attack
             // exercises (heavy/2h -> Strength, light/dual -> Quickness, finesse/missile -> Coordination,
             // each with a related secondary). External by construction, per the anti-runaway rule.
-            AwardAttributesForWeaponSkill(attackSkill.Skill, difficulty);
+            //
+            // Shadowgain 119: gated separately because attributes do NOT flow through Proficiency -
+            // they have a parallel award path, so the gate above does not reach them.
+            if (Proficiency.AllowsUsageGain(this, target))
+                AwardAttributesForWeaponSkill(attackSkill.Skill, difficulty);
         }
 
         public override uint GetEffectiveAttackSkill()
@@ -362,7 +368,10 @@ namespace ACE.Server.WorldObjects
 
             var difficulty = creatureAttacker.GetCreatureSkill(creatureAttacker.GetCurrentWeaponSkill()).Current;
             // attackMod?
-            Proficiency.OnSuccessUse(this, defenseSkill, difficulty);
+            // Shadowgain 119: the attacker goes in for the PvP gate - this is the other half of what
+            // Jkurs reported. Evade difficulty is the ATTACKER's weapon skill, so a developed main
+            // swinging at a low-skill alt trained the alt's defence at full rate.
+            Proficiency.OnSuccessUse(this, defenseSkill, difficulty, opponent: attacker);
         }
 
         public BaseDamageMod GetBaseDamageMod(WorldObject damageSource)
@@ -545,7 +554,10 @@ namespace ACE.Server.WorldObjects
                 // the obvious one: it supplied 0.3% of Endurance xp. Tuning it changes nothing.
                 var enduranceMult = PropertyManager.GetDouble("endurance_damage_multiplier").Item;
 
-                if (enduranceMult > 0.0)
+                // Shadowgain 119: gated on the damage SOURCE. Standing still while an alt hits you is
+                // the same two-account farm as trading blows, and this path fires on every hit TAKEN -
+                // the highest-frequency award in the game, per the 018 measurement above.
+                if (enduranceMult > 0.0 && Proficiency.AllowsUsageGain(this, source))
                     AwardAttributeUsageXP(PropertyAttribute.Endurance, enduranceDifficulty, weightOverride: enduranceMult);
             }
 

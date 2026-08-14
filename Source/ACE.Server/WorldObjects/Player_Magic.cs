@@ -1124,11 +1124,29 @@ namespace ACE.Server.WorldObjects
                     {
                         if (spell.IsHarmful)
                         {
+                            // Shadowgain 119: BRACES. These two blocks were unbraced single-statement
+                            // if/else with the Shadowgain 004 attribute calls indented underneath, so
+                            // the indentation lied about what was guarded:
+                            //
+                            //   - the attribute award below sat OUTSIDE `if (targetCreature != null)`
+                            //     and dereferenced targetCreature unconditionally - a
+                            //     NullReferenceException waiting for a harmful non-projectile spell
+                            //     cast at a non-creature target;
+                            //   - the PowerMod attribute award in the else sat outside the else
+                            //     entirely, so every HARMFUL cast also paid the self-cast award. Each
+                            //     harmful non-projectile spell was awarding magic attributes TWICE.
+                            //
+                            // Found while gating this path for PvP, not reported by anyone.
                             if (targetCreature != null)
-                                Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), targetCreature.GetCreatureSkill(Skill.MagicDefense).Current);
+                            {
+                                var magicDifficulty = targetCreature.GetCreatureSkill(Skill.MagicDefense).Current;
+
+                                Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), magicDifficulty, opponent: targetCreature);
 
                                 // Shadowgain 004: target-derived difficulty -> Focus/Self by school.
-                                AwardAttributesForMagicSkill(spell.School, targetCreature.GetCreatureSkill(Skill.MagicDefense).Current);
+                                if (Proficiency.AllowsUsageGain(this, targetCreature))
+                                    AwardAttributesForMagicSkill(spell.School, magicDifficulty);
+                            }
 
                             // handle target procs
                             if (targetCreature != null && targetCreature != this)
@@ -1138,11 +1156,13 @@ namespace ACE.Server.WorldObjects
                                 UpdatePKTimers(this, targetPlayer);
                         }
                         else
+                        {
                             Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), spell.PowerMod);
 
                             // Shadowgain 004: no creature target here (self/item cast), so PowerMod
                             // is the action's own magnitude - still external to the attribute.
                             AwardAttributesForMagicSkill(spell.School, spell.PowerMod);
+                        }
                     }
 
                     break;

@@ -29,7 +29,21 @@ namespace ACE.Server.Entity
         /// Used by the salvage path, where one action pays Salvaging at full rate and the matching
         /// tinkering skill at its own, independently tunable rate.
         /// </param>
-        public static void OnSuccessUse(Player player, CreatureSkill skill, uint difficulty, double weight = 1.0)
+        /// <param name="opponent">
+        /// Shadowgain 119: the OTHER party to this action, when there is one - the target being hit,
+        /// the attacker being evaded, the creature being assessed. Supplied so the PvP gate can be
+        /// decided in ONE place rather than at each call site. Leave null for actions with no second
+        /// party (salvage, tinkering, jump, run, the allegiance skills).
+        /// </param>
+        /// <param name="boundDifficulty">
+        /// Shadowgain 119: whether <paramref name="difficulty"/> is on the same scale as the skill's
+        /// Base, and can therefore be bounded against it. True for everything whose difficulty comes
+        /// from a creature's skill value. FALSE for the allegiance/pet paths, where difficulty is an
+        /// XP magnitude already divided down by its own dial - a different unit entirely, which the
+        /// skill's Base says nothing about. See the note on the bound below.
+        /// </param>
+        public static void OnSuccessUse(Player player, CreatureSkill skill, uint difficulty, double weight = 1.0,
+            WorldObject opponent = null, bool boundDifficulty = true)
         {
             //Console.WriteLine($"Proficiency.OnSuccessUse({player.Name}, {skill.Skill}, targetDiff: {difficulty})");
 
@@ -48,6 +62,16 @@ namespace ACE.Server.Entity
 
             if (player.IsOlthoiPlayer)
                 return;
+
+            // Shadowgain 119: PvP usage gain. Reported by Jkurs, who asked for his own exploit to be
+            // patched - "i would disable pkl gains btw. i duno why thats allowed lmao".
+            if (!AllowsUsageGain(player, opponent))
+            {
+                if (debug)
+                    log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | BLOCKED=pvp | opponent={opponent?.Name} | difficulty={difficulty}");
+
+                return;
+            }
 
             // ensure skill is at least trained
             if (skill.AdvancementClass < SkillAdvancementClass.Trained)
@@ -133,7 +157,50 @@ namespace ACE.Server.Entity
             // faster, and made measurements depend on buff state. Base is the actual trained level, so
             // buffs still help you land hits and survive; they just no longer tax your learning.
             var baseValue = Math.Max(1u, skill.Base);
-            var ratio = (double)difficulty / baseValue;
+
+            // ----------------------------------------------------------------------------------
+            // Shadowgain 119: BOUND THE DIFFICULTY AGAINST THE ACTOR'S OWN BASE.
+            //
+            // The clamp below bounds the RATIO. It never bounded `difficulty`, which is also a free
+            // multiplier out front - so the award grew linearly with target difficulty forever.
+            // Apex worked this out and reported it: "if someone with 10 attack skill hit something
+            // with 500 defense, it's like 100k xp is given per hit". Reproduced exactly from the
+            // code - 500 x 2.0 (ratio capped) x 100 (fast lane) = 100,000.
+            //
+            // 003 removed upstream's repeat-use timer and made the difficulty-relative modifier the
+            // ONLY anti-farm mechanism - "trivial targets trickle, appropriately-hard targets pay
+            // full". That was verified in the trivial direction and is silently wrong in the other.
+            //
+            // The ceiling now scales with the ACTOR rather than with whatever they can find to hit,
+            // so "an appropriately-hard target pays full" survives and "an impossible target pays
+            // absurdly" does not. It also closes, sight unseen, the high-defence mob Apex declined
+            // to name - the cap is relative, so no specific creature has to be found.
+            //
+            // K MEASURED, NOT GUESSED, from 216,629 skill awards over 24h on LIVE 2026-08-13:
+            // every target-derived skill topped out below 2.6 (MeleeDefense max 2.04,
+            // TwoHandedCombat 2.28, ArcaneLore 2.52), and of 130,189 attribute awards exactly TWO
+            // exceeded 3.0. Since the ratio itself caps at 2.0, any K >= 2 leaves normal fights
+            // untouched; K = 3 sits clear of the highest legitimate ratio ever observed, and
+            // deliberately clears ArcaneLore's 2.52 so it does not quietly undo 114.
+            //
+            // Set the dial to 0 to disable the bound entirely (restores pre-119 behaviour).
+            // ----------------------------------------------------------------------------------
+            var effectiveDifficulty = difficulty;
+
+            if (boundDifficulty)
+            {
+                var bound = PropertyManager.GetDouble("skill_gain_difficulty_bound").Item;
+
+                if (bound > 0)
+                {
+                    var ceiling = baseValue * bound;
+
+                    if (ceiling < effectiveDifficulty)
+                        effectiveDifficulty = (uint)Math.Max(1, Math.Round(ceiling));
+                }
+            }
+
+            var ratio = (double)effectiveDifficulty / baseValue;
 
             // Math.Min/Max guard the clamp in case an operator sets floor above cap live.
             var difficultyFactor = Math.Clamp(ratio, Math.Min(floor, cap), Math.Max(floor, cap));
@@ -141,7 +208,7 @@ namespace ACE.Server.Entity
             // Model A: base points (difficulty) x difficultyFactor x global multiplier, written as
             // raw XP into the skill. The steep native XP tables then give "fast early, slow to
             // master" for free - no normalisation needed (Model B was considered and rejected).
-            var awarded = difficulty * difficultyFactor * multiplier;
+            var awarded = effectiveDifficulty * difficultyFactor * multiplier;
 
             // These knobs are operator-settable live to arbitrary values. Clamp into uint range
             // before casting: a large multiplier would otherwise overflow and wrap to a garbage
@@ -176,13 +243,48 @@ namespace ACE.Server.Entity
 
             if (debug)
             {
+                // Shadowgain 119: print the RAW difficulty as well whenever the bound actually bit,
+                // so the log shows what was faced AND what was paid for. Printing only the bounded
+                // value would hide the very thing this fix exists to make visible - the same
+                // blindness 109e removed from the line below it.
+                var boundNote = effectiveDifficulty != difficulty ? $" (bounded from {difficulty})" : "";
+
                 log.Info($"[PROFICIENCY] {player.Name} | {skill.Skill} | {(applied ? "AWARD" : "NOOP=maxRank")}" +
-                         $" | difficulty={difficulty} vs base={baseValue} ratio={ratio:N3}" +
+                         $" | difficulty={effectiveDifficulty}{boundNote} vs base={baseValue} ratio={ratio:N3}" +
                          $" | factor={difficultyFactor:N3} mult={multiplier:N2}" +
                          $" | pp={pp}" +
                          $" | rank {prevRank}->{skill.Ranks} init {prevInitLevel}->{skill.InitLevel} xp {prevXP}->{skill.TrueExperienceSpent}" +
                          $" | sinceLastUse={timeDiff:N1}s prevDifficulty={last_difficulty}");
             }
+        }
+
+        /// <summary>
+        /// Shadowgain 119: THE one place that decides whether an action against another party trains
+        /// anything. Skills ask via OnSuccessUse; the attribute and specialty awards at the same call
+        /// sites ask directly, so a player-vs-player action cannot pay one of the three and not the
+        /// others.
+        ///
+        /// Both Player_Combat.OnDamageTarget and OnEvade called OnSuccessUse with no check on who the
+        /// other party was. Attack difficulty is the target's effective defence and evade difficulty
+        /// is the attacker's weapon skill, so two accounts could train each other - and because a
+        /// developed character has high defence, a low-skill alt hitting a high-skill main was
+        /// precisely the unbounded-difficulty case above. The two exploits multiplied.
+        ///
+        /// Behind a dial rather than hardcoded: PvP training is a legitimate design choice somebody
+        /// might want later, and this is a policy question, not a bug.
+        ///
+        /// Self-targeted actions are NOT blocked - `opponent == actor` is how self-buffs, self-heals
+        /// and self-appraisal arrive here, and they are ordinary play rather than two-account farming.
+        /// </summary>
+        public static bool AllowsUsageGain(Player actor, WorldObject opponent)
+        {
+            if (opponent == null || ReferenceEquals(opponent, actor))
+                return true;
+
+            if (!(opponent is Player))
+                return true;
+
+            return PropertyManager.GetBool("skill_gain_allow_pvp").Item;
         }
 
         /// <summary>
@@ -206,14 +308,14 @@ namespace ACE.Server.Entity
             }
         }
 
-        public static void OnSuccessUse(Player player, CreatureSkill skill, int difficulty)
+        public static void OnSuccessUse(Player player, CreatureSkill skill, int difficulty, WorldObject opponent = null)
         {
             if (difficulty < 0)
             {
                 log.Error($"Proficiency.OnSuccessUse({player.Name}, {skill.Skill}, {difficulty}) - difficulty cannot be negative");
                 return;
             }
-            OnSuccessUse(player, skill, (uint)difficulty);
+            OnSuccessUse(player, skill, (uint)difficulty, opponent: opponent);
         }
     }
 }

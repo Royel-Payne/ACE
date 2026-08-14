@@ -336,11 +336,17 @@ namespace ACE.Server.WorldObjects
                     if (creatureTarget != null && PropertyManager.GetBool("skill_gain_normalize_magic_difficulty").Item)
                         magicDifficulty = creatureTarget.GetCreatureSkill(Skill.MagicDefense).Current;
 
-                    Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty);
+                    // Shadowgain 119: PvP gate - a war-magic bolt into an alt is the caster's version
+                    // of the melee farm, and normalize_magic_difficulty makes its difficulty the
+                    // target's Magic Defense, so a developed main is the ideal practice dummy.
+                    var pvpAllowed = Proficiency.AllowsUsageGain(player, creatureTarget);
+
+                    Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty, opponent: creatureTarget);
 
                     // Shadowgain 004: same external difficulty drives the mental attribute for this
                     // school - Focus for war/void/enchantment, Self for life magic.
-                    player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty);
+                    if (pvpAllowed)
+                        player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty);
 
                     // Shadowgain 011: aiming a bolt trains Coordination, exactly as firing a bow does.
                     // This closes the last stranded-attribute hole - a pure caster had NO path to
@@ -356,7 +362,7 @@ namespace ACE.Server.WorldObjects
                     // Coordination itself.
                     var coordFactor = PropertyManager.GetDouble("coordination_spell_factor").Item;
 
-                    if (coordFactor > 0.0)
+                    if (coordFactor > 0.0 && pvpAllowed)
                         player.AwardAttributeUsageXP(PropertyAttribute.Coordination, magicDifficulty, false, coordFactor);
                 }
 

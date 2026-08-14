@@ -188,10 +188,33 @@ namespace ACE.Server.WorldObjects
             // enchantments and vitae, which made being buffed shrink your gain. Buffing is the normal
             // state in AC, so that penalised standard play and made measurements buff-dependent.
             var baseValue = Math.Max(1u, creatureAttribute.Base);
-            var ratio = (double)difficulty / baseValue;
+
+            // Shadowgain 119: bound the difficulty against the attribute's own Base, exactly as
+            // Proficiency.OnSuccessUse now does for skills - see the long note there.
+            //
+            // This path carries its OWN copy of the unbounded-difficulty bug. 118 and the 119 handoff
+            // both describe the fix as touching "the XP hot path that every skill and attribute award
+            // flows through", but attributes do not flow through Proficiency at all - they have this
+            // parallel formula, with the same clamp on the ratio and the same free `difficulty` out
+            // front. Fixing only Proficiency would have left the attribute half of the exploit wide
+            // open, which is the half Apex actually demonstrated: "Can have it 200+ attributes in
+            // minutes".
+            var effectiveDifficulty = difficulty;
+
+            var bound = PropertyManager.GetDouble("attribute_gain_difficulty_bound").Item;
+
+            if (bound > 0)
+            {
+                var ceiling = baseValue * bound;
+
+                if (ceiling < effectiveDifficulty)
+                    effectiveDifficulty = (uint)Math.Max(1, Math.Round(ceiling));
+            }
+
+            var ratio = (double)effectiveDifficulty / baseValue;
             var difficultyFactor = Math.Clamp(ratio, Math.Min(floor, cap), Math.Max(floor, cap));
 
-            var awarded = difficulty * difficultyFactor * multiplier;
+            var awarded = effectiveDifficulty * difficultyFactor * multiplier;
 
             // knobs are operator-settable live; clamp before casting so a silly value cannot wrap
             if (double.IsNaN(awarded) || awarded < 0)
@@ -215,8 +238,11 @@ namespace ACE.Server.WorldObjects
 
             if (debug)
             {
+                // Shadowgain 119: show the raw difficulty too when the bound bit - see Proficiency.
+                var boundNote = effectiveDifficulty != difficulty ? $" (bounded from {difficulty})" : "";
+
                 log.Info($"[ATTRIBUTE] {Name} | {attribute} | AWARD{(isSecondary ? "=secondary" : "")}" +
-                         $" | difficulty={difficulty} vs base={baseValue} ratio={ratio:N3}" +
+                         $" | difficulty={effectiveDifficulty}{boundNote} vs base={baseValue} ratio={ratio:N3}" +
                          $" | factor={difficultyFactor:N3} mult={multiplier:N3}" +
                          $" | pp={pp}" +
                          $" | rank {prevRank}->{creatureAttribute.Ranks} xp {prevXP}->{creatureAttribute.ExperienceSpent}");

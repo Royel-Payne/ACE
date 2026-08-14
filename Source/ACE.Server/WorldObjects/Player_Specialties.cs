@@ -28,6 +28,12 @@ namespace ACE.Server.WorldObjects
             if (!PropertyManager.GetBool("specialty_gain_from_use").Item)
                 return;
 
+            // Shadowgain 119: PvP gate. Every specialty below takes the TARGET's defence as its
+            // difficulty, so without this they trained off another player exactly as the weapon skill
+            // did - and Recklessness/SneakAttack/Deception all fire on a landed hit.
+            if (!Proficiency.AllowsUsageGain(this, target))
+                return;
+
             var difficulty = GetTargetEffectiveDefenseSkill(target);
 
             if (difficulty == 0)
@@ -63,6 +69,10 @@ namespace ACE.Server.WorldObjects
         public void AwardDirtyFightingUse(WorldObject target)
         {
             if (target == null || !PropertyManager.GetBool("specialty_gain_from_use").Item)
+                return;
+
+            // Shadowgain 119: PvP gate, as AwardCombatSpecialtyUse.
+            if (!Proficiency.AllowsUsageGain(this, target))
                 return;
 
             var difficulty = GetTargetEffectiveDefenseSkill(target);
@@ -169,7 +179,13 @@ namespace ACE.Server.WorldObjects
 
             var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Round(difficulty));
 
-            Proficiency.OnSuccessUse(this, skill, award);
+            // Shadowgain 119: NOT bounded against Summoning's Base. The 119 bound assumes difficulty
+            // and Base are the same kind of number - a creature's skill value - and here it is a share
+            // of kill XP divided by summoning_gain_xp_divisor, which the skill's Base says nothing
+            // about. Bounding it would be an unrelated balance change smuggled in behind an exploit
+            // fix. Measured on LIVE 2026-08-13: this path runs at ratio 12-45, entirely because of
+            // that unit mismatch, and it is dial-limited already.
+            Proficiency.OnSuccessUse(this, skill, award, boundDifficulty: false);
         }
 
         /// <summary>
@@ -181,7 +197,7 @@ namespace ACE.Server.WorldObjects
         /// sneak-attack damage from the front (Creature_Combat.cs), so they defend against the
         /// specialties hooked above.
         /// </summary>
-        public void AwardAssessUse(Skill assessSkill, uint targetDeception)
+        public void AwardAssessUse(Skill assessSkill, uint targetDeception, WorldObject target = null)
         {
             if (!PropertyManager.GetBool("specialty_gain_from_use").Item)
                 return;
@@ -194,7 +210,12 @@ namespace ACE.Server.WorldObjects
             // an undeceptive target still teaches something, so floor rather than skip
             var difficulty = System.Math.Max(1u, targetDeception);
 
-            Proficiency.OnSuccessUse(this, skill, difficulty);
+            // Shadowgain 119: the assessed object is passed for the PvP gate. Assess Person against a
+            // player was the single most extreme ratio measured on LIVE - 123x base, far above any
+            // combat skill - because a developed character's Deception dwarfs a fresh Assess Person,
+            // and appraising costs nothing and can be repeated at will. Assessing YOURSELF is not
+            // blocked (AllowsUsageGain exempts self), and is now bounded like everything else.
+            Proficiency.OnSuccessUse(this, skill, difficulty, opponent: target);
         }
 
         /// <summary>
@@ -265,7 +286,9 @@ namespace ACE.Server.WorldObjects
 
             var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Max(1, System.Math.Round(difficulty)));
 
-            Proficiency.OnSuccessUse(this, skill, award);
+            // Shadowgain 119: NOT bounded - difficulty here is passed-up XP over
+            // loyalty_gain_xp_divisor, not a skill value. See AwardSummoningFromPet.
+            Proficiency.OnSuccessUse(this, skill, award, boundDifficulty: false);
         }
 
         /// <summary>
@@ -312,7 +335,9 @@ namespace ACE.Server.WorldObjects
 
             var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Max(1, System.Math.Round(difficulty)));
 
-            Proficiency.OnSuccessUse(this, skill, award);
+            // Shadowgain 119: NOT bounded - difficulty here is earned XP over
+            // leadership_gain_xp_divisor, not a skill value. See AwardSummoningFromPet.
+            Proficiency.OnSuccessUse(this, skill, award, boundDifficulty: false);
         }
 
         /// <summary>

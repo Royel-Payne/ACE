@@ -203,7 +203,10 @@ namespace ACE.Server.WorldObjects
                     if (casterCreature != null)
                         targetPlayer.SetCurrentAttacker(casterCreature);
 
-                    Proficiency.OnSuccessUse(targetPlayer, targetPlayer.GetCreatureSkill(Skill.MagicDefense), magicSkill);
+                    // Shadowgain 119: PvP gate. The caster is the other party here - difficulty is the
+                    // CASTER's magic skill, so an alt standing still resisting a developed main's
+                    // spells was Magic Defense's version of the two-account farm.
+                    Proficiency.OnSuccessUse(targetPlayer, targetPlayer.GetCreatureSkill(Skill.MagicDefense), magicSkill, opponent: casterCreature);
 
                     // Shadowgain 022: resisting a spell trains Magic Defense's governing attributes
                     // too - Self primary, Focus secondary, per the dat formula.
@@ -217,7 +220,9 @@ namespace ACE.Server.WorldObjects
                     // Difficulty is the CASTER's magic skill (set above from
                     // casterCreature.GetCreatureSkill(spell.School).Current) - external to the
                     // defender, so no self-reference.
-                    targetPlayer.AwardAttributesForSkill(Skill.MagicDefense, magicSkill);
+                    // Shadowgain 119: gated separately - attributes do not flow through Proficiency.
+                    if (Proficiency.AllowsUsageGain(targetPlayer, casterCreature))
+                        targetPlayer.AwardAttributesForSkill(Skill.MagicDefense, magicSkill);
                 }
 
                 if (this is Creature creature)
