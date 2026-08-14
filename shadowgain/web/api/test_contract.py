@@ -143,6 +143,25 @@ def test_a_vital_never_reports_more_current_than_max():
     assert stamina["current"] == 247 and stamina["max"] == 318
 
 
+def test_attributes_come_out_in_the_clients_panel_order():
+    """Coordination is listed ABOVE Quickness in game, but is the HIGHER enum id.
+
+    Sorting by id put two rows in the wrong place for anyone holding the page next to the
+    character panel - which is the exact comparison this site invites.
+    """
+    raw = {
+        "attributes": [
+            {"type": t, "init_Level": 10, "level_From_C_P": t * 10, "c_P_Spent": 0}
+            for t in (1, 2, 3, 4, 5, 6)
+        ]
+    }
+
+    labels = [a["label"] for a in payload.build_attributes(raw, {
+        "attributes_start_at_ten": True, "attribute_max_value": 290})]
+
+    assert labels == ["Strength", "Endurance", "Coordination", "Quickness", "Focus", "Self"], labels
+
+
 def test_the_public_payload_still_hides_everything_private():
     """Re-asserted here because 126 changed payload.py, and this is the one mistake in this
     service that could not be walked back."""

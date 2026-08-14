@@ -53,46 +53,45 @@ public static class Program
     private const uint TextureRangeEnd = 0x07FFFFFF;
 
     /// <summary>
-    /// ATTRIBUTES AND VITALS HAVE NO ICONS IN THE DAT, so these are drawn rather than extracted.
+    /// The client's own attribute and vital icons, 25x25, palettised.
     ///
-    /// This was checked, not assumed. Skills have icons because the dat's SkillTable carries an
-    /// IconId per skill; there is no equivalent table for attributes, and the retail client's
-    /// attribute panel labels its rows with TEXT. A sweep of the 0x060011xx UI band turned up
-    /// window chrome - coloured fill squares, a green arrow, a red no-entry glyph - and nothing
-    /// resembling a Strength or Focus icon.
+    /// FOUND ON THE SECOND ATTEMPT. The first hunt swept only 32x32 textures - the size item and
+    /// skill icons use - found nothing that looked like an attribute, and concluded the dat had
+    /// none, so the exporter drew substitutes. Both halves of that were wrong:
     ///
-    /// So the exporter generates them, in the mockup's own visual language: a rounded tile
-    /// tinted by category (physical / defensive / magical) carrying the attribute's initial,
-    /// which is exactly what `iconTile()` draws in character-sheet-mockup.html. The front-end
-    /// needs no change - Contract 2's paths are filled with real PNGs either way - and if the
-    /// genuine icons ever turn up, this table becomes a list of ids and the drawing goes away.
+    ///   * these are 25x25, not 32x32, so the sweep never looked at them;
+    ///   * and they are PALETTISED, so they would have failed to decode anyway while
+    ///     DatManager.PortalDat was unset - see the note on DatManager.Initialize in Main.
     ///
-    /// Colours match landing/character-sheet-mockup.html's PALETTE so the generated tiles sit
-    /// beside the real dat skill icons without looking like a different site.
+    /// THE ORDER IS NOT THE ENUM ORDER, which is the trap here. The textures run
+    /// Endurance, Focus, Quickness, Self, Strength, Coordination across 02C4..02C9, while
+    /// PropertyAttribute runs Strength, Endurance, Quickness, Coordination, Focus, Self.
+    /// Assigning them in id order would have given every attribute the wrong picture, and it
+    /// would have looked plausible. Each pairing below was confirmed by cropping the icon column
+    /// out of an in-game screenshot of the attribute panel and diffing it against the export.
     /// </summary>
-    private static readonly (string Key, string Letter, string Tint)[] AttributeTiles =
+    private static readonly (string Key, uint IconId)[] AttributeIcons =
     {
-        // Two letters where one would be ambiguous. Strength, Self and Stamina all start with
-        // S, and three identical tiles in one column is not an icon set - it is a puzzle.
-        ("strength",     "St", "#c98a4b"),   // phys
-        ("endurance",    "E",  "#57d98a"),   // def
-        ("quickness",    "Q",  "#c98a4b"),   // phys
-        ("coordination", "C",  "#c98a4b"),   // phys
-        ("focus",        "F",  "#6ea8ff"),   // magic
-        ("self",         "Sf", "#6ea8ff"),   // magic
+        ("strength",     0x060002C8),
+        ("endurance",    0x060002C4),
+        ("coordination", 0x060002C9),
+        ("quickness",    0x060002C6),
+        ("focus",        0x060002C5),
+        ("self",         0x060002C7),
     };
 
-    private static readonly (string Key, string Letter, string Tint)[] VitalTiles =
+    /// <summary>The three hearts, in the panel's own order: red, yellow, blue.</summary>
+    private static readonly (string Key, uint IconId)[] VitalIcons =
     {
-        ("health",  "H",  "#57d98a"),
-        ("stamina", "St", "#c98a4b"),
-        ("mana",    "M",  "#6ea8ff"),
+        ("health",  0x06004C3B),
+        ("stamina", 0x06004C3C),
+        ("mana",    0x06004C3D),
     };
 
     public static int Main(string[] args)
     {
         string datDir = null, outDir = null, itemIdFile = null;
-        bool doIcons = false, doTables = false;
+        bool doIcons = false, doTables = false, doSizes = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -102,6 +101,7 @@ public static class Program
                 case "--out": outDir = Next(args, ref i); break;
                 case "--item-ids": itemIdFile = Next(args, ref i); break;
                 case "--icons": doIcons = true; break;
+                case "--sizes": doSizes = true; break;
                 case "--tables": doTables = true; break;
                 default:
                     Console.Error.WriteLine($"unknown argument: {args[i]}");
@@ -113,7 +113,7 @@ public static class Program
             return Usage();
 
         // Neither flag means both - the common case is a full refresh.
-        if (!doIcons && !doTables)
+        if (!doIcons && !doTables && !doSizes)
             doIcons = doTables = true;
 
         // The dat stores strings in codepage 1252, which .NET Framework had built in and .NET
@@ -132,13 +132,39 @@ public static class Program
 
         Console.WriteLine($"==> opening {portalPath}");
 
-        // keepOpen: true - the icon pass reads tens of thousands of records, and reopening the
-        // file handle per read turns a 30-second export into a multi-minute one.
+        // GO THROUGH DatManager, NOT `new PortalDatDatabase(...)`.
+        //
+        // This started as a direct construction, because the exporter needs exactly one dat and
+        // none of DatManager's static wiring. That was wrong in a way that failed SILENTLY:
+        // Texture.GetBitmap resolves a palettised image through `DatManager.PortalDat` (see
+        // Texture.GetPaletteIndexes), and with that static never set every PFID_P8 / PFID_INDEX16
+        // texture threw a NullReferenceException. The catch in SaveTexture counted those as
+        // "skipped" and moved on - so the export looked like it worked, and the entire palettised
+        // half of the dat, which is where the UI icons live, was quietly missing.
+        //
+        // DatManager.Initialize insists on the `client_portal.dat` name; FindPortalDat still
+        // accepts `portal.dat`, so that case is warned about rather than silently degraded.
         PortalDatDatabase portal;
+        var retiredSkillsAdded = false;
 
         try
         {
-            portal = new PortalDatDatabase(portalPath, keepOpen: true);
+            if (Path.GetFileName(portalPath).Equals("client_portal.dat", StringComparison.OrdinalIgnoreCase))
+            {
+                // loadCell: false - nothing here reads landblocks, and the cell dat is 200MB.
+                DatManager.Initialize(Path.GetDirectoryName(portalPath), keepOpen: true, loadCell: false);
+                portal = DatManager.PortalDat;
+
+                // Initialize already called AddRetiredSkills; calling it again throws on the
+                // duplicate key. Only the fallback path below has to do it for itself.
+                retiredSkillsAdded = true;
+            }
+            else
+            {
+                Console.Error.WriteLine("!! WARNING: this dat is not named client_portal.dat, so DatManager cannot");
+                Console.Error.WriteLine("!! be initialised and PALETTISED TEXTURES WILL FAIL TO DECODE.");
+                portal = new PortalDatDatabase(portalPath, keepOpen: true);
+            }
         }
         catch (IOException ex)
         {
@@ -154,11 +180,21 @@ public static class Program
 
         Console.WriteLine($"    iteration {portal.Iteration}, {portal.AllFiles.Count:N0} records");
 
-        // AddRetiredSkills is what DatManager.Initialize does for the server, and the reason is
-        // the same here: the dat's own SkillTable predates the retired-skill consolidation, so
-        // without this call Axe/Bow/Dagger/... resolve to nothing and every character who still
-        // carries frozen ranks in one shows a blank row.
-        portal.SkillTable.AddRetiredSkills();
+        // The dat's own SkillTable predates the retired-skill consolidation, so without this
+        // Axe/Bow/Dagger/... resolve to nothing and every character still carrying frozen ranks
+        // in one shows a blank row. DatManager.Initialize does it for us on that path.
+        if (!retiredSkillsAdded)
+            portal.SkillTable.AddRetiredSkills();
+
+        // --sizes: a census of the texture range by dimension. Added because the first hunt for
+        // the attribute icons assumed they were 32x32 like item icons, found nothing, and
+        // concluded the dat had none. It has them - they are UI chrome at a different size, and
+        // this is how you find that out instead of guessing.
+        if (doSizes)
+        {
+            ReportSizes(portal, outDir);
+            return 0;
+        }
 
         if (doTables)
             ExportTables(portal, outDir);
@@ -308,8 +344,8 @@ public static class Program
         // needing to know the dat ids at all.
         Write(Path.Combine(dataDir, "icon-map.json"), new
         {
-            attribute = AttributeTiles.ToDictionary(a => a.Key, a => $"/assets/icons/attribute/{a.Key}.png"),
-            vital = VitalTiles.ToDictionary(v => v.Key, v => $"/assets/icons/vital/{v.Key}.png"),
+            attribute = AttributeIcons.ToDictionary(a => a.Key, a => a.IconId),
+            vital = VitalIcons.ToDictionary(v => v.Key, v => v.IconId),
             skill = portal.SkillTable.SkillBaseHash.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.IconId),
         });
 
@@ -417,15 +453,17 @@ public static class Program
 
         Console.WriteLine($"    skill icons       {skillCount}/{portal.SkillTable.SkillBaseHash.Count}");
 
-        // --- attribute + vital tiles, GENERATED (see AttributeTiles) -------------------------
-        foreach (var (key, letter, tint) in AttributeTiles)
-            WriteTile(Path.Combine(attrDir, $"{key}.png"), letter, tint);
+        // --- attribute + vital icons, from the dat, named by key ----------------------------
+        var attrCount = AttributeIcons.Count(a => SaveTexture(portal, a.IconId, Path.Combine(attrDir, $"{a.Key}.png")));
+        var vitalCount = VitalIcons.Count(v => SaveTexture(portal, v.IconId, Path.Combine(vitalDir, $"{v.Key}.png")));
 
-        foreach (var (key, letter, tint) in VitalTiles)
-            WriteTile(Path.Combine(vitalDir, $"{key}.png"), letter, tint);
+        Console.WriteLine($"    attribute icons   {attrCount}/{AttributeIcons.Length}");
+        Console.WriteLine($"    vital icons       {vitalCount}/{VitalIcons.Length}");
 
-        Console.WriteLine($"    attribute tiles   {AttributeTiles.Length} generated (no dat icons exist)");
-        Console.WriteLine($"    vital tiles       {VitalTiles.Length} generated");
+        // A zero here means the palette did not resolve - which is the DatManager trap, not a
+        // missing texture. Fail loudly rather than shipping blanks.
+        if (attrCount < AttributeIcons.Length || vitalCount < VitalIcons.Length)
+            Console.Error.WriteLine("!! some attribute/vital icons failed - is DatManager initialised?");
 
         // --- item icons ---------------------------------------------------------------------
         //
@@ -461,6 +499,46 @@ public static class Program
         // out of size with the real icons.
         WritePlaceholder(Path.Combine(assets, "placeholder.png"));
         Console.WriteLine("    placeholder.png   written");
+    }
+
+    /// <summary>
+    /// Print how many textures exist at each dimension, and write the id list per size so a
+    /// promising size can be exported and eyeballed without re-scanning the whole dat.
+    /// </summary>
+    private static void ReportSizes(PortalDatDatabase portal, string outDir)
+    {
+        var bySize = new SortedDictionary<(int W, int H), List<uint>>();
+
+        foreach (var id in portal.AllFiles.Keys)
+        {
+            if (id < TextureRangeStart || id > TextureRangeEnd)
+                continue;
+
+            try
+            {
+                var tex = portal.ReadFromDat<Texture>(id);
+
+                if (tex == null || tex.Length == 0)
+                    continue;
+
+                var key = (tex.Width, tex.Height);
+
+                if (!bySize.TryGetValue(key, out var list))
+                    bySize[key] = list = new List<uint>();
+
+                list.Add(id);
+            }
+            catch { }
+        }
+
+        Directory.CreateDirectory(outDir);
+
+        foreach (var (size, ids) in bySize.OrderByDescending(kv => kv.Value.Count))
+        {
+            Console.WriteLine($"    {size.W,4} x {size.H,-4} {ids.Count,7:N0}");
+            ids.Sort();
+            File.WriteAllLines(Path.Combine(outDir, $"ids-{size.W}x{size.H}.txt"), ids.Select(i => i.ToString()));
+        }
     }
 
     private static List<uint> ReadIdFile(string path)

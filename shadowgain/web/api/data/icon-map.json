@@ -1,16 +1,16 @@
 {
   "attribute": {
-    "strength": 100667896,
-    "endurance": 100667889,
-    "coordination": 100667887,
-    "quickness": 100667893,
-    "focus": 100667890,
-    "self": 100667894
+    "strength": 100664008,
+    "endurance": 100664004,
+    "coordination": 100664009,
+    "quickness": 100664006,
+    "focus": 100664005,
+    "self": 100664007
   },
   "vital": {
-    "health": 100667891,
-    "stamina": 100667895,
-    "mana": 100667892
+    "health": 100682811,
+    "stamina": 100682812,
+    "mana": 100682813
   },
   "skill": {
     "32": 100668251,

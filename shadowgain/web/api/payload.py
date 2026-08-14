@@ -31,9 +31,38 @@ private object cannot leak into it by default.
 from __future__ import annotations
 
 import datetime
+import functools
+from pathlib import Path
 from typing import Any
 
 from . import curves, db, names
+
+DATA_DIR = Path(__file__).parent / "data"
+
+
+@functools.lru_cache(maxsize=1)
+def _icon_version() -> str:
+    """A cache-busting stamp that changes whenever the icons are re-exported.
+
+    Caddy serves /assets/* as `immutable` with a week's max-age, which is right for item icons —
+    their filename IS the IconId, so a given URL's bytes never change. It is WRONG for the named
+    ones: `/assets/icons/attribute/strength.png` is keyed by name, so re-pointing Strength at a
+    different texture leaves every browser that has already visited holding the old picture for
+    a week. That is exactly what happened when the drawn placeholders were replaced with the real
+    dat icons — the deploy was correct and the page still showed the old tiles.
+
+    So the URL carries the version instead of the header being weakened. The stamp is the mtime
+    of data/icon-map.json, which the exporter rewrites on every run, so it moves when and only
+    when the icons might have.
+    """
+    try:
+        return str(int((DATA_DIR / "icon-map.json").stat().st_mtime))
+    except OSError:
+        return "0"
+
+
+def icon_url(path: str) -> str:
+    return f"{path}?v={_icon_version()}"
 
 
 def iso(timestamp: float | int | None) -> str | None:
@@ -86,8 +115,13 @@ IID_WIELDER = 3
 
 POSITION_LOCATION = 1
 
-# PropertyAttribute / PropertyAttribute2nd
-ATTRIBUTE_IDS = [1, 2, 3, 4, 5, 6]  # Strength, Endurance, Coordination, Quickness, Focus, Self
+# PropertyAttribute, IN THE ORDER THE CLIENT'S PANEL LISTS THEM.
+#
+# The enum is Strength(1), Endurance(2), Quickness(3), Coordination(4), Focus(5), Self(6) — but
+# the character panel shows Coordination ABOVE Quickness, so sorting by id puts two rows in the
+# wrong place for anyone comparing the page against the game. The enum's own comment warns about
+# this pair specifically: "The order of quickness and coordination corresponds to the client".
+ATTRIBUTE_IDS = [1, 2, 4, 3, 5, 6]
 VITAL_KEYS = {1: ("health", "Health", "maxHealth"), 3: ("stamina", "Stamina", "maxStamina"), 5: ("mana", "Mana", "maxMana")}
 
 # The `cat` field in the contract: a coarse class the front-end tints icons by until the real
@@ -222,10 +256,13 @@ def _attribute_bases(attributes: list[dict]) -> dict[int, int]:
 def build_attributes(raw: dict, dials: dict) -> list[dict]:
     out = []
 
-    for row in sorted(raw["attributes"], key=lambda r: r["type"]):
-        attr_id = row["type"]
+    by_id = {row["type"]: row for row in raw["attributes"]}
 
-        if attr_id not in ATTRIBUTE_IDS:
+    # Emitted in the client's panel order, not the enum's - see ATTRIBUTE_IDS.
+    for attr_id in ATTRIBUTE_IDS:
+        row = by_id.get(attr_id)
+
+        if row is None:
             continue
 
         starting = row["init_Level"] or 0
@@ -253,7 +290,7 @@ def build_attributes(raw: dict, dials: dict) -> list[dict]:
                 "xpSpent": cp_spent,
                 "xpIntoRank": into,
                 "xpToNextRank": to_next,
-                "icon": f"/assets/icons/attribute/{key}.png",
+                "icon": icon_url(f"/assets/icons/attribute/{key}.png"),
             }
         )
 
@@ -327,7 +364,7 @@ def build_vitals(raw: dict) -> list[dict]:
                 "ranks": row["level_From_C_P"] or 0,
                 "xpSpent": row["c_P_Spent"] or 0,
                 "governedBy": governed_by,
-                "icon": f"/assets/icons/vital/{key}.png",
+                "icon": icon_url(f"/assets/icons/vital/{key}.png"),
             }
         )
 
@@ -406,7 +443,7 @@ def build_skills(raw: dict) -> list[dict]:
                 # actually pays, and quoting the raw figure would overstate it.
                 "specCost": spec_cost,
                 "canSpecialize": can_specialize,
-                "icon": f"/assets/icons/skill/{skill_id}.png",
+                "icon": icon_url(f"/assets/icons/skill/{skill_id}.png"),
             }
         )
 
@@ -592,9 +629,10 @@ def build_inventory(cur, character_id: int) -> dict:
             "id": row["id"],
             "name": row["name"] or "(unnamed)",
             "iconId": row["icon"],
-            "icon": f"/assets/icons/item/{row['icon']}.png"
-            if row["icon"]
-            else "/assets/icons/placeholder.png",
+            "icon": icon_url(
+                f"/assets/icons/item/{row['icon']}.png" if row["icon"]
+                else "/assets/icons/placeholder.png"
+            ),
             "stack": int(row["stack_size"] or 1),
             "cat": "util",
         }
