@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!--
+  PLACEHOLDER. Shadowgain 124.
+
+  The subdomain went live before the front-end did, and a bare Caddy 404 at the root is a poor
+  thing for anyone who wanders in. This is a holding page and nothing more - it will be
+  overwritten the moment Cowork's index.html ships, which is the intended outcome. Do not build
+  on it.
+
+  Palette and type are lifted from landing/character-sheet-mockup.html so the eventual swap is
+  not a visual jolt.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadowgain — Character Portal</title>
+<meta name="theme-color" content="#090c12">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/icons/skill/6.png">
+<style>
+  :root{
+    --bg:#090c12; --bg2:#0f151f; --panel:#121b27; --line:rgba(120,180,190,.14);
+    --ink:#c9d3df; --muted:#7f8b9c; --arcane:#4fd6c6; --gold:#d8ac52; --green:#57d98a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 640px at 50% -10%, rgba(216,172,82,.08), transparent 60%),
+      radial-gradient(900px 600px at 85% 15%, rgba(79,214,198,.07), transparent 60%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; min-height:100vh; letter-spacing:.2px;
+    display:grid; place-items:center; padding:32px 22px;
+  }
+  .card{
+    max-width:560px; width:100%; text-align:center;
+    background:linear-gradient(180deg,var(--panel),rgba(15,21,31,.45));
+    border:1px solid var(--line); border-radius:14px; padding:38px 30px;
+  }
+  h1{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-weight:600; margin:0 0 6px; font-size:clamp(26px,5vw,34px); color:#eaf3f2;
+  }
+  .kicker{color:var(--gold);text-transform:uppercase;letter-spacing:3px;font-size:11px;margin:0 0 10px}
+  p{color:#9aa6b6;font-size:15px;margin:0 0 8px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;vertical-align:middle;margin-right:7px}
+  .dot.on{background:var(--green);box-shadow:0 0 11px rgba(87,217,138,.7)}
+  .status{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:#cdd7e2}
+  .status b{color:var(--arcane);font-variant-numeric:tabular-nums}
+  a{color:var(--arcane);text-decoration:none} a:hover{color:#8be7db}
+  .foot{margin-top:20px;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <p class="kicker">Character Portal</p>
+    <h1>Shadowgain</h1>
+    <p>The character sheet is being built. Soon you will be able to sign in with your game
+       account and see your <em>true</em> ranks &mdash; the numbers the client cannot display.</p>
+
+    <div class="status" id="status"><span class="dot"></span>checking the server&hellip;</div>
+
+    <p class="foot"><a href="https://shadowgain.com/">shadowgain.com</a></p>
+  </div>
+
+<script>
+// The one live thing on this page: the real status feed, proxied through our own API so the
+// page makes requests to a single origin. Kept deliberately small - this is a holding page.
+fetch('/api/status')
+  .then(r => r.json())
+  .then(s => {
+    const up = !!s.online;
+    const n = s.playersOnline;
+    document.getElementById('status').innerHTML =
+      `<span class="dot ${up ? 'on' : ''}"></span>` +
+      (up
+        ? `Server online${n == null ? '' : ` &middot; <b>${n}</b> player${n === 1 ? '' : 's'} in Dereth`}`
+        : 'Server offline');
+  })
+  .catch(() => {
+    document.getElementById('status').innerHTML = '<span class="dot"></span>Status unavailable';
+  });
+</script>
+</body>
+</html>

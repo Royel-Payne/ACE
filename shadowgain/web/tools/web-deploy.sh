@@ -290,14 +290,46 @@ if [ "$SKIP_CADDY" = 1 ]; then
   exit 0
 fi
 
-PUBLIC=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' https://my.shadowgain.com/api/health || echo "000")
+# The public check runs FROM THE DROPLET, not from here.
+#
+# Running it locally conflates two unrelated things. On the first successful deploy this machine
+# could not resolve my.shadowgain.com - not because the site was down, but because the LAN
+# resolver (192.168.20.1) was still holding a negative cache entry from before the A record
+# existed. The site was live and correctly served; the deploy reported failure anyway.
+#
+# The droplet's own resolver is the honest place to ask "is this reachable over HTTPS", because
+# a failure there is genuinely the deploy's problem. `--resolve` pins the address so a slow
+# recursive lookup cannot fail the check either.
+PUBLIC=$($SSH "$HOST" "curl -sS --max-time 15 --resolve my.shadowgain.com:443:127.0.0.1 \
+  -o /dev/null -w '%{http_code}' https://my.shadowgain.com/api/health" 2>/dev/null || echo "000")
+
 echo "    public /api/health -> $PUBLIC"
 
 if [ "$PUBLIC" != "200" ]; then
   echo "!! not reachable over HTTPS yet."
   echo "!! DNS resolves, so this is most likely Caddy still finishing the ACME challenge -"
   echo "!! give it a minute and re-check. The service itself is up and healthy."
+  echo "!!   journalctl -u caddy -n 40"
   exit 1
 fi
 
-echo "==> deployed"
+# Prove the certificate is real and not Caddy's internal fallback, which also answers 200 and
+# would leave every browser showing a warning.
+ISSUER=$($SSH "$HOST" "echo | openssl s_client -connect my.shadowgain.com:443 \
+  -servername my.shadowgain.com 2>/dev/null | openssl x509 -noout -issuer 2>/dev/null" || true)
+
+echo "    certificate -> ${ISSUER:-unknown}"
+
+case "$ISSUER" in
+  *"Let's Encrypt"*|*ZeroSSL*) ;;
+  *) echo "!! that is not a public CA - browsers will warn. Check: journalctl -u caddy -n 40" ;;
+esac
+
+# The apex site shares the Caddyfile. If the splice broke it, that is worth knowing NOW rather
+# than from a player.
+APEX=$($SSH "$HOST" "curl -sS --max-time 10 -o /dev/null -w '%{http_code}' https://shadowgain.com/" || echo "000")
+echo "    shadowgain.com (unchanged?) -> $APEX"
+
+[ "$APEX" = "200" ] || { echo "!! the APEX SITE is not answering - the Caddy splice broke it"; exit 1; }
+
+echo "==> deployed: https://my.shadowgain.com"
