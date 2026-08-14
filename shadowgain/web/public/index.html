@@ -361,10 +361,21 @@ function renderBanner(c){
     <div class="stat"><span class="n sm onl"><span class="dot ${c.online?'on':''}"></span>${c.online?'Online':'Offline'}</span><span class="l">${c.online?'Now':(c.lastLogin?'Last '+timeAgo(c.lastLogin):'Status')}</span></div>
     ${loc?`<div class="stat"><span class="n sm">${c.location.place}</span><span class="l">Last location</span></div>`:''}`;
 }
+// ATTRIBUTES SHOW THE VALUE, NOT THE RANK. Chris, 2026-08-14: "players don't care about the
+// bookkeeping." Strength 220 is the number on the in-game panel and the number `@mystats` prints
+// (`Strength  220 / 290`); 210 is the rank that bought it. Showing the rank here made the site
+// disagree with the game on its headline figure - and 122 already fixed exactly this confusion
+// in game, where two ceilings on one line had players reading the rank cap as the value cap.
+//
+// The rank is not lost, it moves to the readout, which is where `@mystats <name>` puts it too.
+// Skills keep trueRank in the row: rank IS the progression currency for skills, it is what
+// `@myskills` leads with, and showing ranks the client cannot display is the reason this site
+// exists (123).
 function statRow(o,kind){
   const badge = o.group==='specialized' ? '<span class="sb">SPEC</span>' : '';
   const vlcls = kind==='attr' ? 'trained' : o.group;
-  return `<div class="row" data-key="${o.key}" data-kind="${kind}">${icon(o)}<span class="nm">${o.label}${badge}</span><span class="vl ${vlcls}">${o.trueRank??o.base??0}</span></div>`;
+  const shown = kind==='attr' ? (o.base??o.trueRank??0) : (o.trueRank??o.base??0);
+  return `<div class="row" data-key="${o.key}" data-kind="${kind}">${icon(o)}<span class="nm">${o.label}${badge}</span><span class="vl ${vlcls}">${shown}</span></div>`;
 }
 function renderAttributes(c){
   let h = `<div class="grouphdr">Attributes</div>` + (c.attributes||[]).map(a=>statRow(a,'attr')).join('');
@@ -413,9 +424,21 @@ function showReadout(o){
   const pct=total?Math.round(100*into/total):0;
   const buff=(o.buffed!=null&&o.buffed!==o.base)?`<span class="buff">${o.buffed>o.base?'+':''}${o.buffed-o.base}</span>`:'';
   const isSkill=!!o.group;
+
+  // Same split as the rows: an attribute leads with its VALUE, a skill with its true rank.
+  // `@mystats <attribute>` prints the value, then "rank N / 280 earned" underneath, and this
+  // mirrors that - the ceiling is the VALUE ceiling (startingValue + maxRank = 290), because
+  // quoting a value against a rank cap is the exact ambiguity 122 removed from the game text.
+  const headline = isSkill ? (o.trueRank??o.base??0) : (o.base??o.trueRank??0);
+  const badge = isSkill ? '<span class="truebadge">true rank</span>' : '';
+  const ceiling = (!isSkill && o.maxRank!=null && o.startingValue!=null)
+    ? `<span class="hint" style="margin-left:8px">of ${o.startingValue + o.maxRank}</span>` : '';
+  const rankLine = (!isSkill && o.trueRank!=null && o.maxRank!=null)
+    ? `<div class="hint" style="margin-top:6px">rank ${fmt(o.trueRank)} of ${fmt(o.maxRank)} earned &middot; you start at ${o.startingValue}</div>` : '';
+
   const body = total===0
-    ? `<div class="top"><span class="rn">${o.label}${buff}</span><span class="rk">${o.trueRank??o.base??0}</span></div><div class="hint" style="margin-top:6px">No XP progress to show.</div>`
-    : `<div class="top"><span class="rn">${o.label}${buff}<span class="truebadge">true rank</span></span><span class="rk">${o.trueRank??o.base}</span></div>
+    ? `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>${rankLine}<div class="hint" style="margin-top:6px">No XP progress to show.</div>`
+    : `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>${rankLine}
        <div class="bar"><i style="width:${pct}%"></i></div>
        <div class="xp"><span>${fmt(into)} into rank</span><span>${fmt(next)} to next</span></div>`;
   $('#readout').innerHTML = body + (isSkill?creditsLine(o):'');
