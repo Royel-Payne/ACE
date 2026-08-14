@@ -447,8 +447,8 @@ function showReadout(o, kind){
   /* --- vitals: they earn nothing of their own, so no rank, no bar, no credits ------------- */
   if(isVital){
     const gov = o.governedBy
-      ? `It is held at the same fraction of its ceiling as <b>${o.governedBy}</b>, so it rises when that attribute does.`
-      : 'It rises with the attribute that governs it, rather than being raised directly.';
+      ? `Rises with <b>${o.governedBy}</b> &mdash; raise that and this follows.`
+      : 'Rises with the attribute that governs it, rather than being raised directly.';
     $('#readout').innerHTML =
       `<div class="top"><span class="rn">${o.label}</span><span class="rk">${fmt(o.current)}<span class="hint" style="margin-left:6px">of ${fmt(o.max)}</span></span></div>
        <div class="hint" style="margin-top:6px">${gov}</div>`;
@@ -465,21 +465,29 @@ function showReadout(o, kind){
   const ceiling = (!isSkill && o.maxRank!=null && o.startingValue!=null)
     ? `<span class="hint" style="margin-left:8px">of ${fmt(o.startingValue + o.maxRank)}</span>` : '';
   const maxed = !isSkill && o.maxRank!=null && o.trueRank>=o.maxRank;
-  const rankLine = (!isSkill && o.trueRank!=null && o.maxRank!=null)
-    ? `<div class="hint" style="margin-top:6px">rank ${fmt(o.trueRank)} of ${fmt(o.maxRank)} earned</div>` : '';
 
   const head = `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>`;
+
+  // NO RANK LINE. Chris, 2026-08-14: rank is bookkeeping and bookkeeping is only confusing.
+  //
+  // What replaces it is TOTAL EXPERIENCE EARNED, which is the one number a player actually
+  // recognises about a stat - it is what `@mystats` prints as "experience earned" and what
+  // `@myskills` sorts by. It sits on the left of the progress row, opposite the goal, so the
+  // pair reads as "this is what it cost me, that is what the next point costs".
+  const earned = (o.xpSpent||0) > 0 ? `${fmt(o.xpSpent)} experience earned` : '';
+  const goal = `<div class="xp"><span>${earned}</span><span>${fmt(next)} to ${fmt(headline+1)}</span></div>`;
+  const earnedLine = earned ? `<div class="xp" style="margin-top:6px"><span>${earned}</span><span></span></div>` : '';
 
   let body;
 
   if(total>0){
-    body = `${head}${rankLine}
+    body = `${head}
        <div class="bar"><i style="width:${pct}%"></i></div>
-       <div class="xp"><span>${fmt(into)} into rank</span><span>${fmt(next)} to next</span></div>`;
+       ${goal}`;
   } else if(maxed){
-    body = `${head}${rankLine}<div class="hint" style="margin-top:6px">At its ceiling &mdash; this attribute is finished.</div>`;
+    body = `${head}<div class="hint" style="margin-top:6px">At its ceiling &mdash; this attribute is finished.</div>${earnedLine}`;
   } else if(!isSkill){
-    body = `${head}${rankLine}`;
+    body = head + earnedLine;
   } else if(o.group==='untrained' && (o.xpSpent||0)>0){
     // 093: pruning FREEZES a skill, it does not destroy it. Saying so is the difference between
     // a player thinking they set a skill aside and thinking they threw it away.
