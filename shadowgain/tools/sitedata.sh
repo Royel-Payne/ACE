@@ -193,8 +193,14 @@ if [ "$UP" = true ]; then
   # character fail the name comparison and read as offline. The sed strips everything before
   # the first ASCII letter or digit, which handles any marker prefix the dial is ever set to.
   #
-  # The account id is discarded on purpose: this feed is PUBLIC, and account ids have no
-  # business on shadowgain.com.
+  # The account id is discarded on purpose - it is not needed to answer "is this character
+  # online", and an account id is a different class of fact from a character name.
+  #
+  # `awk '!seen[$0]++'` DEDUPES, because a `docker logs --since` window can contain TWO runs.
+  # The window is second-granularity and this timer fires every 30s, so an overlapping manual
+  # run or a slow console reply lands both lists in the same slice - measured, 20 matching
+  # lines for 10 players. Same class of trap as the stale `Exiting at` in DEPLOY.md: `--since`
+  # bounds the read, it does not guarantee the read saw exactly one run.
   NAMES_JSON=$(printf '%s' "$SS" \
     | grep -aE ' : [0-9]+[[:space:]]*$' \
     | sed -E 's/^.*INFO : //' \
@@ -202,6 +208,7 @@ if [ "$UP" = true ]; then
     | sed -E 's/^[^A-Za-z0-9]+//' \
     | sed -E 's/[[:space:]]+$//' \
     | grep -av '^$' \
+    | awk '!seen[$0]++' \
     | python3 -c 'import json,sys; print(json.dumps([l.rstrip("\n") for l in sys.stdin]))' 2>/dev/null || true)
 fi
 

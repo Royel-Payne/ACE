@@ -81,9 +81,12 @@ apt-get install -y python3-venv >/dev/null 2>&1 || true
 [ -d /opt/shadowgain-web/venv ] || python3 -m venv /opt/shadowgain-web/venv
 REMOTE
 
-  # web.env: the two secrets. Generated ON THE DROPLET so neither ever exists on this machine or
-  # in the repo. The DB password is read straight out of docker.env, which is where the shard's
-  # own credentials already live.
+  # web.env: the two secrets, generated ON THE DROPLET so neither ever exists on this machine or
+  # in the repo.
+  #
+  # The MySQL user is NOT created here - it is created after the API ships, because the grants
+  # live in api/setup.sql and that file is not on the box yet. Doing it in this block is what
+  # the first run actually tried, and it failed with "can't read setup.sql".
   echo "==> creating $APP_DIR/web.env (secrets generated on the droplet)"
   $SSH "$HOST" 'bash -s' <<'REMOTE'
 set -euo pipefail
@@ -94,8 +97,7 @@ if [ -f "$ENV" ]; then
   exit 0
 fi
 
-# A fresh random password for the read-only MySQL user, and a session-signing key. Regenerating
-# the session key logs everybody out, which is why this refuses to overwrite an existing file.
+# A fresh random password for the read-only MySQL user, and a session-signing key.
 DBPW=$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
 SECRET=$(head -c 48 /dev/urandom | base64 | tr -d '/+=' | head -c 64)
 
@@ -110,18 +112,12 @@ SG_WEB_DB_SHARD=ace_shard
 SG_WEB_DB_AUTH=ace_auth
 SG_WEB_SECRET_KEY=$SECRET
 SG_WEB_STATUS_URL=https://shadowgain.com/data/status.json
+SG_WEB_ONLINE_NAMES=/opt/ACE/online-names.json
 EOF
 
 chown root:sgweb "$ENV"
 chmod 640 "$ENV"
 echo "    web.env written (mode 640, root:sgweb)"
-
-# Create the read-only MySQL user with that password. setup.sql carries a REPLACE_ME placeholder
-# precisely so the real password never sits in a committed file.
-cd /opt/ACE
-RP=$(grep '^MYSQL_ROOT_PASSWORD=' docker.env | cut -d= -f2)
-sed "s/REPLACE_ME/$DBPW/" /opt/shadowgain-web/setup.sql | docker exec -i ace-db mysql -uroot -p"$RP" 2>/dev/null
-echo "    sgweb MySQL user created (SELECT only)"
 REMOTE
 fi
 
@@ -159,6 +155,49 @@ tar --exclude='__pycache__' --exclude='*.pyc' -czf - -C "$WEB" api \
 
 $SSH "$HOST" "cp $APP_DIR/api/setup.sql $APP_DIR/setup.sql && chown -R sgweb:sgweb $APP_DIR/api $APP_DIR/setup.sql"
 
+if [ "$SETUP" = 1 ]; then
+  # NOW the grants can go in - setup.sql arrived with the API above.
+  #
+  # Idempotent on purpose: the password is read back out of web.env rather than regenerated, and
+  # ALTER USER re-syncs it. So a --setup that failed halfway (as the first one did) can simply be
+  # re-run, and it converges instead of leaving a user whose password nobody knows.
+  echo "==> creating the read-only MySQL user"
+  $SSH "$HOST" 'bash -s' <<'REMOTE'
+set -euo pipefail
+DBPW=$(grep '^SG_WEB_DB_PASSWORD=' /opt/shadowgain-web/web.env | cut -d= -f2-)
+
+[ -n "$DBPW" ] || { echo "!! no SG_WEB_DB_PASSWORD in web.env"; exit 1; }
+
+cd /opt/ACE
+RP=$(grep '^MYSQL_ROOT_PASSWORD=' docker.env | cut -d= -f2)
+
+# setup.sql carries a REPLACE_ME placeholder precisely so the real password never sits in a
+# committed file. ALTER after CREATE IF NOT EXISTS so a re-run fixes a drifted password.
+{
+  sed "s/REPLACE_ME/$DBPW/" /opt/shadowgain-web/setup.sql
+  echo "ALTER USER 'sgweb'@'%' IDENTIFIED BY '$DBPW';"
+  echo "FLUSH PRIVILEGES;"
+} | docker exec -i ace-db mysql -uroot -p"$RP" 2>&1 | grep -v "Using a password" || true
+
+# Prove the grants actually work, as the sgweb user, before anything depends on them. A missing
+# grant does not fail at deploy time - it fails on the first request that needs that table.
+docker exec ace-db mysql -usgweb -p"$DBPW" -N -B -e \
+  "SELECT 'shard', COUNT(*) FROM ace_shard.\`character\`;
+   SELECT 'auth',  COUNT(*) FROM ace_auth.account;
+   SELECT 'int64', COUNT(*) FROM ace_shard.biota_properties_int64;
+   SELECT 'dials', COUNT(*) FROM ace_shard.config_properties_boolean;" 2>&1 | grep -v "Using a password"
+
+# And prove it CANNOT write. This is the rule the whole service rests on, so it is tested rather
+# than assumed - an accidentally over-broad grant would otherwise go unnoticed indefinitely.
+if docker exec ace-db mysql -usgweb -p"$DBPW" -e \
+     "UPDATE ace_shard.\`character\` SET name=name WHERE id=0;" >/dev/null 2>&1; then
+  echo "!! sgweb CAN WRITE to the shard - the grant is wrong. Aborting."
+  exit 1
+fi
+echo "    verified: sgweb can read, and cannot write"
+REMOTE
+fi
+
 echo "==> installing dependencies"
 $SSH "$HOST" "$APP_DIR/venv/bin/pip install --quiet --upgrade pip && \
               $APP_DIR/venv/bin/pip install --quiet -r $APP_DIR/api/requirements.txt"
@@ -169,6 +208,32 @@ $SSH "$HOST" "$APP_DIR/venv/bin/pip install --quiet --upgrade pip && \
 echo "==> installing systemd unit"
 $SSH "$HOST" "cat > /etc/systemd/system/shadowgain-web.service" < "$WEB/deploy/shadowgain-web.service"
 
+# DNS MUST EXIST BEFORE THE CADDY BLOCK GOES IN.
+#
+# Caddy provisions the certificate on first request via an ACME HTTP challenge, and that
+# challenge is a request to my.shadowgain.com - which cannot arrive if the name does not
+# resolve. Loading the block anyway does not break the apex site, but it does start a retry
+# loop that fills the journal with failures and can trip Let's Encrypt rate limits on the
+# domain. So the block is SKIPPED, loudly, rather than loaded hopefully.
+#
+# This is not hypothetical: on the first deploy the GoDaddy PAT in credentials.env was expired
+# (401 on both auth schemes) and the A record could not be created.
+if ! $SSH "$HOST" "getent hosts my.shadowgain.com >/dev/null 2>&1"; then
+  echo "!! my.shadowgain.com does not resolve - SKIPPING the Caddy block."
+  echo "!!"
+  echo "!! Create the A record first:"
+  echo "!!   curl -X PUT https://api.godaddy.com/v1/domains/shadowgain.com/records/A/my \\"
+  echo "!!     -H \"Authorization: Bearer \$GODADDY_KEY\" -H 'Content-Type: application/json' \\"
+  echo "!!     -d '[{\"data\":\"137.184.1.44\",\"ttl\":600}]'"
+  echo "!!"
+  echo "!! then re-run this script. The API itself is deployed and will be verified below on"
+  echo "!! 127.0.0.1:8081 - it is simply not reachable from outside yet."
+  SKIP_CADDY=1
+else
+  SKIP_CADDY=0
+fi
+
+if [ "$SKIP_CADDY" = 0 ]; then
 echo "==> updating Caddy site block"
 # Replace only the managed block. The apex shadowgain.com config lives in the same file and must
 # survive untouched - hence markers and an awk splice rather than a whole-file overwrite.
@@ -201,6 +266,7 @@ mv /tmp/caddyfile.new "$CF"
 systemctl reload caddy
 echo "    Caddy reloaded"
 REMOTE
+fi
 
 echo "==> restarting the API"
 $SSH "$HOST" "systemctl daemon-reload && systemctl enable --now shadowgain-web && sleep 3 && systemctl is-active shadowgain-web"
@@ -218,13 +284,19 @@ case "$HEALTH" in
   *) echo "!! the API is not answering healthily - check: journalctl -u shadowgain-web -n 50"; exit 1 ;;
 esac
 
+if [ "$SKIP_CADDY" = 1 ]; then
+  echo "==> API deployed and healthy on 127.0.0.1:8081."
+  echo "==> NOT yet public: create the DNS A record above, then re-run."
+  exit 0
+fi
+
 PUBLIC=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' https://my.shadowgain.com/api/health || echo "000")
 echo "    public /api/health -> $PUBLIC"
 
 if [ "$PUBLIC" != "200" ]; then
   echo "!! not reachable over HTTPS yet."
-  echo "!! If this is the first deploy, the DNS A record may not have propagated - Caddy cannot"
-  echo "!! get a certificate until it has. Re-run in a few minutes; the service itself is up."
+  echo "!! DNS resolves, so this is most likely Caddy still finishing the ACME challenge -"
+  echo "!! give it a minute and re-check. The service itself is up and healthy."
   exit 1
 fi
 
