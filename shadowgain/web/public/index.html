@@ -342,8 +342,11 @@ function mountSheet(){
   $('#charArea').addEventListener('click', e=>{
     const row=e.target.closest('.row[data-key]');
     if(row){ $('#charArea').querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); row.classList.add('sel');
-      const arr = row.dataset.kind==='attr'?CHAR.attributes:CHAR.skills;
-      const o = arr.find(x=>x.key===row.dataset.key); if(o) showReadout(o); }
+      // Vitals are selectable now. They used to fall through to CHAR.skills, match nothing, and
+      // silently do nothing - a row that highlights on click and then shows you no reason why.
+      const k = row.dataset.kind;
+      const arr = k==='attr' ? CHAR.attributes : k==='vital' ? CHAR.vitals : CHAR.skills;
+      const o = (arr||[]).find(x=>x.key===row.dataset.key); if(o) showReadout(o, k); }
     const spc=e.target.closest('.spk[data-cont]'); if(spc){ curCont=+spc.dataset.cont; renderInventory(CHAR); }
   });
   $('#viewBtn').onclick=()=>{ showAvatar=!showAvatar; $('#viewBtn').classList.toggle('active',!showAvatar); renderInventory(CHAR); };
@@ -380,7 +383,7 @@ function statRow(o,kind){
 function renderAttributes(c){
   let h = `<div class="grouphdr">Attributes</div>` + (c.attributes||[]).map(a=>statRow(a,'attr')).join('');
   if(c.vitals&&c.vitals.length){ h += `<div class="grouphdr">Vitals</div>` + c.vitals.map(v=>
-    `<div class="row" data-key="${v.key}" data-kind="vital" style="cursor:default">${icon(v)}<span class="nm">${v.label}</span><span class="vl trained">${v.current}/${v.max}</span></div>`).join(''); }
+    `<div class="row" data-key="${v.key}" data-kind="vital">${icon(v)}<span class="nm">${v.label}</span><span class="vl trained">${v.current}/${v.max}</span></div>`).join(''); }
   $('#pane-attributes').innerHTML = h;
 }
 function renderSkills(c){
@@ -408,7 +411,7 @@ function renderQuests(c){
 }
 function defaultReadout(){
   const av=(CHAR.skillCredits&&CHAR.skillCredits.available)??0;
-  $('#readout').innerHTML = `<div class="hint">Click an attribute or skill to see its true rank and XP progress.</div>
+  $('#readout').innerHTML = `<div class="hint">Click any row to see what it is worth and how far it has to go.</div>
     <div class="credits"><span class="m">&nbsp;</span><span class="m">Skill Credits Available: <b>${av}</b></span></div>`;
 }
 function creditsLine(o){
@@ -416,31 +419,77 @@ function creditsLine(o){
   let left;
   if(o.group==='specialized') left='<span>Specialized &#10003;</span>';
   else if(o.canSpecialize===false||o.group==='unusable') left='<span class="m">Cannot be specialized</span>';
+  // SpecializeSkill refuses anything that is not already Trained, so quoting a credit price on an
+  // untrained skill offers a purchase the server will decline. Training is free, so the honest
+  // line is what has to happen first - not a number.
+  else if(o.group==='untrained') left='<span class="m">Train it first &mdash; training is free</span>';
   else left=`<span>Specialize: <b>${o.specCost??'—'}</b> credits</span>`;
   return `<div class="credits">${left}<span class="m">Skill Credits Available: <b>${av}</b></span></div>`;
 }
-function showReadout(o){
+/* THE READOUT SAYS A DIFFERENT TRUE THING FOR EACH KIND OF ROW.
+ *
+ * There used to be one message - "No XP progress to show." - covering five unrelated states, and
+ * it was wrong or useless in every one of them. A maxed attribute is FINISHED; a pruned skill is
+ * holding its experience and can be re-trained free; an unusable skill can never be trained at
+ * all; a vital earns nothing of its own by design. Those are four different facts and a player
+ * needs to be told which applies, or the blank readout reads as a bug.
+ *
+ * Wording follows the in-game text (@mystats / @myskills) deliberately: a player who reads both
+ * should not have to work out that they are being told the same thing twice in different words.
+ */
+function showReadout(o, kind){
   const into=o.xpIntoRank||0, next=o.xpToNextRank||0, total=into+next;
   const pct=total?Math.round(100*into/total):0;
   const buff=(o.buffed!=null&&o.buffed!==o.base)?`<span class="buff">${o.buffed>o.base?'+':''}${o.buffed-o.base}</span>`:'';
-  const isSkill=!!o.group;
+  const isSkill = kind==='skill';
+  const isVital = kind==='vital';
 
-  // Same split as the rows: an attribute leads with its VALUE, a skill with its true rank.
-  // `@mystats <attribute>` prints the value, then "rank N / 280 earned" underneath, and this
-  // mirrors that - the ceiling is the VALUE ceiling (startingValue + maxRank = 290), because
-  // quoting a value against a rank cap is the exact ambiguity 122 removed from the game text.
+  /* --- vitals: they earn nothing of their own, so no rank, no bar, no credits ------------- */
+  if(isVital){
+    const gov = o.governedBy
+      ? `It is held at the same fraction of its ceiling as <b>${o.governedBy}</b>, so it rises when that attribute does.`
+      : 'It rises with the attribute that governs it, rather than being raised directly.';
+    $('#readout').innerHTML =
+      `<div class="top"><span class="rn">${o.label}</span><span class="rk">${fmt(o.current)}<span class="hint" style="margin-left:6px">of ${fmt(o.max)}</span></span></div>
+       <div class="hint" style="margin-top:6px">${gov}</div>`;
+    return;
+  }
+
+  /* --- headline: an attribute leads with its VALUE, a skill with its true rank ------------ */
   const headline = isSkill ? (o.trueRank??o.base??0) : (o.base??o.trueRank??0);
-  const badge = isSkill ? '<span class="truebadge">true rank</span>' : '';
+  // The badge earns its place only when there is a rank to be true ABOUT. On a skill sitting at
+  // 0 it labelled a zero as a hard-won number.
+  const badge = (isSkill && (o.trueRank||0)>0) ? '<span class="truebadge">true rank</span>' : '';
+  // The ceiling quoted beside an attribute is the VALUE ceiling (start + max ranks), never the
+  // rank cap - putting a value next to a rank cap is the exact ambiguity 122 removed in game.
   const ceiling = (!isSkill && o.maxRank!=null && o.startingValue!=null)
-    ? `<span class="hint" style="margin-left:8px">of ${o.startingValue + o.maxRank}</span>` : '';
+    ? `<span class="hint" style="margin-left:8px">of ${fmt(o.startingValue + o.maxRank)}</span>` : '';
+  const maxed = !isSkill && o.maxRank!=null && o.trueRank>=o.maxRank;
   const rankLine = (!isSkill && o.trueRank!=null && o.maxRank!=null)
-    ? `<div class="hint" style="margin-top:6px">rank ${fmt(o.trueRank)} of ${fmt(o.maxRank)} earned &middot; you start at ${o.startingValue}</div>` : '';
+    ? `<div class="hint" style="margin-top:6px">rank ${fmt(o.trueRank)} of ${fmt(o.maxRank)} earned</div>` : '';
 
-  const body = total===0
-    ? `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>${rankLine}<div class="hint" style="margin-top:6px">No XP progress to show.</div>`
-    : `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>${rankLine}
+  const head = `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>`;
+
+  let body;
+
+  if(total>0){
+    body = `${head}${rankLine}
        <div class="bar"><i style="width:${pct}%"></i></div>
        <div class="xp"><span>${fmt(into)} into rank</span><span>${fmt(next)} to next</span></div>`;
+  } else if(maxed){
+    body = `${head}${rankLine}<div class="hint" style="margin-top:6px">At its ceiling &mdash; this attribute is finished.</div>`;
+  } else if(!isSkill){
+    body = `${head}${rankLine}`;
+  } else if(o.group==='untrained' && (o.xpSpent||0)>0){
+    // 093: pruning FREEZES a skill, it does not destroy it. Saying so is the difference between
+    // a player thinking they set a skill aside and thinking they threw it away.
+    body = `${head}<div class="hint" style="margin-top:6px">Set aside. <b>${fmt(o.xpSpent)}</b> experience is held for it &mdash; re-train it, free, and it returns exactly as it was.</div>`;
+  } else if(o.group==='unusable'){
+    body = `${head}<div class="hint" style="margin-top:6px">Cannot be used until it is trained, and it has earned no experience.</div>`;
+  } else {
+    body = `${head}<div class="hint" style="margin-top:6px">Not trained, and has earned no experience.</div>`;
+  }
+
   $('#readout').innerHTML = body + (isSkill?creditsLine(o):'');
 }
 

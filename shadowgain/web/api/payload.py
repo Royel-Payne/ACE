@@ -281,11 +281,26 @@ def build_vitals(raw: dict) -> list[dict]:
 
         key, label, formula_key = VITAL_KEYS[vital_id]
 
+        formula = formulas.get(formula_key, {})
+
         base = (
             (row["init_Level"] or 0)
             + (row["level_From_C_P"] or 0)
-            + curves.apply_formula(formulas.get(formula_key, {}), bases)
+            + curves.apply_formula(formula, bases)
         )
+
+        # WHICH ATTRIBUTE THIS VITAL FOLLOWS, named rather than assumed.
+        #
+        # 004 holds vitals at the same fraction of their ceiling as the governing attribute, and
+        # the in-game text says so explicitly - *"each is held at the same fraction of its ceiling
+        # as the attribute that governs it, so it rises when that attribute does"*. A player who
+        # does not know WHICH attribute reads that as "my Health is stuck". The pairing lives in
+        # the dat (health follows Endurance, mana follows Self), so it is read from there rather
+        # than hard-coded here, and it survives a dat that ever disagreed with the assumption.
+        governed_by = formula.get("attr1")
+
+        if governed_by in (None, "Undef"):
+            governed_by = None
 
         current = row["current_Level"] or 0
 
@@ -311,6 +326,7 @@ def build_vitals(raw: dict) -> list[dict]:
                 "base": base,
                 "ranks": row["level_From_C_P"] or 0,
                 "xpSpent": row["c_P_Spent"] or 0,
+                "governedBy": governed_by,
                 "icon": f"/assets/icons/vital/{key}.png",
             }
         )
