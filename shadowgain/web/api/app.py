@@ -258,15 +258,33 @@ async def _config_error(_: Request, exc: db.ConfigError):
 
 
 class LoginBody(BaseModel):
-    accountName: str
+    """The login form's body.
+
+    ACCEPTS BOTH `account` AND `accountName`. Contract 1 never named this field — it specified the
+    character payload and left the login body to whoever wrote it — so the front-end sent
+    `account` and this required `accountName`. Pydantic rejected the body with a 422, and the
+    front-end's error handler rendered that as "Incorrect account or password", which is the worst
+    possible symptom: a player with the right password is told it is wrong.
+
+    Taking either is the right resolution for a name that was never agreed. Rewriting one side to
+    match the other would work today and break again the next time Cowork regenerates the page
+    from the contract, which still does not mention it.
+    """
+
+    account: str | None = None
+    accountName: str | None = None
     password: str
     remember: bool = False
+
+    @property
+    def name(self) -> str:
+        return (self.accountName or self.account or "").strip()
 
 
 @app.post("/api/login")
 def login(body: LoginBody, request: Request, response: Response):
     """Verify GAME credentials and start a session. Verifies only — never migrates, never writes."""
-    account = auth.verify_credentials(body.accountName, body.password, client_ip(request))
+    account = auth.verify_credentials(body.name, body.password, client_ip(request))
 
     token, max_age = auth.issue_session(account, body.remember)
 
@@ -379,7 +397,9 @@ def character(character_id: int, sg_session: str | None = Cookie(default=None)):
 
     data = dict(data)
     data["online"] = data["name"] in online_names()
-    data["asOf"] = time.time() - age
+    # ISO, like every other timestamp in the payload - `new Date()` reads a bare number as
+    # milliseconds. See payload.iso().
+    data["asOf"] = payload.iso(time.time() - age)
     data["cacheSeconds"] = cache.private_characters.ttl
 
     return data
@@ -417,7 +437,7 @@ def public_character(name: str):
 
     data = dict(data)
     data["online"] = data["name"] in online_names()
-    data["asOf"] = time.time() - age
+    data["asOf"] = payload.iso(time.time() - age)
 
     return data
 

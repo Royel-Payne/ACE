@@ -1,15 +1,4 @@
 <!DOCTYPE html>
-<!--
-  PLACEHOLDER. Shadowgain 124.
-
-  The subdomain went live before the front-end did, and a bare Caddy 404 at the root is a poor
-  thing for anyone who wanders in. This is a holding page and nothing more - it will be
-  overwritten the moment Cowork's index.html ships, which is the intended outcome. Do not build
-  on it.
-
-  Palette and type are lifted from landing/character-sheet-mockup.html so the eventual swap is
-  not a visual jolt.
--->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -20,8 +9,10 @@
 <link rel="icon" href="/assets/icons/skill/6.png">
 <style>
   :root{
-    --bg:#090c12; --bg2:#0f151f; --panel:#121b27; --line:rgba(120,180,190,.14);
-    --ink:#c9d3df; --muted:#7f8b9c; --arcane:#4fd6c6; --gold:#d8ac52; --green:#57d98a;
+    --bg:#090c12; --bg2:#0f151f; --panel:#121b27; --panel2:#0e1620; --line:rgba(120,180,190,.14);
+    --ink:#c9d3df; --muted:#7f8b9c;
+    --arcane:#4fd6c6; --arcane-dim:#1d6d66; --gold:#d8ac52; --violet:#8f7bd6;
+    --green:#57d98a; --red:#e0645f;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -33,56 +24,456 @@
     color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.6; min-height:100vh; letter-spacing:.2px;
-    display:grid; place-items:center; padding:32px 22px;
   }
-  .card{
-    max-width:560px; width:100%; text-align:center;
-    background:linear-gradient(180deg,var(--panel),rgba(15,21,31,.45));
-    border:1px solid var(--line); border-radius:14px; padding:38px 30px;
-  }
-  h1{
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-    font-weight:600; margin:0 0 6px; font-size:clamp(26px,5vw,34px); color:#eaf3f2;
-  }
-  .kicker{color:var(--gold);text-transform:uppercase;letter-spacing:3px;font-size:11px;margin:0 0 10px}
-  p{color:#9aa6b6;font-size:15px;margin:0 0 8px}
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;vertical-align:middle;margin-right:7px}
-  .dot.on{background:var(--green);box-shadow:0 0 11px rgba(87,217,138,.7)}
-  .status{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:#cdd7e2}
-  .status b{color:var(--arcane);font-variant-numeric:tabular-nums}
   a{color:var(--arcane);text-decoration:none} a:hover{color:#8be7db}
-  .foot{margin-top:20px;color:var(--muted);font-size:12.5px}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 22px}
+  h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:600;margin:0}
+  .hidden{display:none !important}
+
+  .topnav{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--line)}
+  .brand{color:#e7eef0;font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:19px;letter-spacing:.5px}
+  .brand b{color:var(--arcane)}
+  .navlinks{display:flex;gap:20px;align-items:center;font-size:14.5px}
+  .navlinks a.active{color:var(--gold)}
+  .acct .btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:#dbe4ea;font-size:13.5px;cursor:pointer}
+  .acct .btn:hover{border-color:var(--arcane-dim)}
+
+  /* login */
+  .login{max-width:420px;margin:8vh auto 0;background:linear-gradient(180deg,var(--panel),rgba(15,21,31,.5));
+    border:1px solid var(--line);border-radius:14px;padding:30px 28px}
+  .login .kicker{color:var(--gold);text-transform:uppercase;letter-spacing:3px;font-size:11px;margin:0 0 6px;text-align:center}
+  .login h1{font-size:28px;color:#eaf3f2;text-align:center;margin-bottom:4px}
+  .login .sub{color:#9aa6b6;font-size:14px;text-align:center;margin:0 0 20px}
+  .field{margin:0 0 13px}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:5px}
+  .field input[type=text],.field input[type=password]{width:100%;background:#0a0f16;border:1px solid var(--line);
+    border-radius:8px;padding:10px 12px;color:#eaf3f2;font-size:15px}
+  .field input:focus{outline:none;border-color:var(--arcane-dim)}
+  .remember{display:flex;align-items:center;gap:8px;color:#9aa6b6;font-size:13.5px;margin:2px 0 18px}
+  .primary{width:100%;background:linear-gradient(180deg,var(--arcane),var(--arcane-dim));color:#06120f;
+    border:none;border-radius:9px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+  .primary:hover{filter:brightness(1.08)} .primary:disabled{opacity:.6;cursor:default}
+  .loginmsg{color:var(--red);font-size:13.5px;text-align:center;min-height:18px;margin-top:12px}
+  .login .foot{text-align:center;margin-top:18px;color:var(--muted);font-size:12.5px}
+  .login .status{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-size:13px;color:#cdd7e2}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;vertical-align:middle;margin-right:6px}
+  .dot.on{background:var(--green);box-shadow:0 0 11px rgba(87,217,138,.7)}
+
+  .pagehead{padding:24px 0 6px}
+  .kicker{color:var(--gold);text-transform:uppercase;letter-spacing:3px;font-size:11px;margin:0 0 6px}
+  .pagehead h1{font-size:clamp(26px,5vw,38px);color:#eaf3f2}
+  .pagehead .sub{color:#8f9bab;font-size:15px;margin-top:4px}
+
+  .pickrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0 4px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;
+    display:flex;gap:9px;align-items:center;font-size:14px;color:#cdd7e2}
+  .chip:hover{border-color:var(--arcane-dim)}
+  .chip.sel{border-color:var(--arcane);background:linear-gradient(180deg,rgba(79,214,198,.09),rgba(15,21,31,.4))}
+  .chip .lv{color:var(--arcane);font-variant-numeric:tabular-nums;font-size:12.5px}
+  .chip .d{color:var(--gold)} .chip .odot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .chip .odot.on{background:var(--green);box-shadow:0 0 8px rgba(87,217,138,.7)}
+
+  .banner{margin-top:12px;background:linear-gradient(180deg,var(--panel),rgba(15,21,31,.45));
+    border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center}
+  .banner .idblock{min-width:240px;flex:1}
+  .banner .cname{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:30px;color:#fff;line-height:1.15}
+  .banner .cname .d{color:var(--gold);text-shadow:0 0 12px rgba(216,172,82,.6)}
+  .banner .meta{color:#9aa6b6;font-size:14px;margin-top:4px}
+  .banner .meta .pk{color:var(--red)}
+  .banner .stat{display:flex;flex-direction:column;min-width:92px}
+  .banner .stat .n{font-size:22px;font-weight:600;color:var(--arcane);font-variant-numeric:tabular-nums}
+  .banner .stat .n.sm{font-size:15px;color:#dbe4ea;font-weight:500}
+  .banner .stat .l{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin-top:2px}
+  .onl{display:inline-flex;align-items:center;gap:7px}
+
+  .sheet{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 40px;align-items:start}
+  @media(max-width:820px){.sheet{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;overflow:hidden}
+
+  .tabs{display:flex;border-bottom:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:12px 6px;cursor:pointer;color:var(--muted);font-size:12.5px;
+    text-transform:uppercase;letter-spacing:1.2px;border-bottom:2px solid transparent}
+  .tab:hover{color:#cdd7e2}
+  .tab.sel{color:var(--gold);border-bottom-color:var(--gold);background:rgba(216,172,82,.05)}
+  .tabpane{padding:14px 16px;display:none} .tabpane.sel{display:block}
+
+  .grouphdr{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:1.6px;
+    margin:14px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .grouphdr:first-child{margin-top:2px} .grouphdr .ct{color:var(--muted)}
+  .row{display:flex;align-items:center;gap:11px;padding:7px 8px;border-radius:8px;cursor:pointer}
+  .row:hover{background:rgba(79,214,198,.05)}
+  .row.sel{background:rgba(79,214,198,.09);outline:1px solid var(--arcane-dim)}
+  .ico{width:26px;height:26px;border-radius:6px;flex:none;display:grid;place-items:center;
+    font-size:12px;font-weight:700;color:#0c1016;border:1px solid rgba(255,255,255,.15);object-fit:cover;background:#1a2230}
+  img.ico{background:#0b1119}
+  .row .nm{flex:1;color:#dbe4ea;font-size:14.5px}
+  .row .vl{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px}
+  .vl.trained{color:var(--green)} .vl.specialized{color:var(--gold)} .vl.untrained{color:var(--violet)} .vl.unusable{color:var(--muted)}
+  .row .sb{font-size:11px;color:var(--gold);border:1px solid rgba(216,172,82,.4);border-radius:5px;padding:1px 5px;margin-left:2px}
+  .emptygrp{color:var(--muted);font-style:italic;font-size:13px;padding:4px 8px 8px}
+
+  .readout{border-top:1px solid var(--line);background:rgba(9,12,18,.5);padding:13px 16px}
+  .readout .top{display:flex;justify-content:space-between;align-items:baseline}
+  .readout .rn{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:17px;color:#eaf3f2}
+  .readout .rn .buff{font-size:13px;color:var(--red);margin-left:6px}
+  .readout .rk{color:var(--arcane);font-variant-numeric:tabular-nums;font-weight:600}
+  .bar{height:9px;border-radius:6px;background:#0a0f16;border:1px solid var(--line);margin:9px 0 6px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--arcane-dim),var(--arcane));border-radius:6px}
+  .readout .xp{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+  .readout .hint{color:var(--muted);font-style:italic;font-size:12.5px}
+  .truebadge{color:var(--gold);font-size:11px;border:1px solid rgba(216,172,82,.35);border-radius:5px;padding:1px 6px;margin-left:8px}
+  .credits{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:10px;
+    padding-top:9px;border-top:1px solid var(--line);font-size:13px;color:#cdd7e2}
+  .credits b{color:var(--gold);font-variant-numeric:tabular-nums;font-size:15px} .credits .m{color:var(--muted)}
+
+  /* inventory */
+  .invhdr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .invhdr .t{color:#eaf3f2;font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:16px;margin-right:auto}
+  .invhdr .burden{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .invhdr .burden b{color:var(--green);font-variant-numeric:tabular-nums}
+  .bbar{width:46px;height:8px;border:1px solid var(--line);border-radius:4px;background:#0a0f16;overflow:hidden}
+  .bbar i{display:block;height:100%;background:linear-gradient(90deg,var(--arcane-dim),var(--green))}
+  .viewbtn{font-size:11px;color:#cdd7e2;border:1px solid var(--line);border-radius:6px;padding:3px 11px;cursor:pointer;background:var(--panel)}
+  .viewbtn:hover{border-color:var(--arcane-dim);color:#fff} .viewbtn.active{color:var(--gold);border-color:rgba(216,172,82,.45)}
+  .equip{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:16px 14px 6px;align-items:start}
+  .eqcol{display:flex;flex-direction:column;gap:7px}
+  .eqcol .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .doll{position:relative;height:288px;border-radius:12px;border:1px solid var(--line);
+    background:radial-gradient(130px 220px at 50% 30%, rgba(143,123,214,.14), transparent 70%), #0b111a}
+  .doll .figure{position:absolute;left:50%;top:32px;transform:translateX(-50%);width:96px;height:212px;opacity:.92}
+  .doll.noavatar .figure{display:none}
+  .aslot{position:absolute;width:38px;height:38px;border-radius:8px;background:rgba(9,13,20,.72);
+    border:1px solid var(--line);display:grid;place-items:center}
+  .aslot.fill{border-color:rgba(79,214,198,.45);box-shadow:0 0 0 1px rgba(79,214,198,.14)}
+  .aslot.empty{border-style:dashed;opacity:.5}
+  .islot{width:40px;height:40px;border-radius:8px;background:#0b1119;border:1px solid var(--line);
+    display:grid;place-items:center;position:relative}
+  .islot.empty{border-style:dashed;opacity:.4}
+  .stack{position:absolute;right:2px;bottom:1px;font-size:9.5px;color:#e7eef0;background:rgba(0,0,0,.6);
+    border-radius:3px;padding:0 2px;font-variant-numeric:tabular-nums}
+  .psub{color:#cdd7e2;font-size:13px;padding:4px 16px 0;letter-spacing:.3px}
+  .otherbar{display:flex;gap:7px;flex-wrap:wrap;padding:4px 16px 2px;align-items:center}
+  .otherbar .lbl{width:100%;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
+  .sidepacks{display:flex;gap:7px;flex-wrap:wrap;padding:8px 16px 4px;align-items:center;border-top:1px solid var(--line)}
+  .sidepacks .lbl{width:100%;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
+  .spk{width:38px;height:38px;border-radius:8px;background:#0b1119;border:1px solid var(--line);display:grid;place-items:center;position:relative;cursor:pointer}
+  .spk:hover{border-color:var(--arcane-dim)} .spk.sel{border-color:var(--arcane);box-shadow:0 0 0 1px rgba(79,214,198,.2)}
+  .spk .tag{position:absolute;left:2px;top:1px;font-size:8px;color:var(--gold)}
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;padding:6px 16px 18px;max-height:300px;overflow-y:auto}
+  .grid::-webkit-scrollbar{width:9px} .grid::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
+  .cell{aspect-ratio:1;border-radius:8px;background:#0b1119;border:1px solid var(--line);position:relative;display:grid;place-items:center}
+  .cell.empty{background:#0a0f16;border-style:dashed;opacity:.45}
+
+  .questrow{display:flex;justify-content:space-between;gap:10px;padding:8px;border-radius:8px}
+  .questrow:hover{background:rgba(79,214,198,.04)}
+  .questrow .qn{color:#dbe4ea;font-size:14px} .questrow .qm{color:var(--muted);font-size:12px;margin-top:2px}
+  .questrow .qc{color:var(--arcane);font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}
+  .questrow .qc .rdy{color:var(--green)} .questrow .qc .cd{color:var(--gold)}
+
+  .legend{color:var(--muted);font-size:12px;margin:6px 0 0;text-align:center}
+  footer{border-top:1px solid var(--line);margin-top:6px;padding:22px 0 44px;text-align:center;color:var(--muted);font-size:13px}
+  .loading{color:var(--muted);text-align:center;padding:60px 0;font-style:italic}
 </style>
 </head>
 <body>
-  <div class="card">
-    <p class="kicker">Character Portal</p>
-    <h1>Shadowgain</h1>
-    <p>The character sheet is being built. Soon you will be able to sign in with your game
-       account and see your <em>true</em> ranks &mdash; the numbers the client cannot display.</p>
+<div class="wrap">
 
-    <div class="status" id="status"><span class="dot"></span>checking the server&hellip;</div>
-
-    <p class="foot"><a href="https://shadowgain.com/">shadowgain.com</a></p>
+  <!-- ============ LOGIN VIEW ============ -->
+  <div id="loginView">
+    <div class="login">
+      <p class="kicker">Character Portal</p>
+      <h1>&#x25C8; Shadowgain</h1>
+      <p class="sub">Sign in with your game account to see your true ranks.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="field"><label for="acct">Account</label><input id="acct" type="text" autocomplete="username" required></div>
+        <div class="field"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" required></div>
+        <label class="remember"><input type="checkbox" id="remember"> Keep me signed in</label>
+        <button class="primary" id="loginBtn" type="submit">Sign in</button>
+        <div class="loginmsg" id="loginMsg"></div>
+      </form>
+      <div class="status" id="loginStatus"><span class="dot"></span>checking the server&hellip;</div>
+      <p class="foot"><a href="https://shadowgain.com/">shadowgain.com</a> &middot; <a href="https://shadowgain.com/honourroll.html">Honour Roll</a></p>
+    </div>
   </div>
 
+  <!-- ============ PORTAL VIEW ============ -->
+  <div id="portalView" class="hidden">
+    <nav class="topnav">
+      <a class="brand" href="https://shadowgain.com/">&#x25C8; <b>Shadowgain</b></a>
+      <div class="navlinks">
+        <a href="https://shadowgain.com/">Home</a>
+        <a href="https://shadowgain.com/honourroll.html">Honour Roll</a>
+        <a href="/" class="active">Characters</a>
+        <div class="acct"><button class="btn" id="logoutBtn" title="Sign out"><span id="acctName">Account</span> &nbsp;&#9099;</button></div>
+      </div>
+    </nav>
+
+    <header class="pagehead">
+      <p class="kicker">Character Portal</p>
+      <h1>Characters</h1>
+      <p class="sub">Your Dereth adventurers &mdash; live.</p>
+    </header>
+
+    <div class="pickrow" id="pickrow"></div>
+    <div id="charArea"><div class="loading">Loading&hellip;</div></div>
+
+    <p class="legend">Ranks shown are the <b>true</b> server values.</p>
+    <footer>Shadowgain &mdash; character portal &middot; Throne of Destiny</footer>
+  </div>
+
+</div>
+
+<template id="sheetTpl">
+  <div class="banner" id="banner"></div>
+  <div class="sheet">
+    <div class="card">
+      <div class="tabs">
+        <div class="tab sel" data-tab="attributes">Attributes</div>
+        <div class="tab" data-tab="skills">Skills</div>
+        <div class="tab" data-tab="titles">Titles</div>
+        <div class="tab" data-tab="quests">Quests</div>
+      </div>
+      <div class="tabpane sel" id="pane-attributes"></div>
+      <div class="tabpane" id="pane-skills"></div>
+      <div class="tabpane" id="pane-titles"></div>
+      <div class="tabpane" id="pane-quests"></div>
+      <div class="readout" id="readout"></div>
+    </div>
+    <div class="card">
+      <div class="invhdr"><span class="t" id="invName">Inventory</span>
+        <span class="burden" id="burdenWrap">Burden <b id="burdenPct">&mdash;</b><span class="bbar"><i id="burdenBar"></i></span></span>
+        <button class="viewbtn" id="viewBtn" title="Show / hide the character model">View</button></div>
+      <div class="equip" id="equip"></div>
+      <div class="otherbar" id="otherbar"></div>
+      <div class="sidepacks" id="sidepacks"></div>
+      <div class="psub" id="contHdr">Contents</div>
+      <div class="grid" id="packgrid"></div>
+    </div>
+  </div>
+</template>
+
 <script>
-// The one live thing on this page: the real status feed, proxied through our own API so the
-// page makes requests to a single origin. Kept deliberately small - this is a holding page.
-fetch('/api/status')
-  .then(r => r.json())
-  .then(s => {
-    const up = !!s.online;
-    const n = s.playersOnline;
-    document.getElementById('status').innerHTML =
-      `<span class="dot ${up ? 'on' : ''}"></span>` +
-      (up
-        ? `Server online${n == null ? '' : ` &middot; <b>${n}</b> player${n === 1 ? '' : 's'} in Dereth`}`
-        : 'Server offline');
-  })
-  .catch(() => {
-    document.getElementById('status').innerHTML = '<span class="dot"></span>Status unavailable';
+const $  = (s,r=document)=>r.querySelector(s);
+const api = (p,o={})=>fetch('/api'+p,{credentials:'same-origin',...o});
+const fmt = n => (n==null?'—':Number(n).toLocaleString('en-US'));
+const PAL = {phys:'#c98a4b',magic:'#6ea8ff',def:'#57d98a',util:'#b9a4e6',craft:'#d8ac52',weap:'#e0645f'};
+function shade(hex){const n=parseInt(hex.slice(1),16);let r=Math.max(0,(n>>16)-40),g=Math.max(0,((n>>8)&255)-40),b=Math.max(0,(n&255)-40);return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
+function tile(cat,label){const c=PAL[cat]||'#6b7a8d';return `<span class="ico" style="background:linear-gradient(180deg,${c},${shade(c)})">${(label||'?')[0]}</span>`;}
+// real icon if the payload gives one; fall back to a drawn tile on 404
+function icon(o){ return o && o.icon
+  ? `<img class="ico" src="${o.icon}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ico',style:'background:linear-gradient(180deg,${PAL[o.cat]||'#6b7a8d'},${shade(PAL[o.cat]||'#6b7a8d')})',textContent:'${((o.label||o.name||'?')[0]||'?').replace(/'/g,'')}'}))">`
+  : tile(o&&o.cat,(o&&(o.label||o.name))||'?'); }
+const marker = m => m==='hard' ? '<span class="d" title="hard path">&dagger;</span> ' : '';
+function timeAgo(iso){ if(!iso) return ''; const d=(Date.now()-new Date(iso))/36e5; if(isNaN(d)) return ''; if(d<1)return Math.max(1,Math.round(d*60))+'m ago'; if(d<24)return Math.round(d)+'h ago'; return Math.round(d/24)+'d ago'; }
+function untilTime(iso){ if(!iso) return null; const d=(new Date(iso)-Date.now())/36e5; if(isNaN(d)||d<=0) return null; if(d<1)return Math.round(d*60)+'m'; if(d<24)return Math.round(d)+'h'; return Math.round(d/24)+'d'; }
+
+let CHAR=null, showAvatar=true, curCont=0, refreshTimer=null;
+
+/* ---------- boot / auth ---------- */
+async function boot(){
+  pollStatus(); setInterval(pollStatus, 60000);
+  try{
+    const me = await api('/me').then(r=>r.json());
+    if(me && me.account){ enterPortal(me.account); return; }
+  }catch(e){}
+  showLogin();
+}
+function showLogin(){ $('#portalView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); }
+async function pollStatus(){
+  const el = $('#loginStatus'); if(!el) return;
+  try{
+    const s = await api('/status').then(r=>r.json());
+    el.innerHTML = `<span class="dot ${s.online?'on':''}"></span>` +
+      (s.online ? `Server online${s.playersOnline!=null?` &middot; <b style="color:var(--arcane)">${s.playersOnline}</b> in Dereth`:''}` : 'Server offline');
+  }catch(e){ el.innerHTML = '<span class="dot"></span>Status unavailable'; }
+}
+$('#loginForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const btn=$('#loginBtn'), msg=$('#loginMsg');
+  btn.disabled=true; msg.textContent='';
+  try{
+    const r = await api('/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({account:$('#acct').value.trim(),password:$('#pw').value,remember:$('#remember').checked})});
+    if(r.ok){ const me=await api('/me').then(x=>x.json()); enterPortal(me.account); }
+    else { const b=await r.json().catch(()=>({})); msg.textContent = b.detail || b.error || (r.status===429?'Too many attempts — wait a moment.':'Incorrect account or password.'); }
+  }catch(e){ msg.textContent='Could not reach the server.'; }
+  btn.disabled=false;
+});
+$('#logoutBtn').addEventListener('click', async ()=>{ try{await api('/logout',{method:'POST'});}catch(e){} location.reload(); });
+
+async function enterPortal(account){
+  $('#loginView').classList.add('hidden'); $('#portalView').classList.remove('hidden');
+  $('#acctName').textContent = account.name;
+  const data = await api('/characters').then(r=>r.json());
+  const chars = data.characters||[];
+  renderPicker(chars);
+  if(chars.length) selectCharacter(chars[0].id, chars);
+  else $('#charArea').innerHTML = '<div class="loading">No characters on this account yet.</div>';
+}
+function renderPicker(chars){
+  $('#pickrow').innerHTML = chars.map(c=>
+    `<div class="chip" data-id="${c.id}">${marker(c.marker)}${c.name}<span class="lv">Lv ${c.level}</span><span class="odot ${c.online?'on':''}"></span></div>`).join('');
+  $('#pickrow').querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>selectCharacter(+ch.dataset.id, chars));
+}
+async function selectCharacter(id, chars){
+  $('#pickrow').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel', +c.dataset.id===id));
+  $('#charArea').innerHTML='<div class="loading">Loading&hellip;</div>';
+  if(refreshTimer) clearTimeout(refreshTimer);
+  try{
+    CHAR = await api('/character/'+id).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
+  }catch(e){ $('#charArea').innerHTML='<div class="loading">Could not load this character.</div>'; return; }
+  mountSheet();
+  // re-fetch on the cache cadence so an idle tab stays reasonably fresh
+  refreshTimer = setTimeout(()=>selectCharacter(id, chars), (CHAR.cacheSeconds||300)*1000);
+}
+
+/* ---------- sheet ---------- */
+function mountSheet(){
+  const frag = $('#sheetTpl').content.cloneNode(true);
+  $('#charArea').innerHTML=''; $('#charArea').appendChild(frag);
+  renderBanner(CHAR); renderAttributes(CHAR); renderSkills(CHAR); renderTitles(CHAR); renderQuests(CHAR); renderInventory(CHAR);
+  defaultReadout();
+  $('#charArea').querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    $('#charArea').querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
+    $('#charArea').querySelectorAll('.tabpane').forEach(x=>x.classList.remove('sel'));
+    t.classList.add('sel'); $('#pane-'+t.dataset.tab).classList.add('sel');
+    $('#charArea').querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); defaultReadout();
   });
+  $('#charArea').addEventListener('click', e=>{
+    const row=e.target.closest('.row[data-key]');
+    if(row){ $('#charArea').querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); row.classList.add('sel');
+      const arr = row.dataset.kind==='attr'?CHAR.attributes:CHAR.skills;
+      const o = arr.find(x=>x.key===row.dataset.key); if(o) showReadout(o); }
+    const spc=e.target.closest('.spk[data-cont]'); if(spc){ curCont=+spc.dataset.cont; renderInventory(CHAR); }
+  });
+  $('#viewBtn').onclick=()=>{ showAvatar=!showAvatar; $('#viewBtn').classList.toggle('active',!showAvatar); renderInventory(CHAR); };
+}
+function renderBanner(c){
+  const loc = c.location && c.location.place;
+  $('#banner').innerHTML = `
+    <div class="idblock">
+      <div class="cname">${marker(c.marker)}${c.name}</div>
+      <div class="meta">${[c.gender,c.heritage].filter(Boolean).join(' ')}${c.pkStatus?` &middot; <span class="pk">${c.pkStatus}</span>`:''}${c.title?` &middot; <span style="color:var(--gold)">${c.title}</span>`:''}</div>
+    </div>
+    <div class="stat"><span class="n">${c.level}</span><span class="l">Level</span></div>
+    <div class="stat"><span class="n sm">${fmt(c.totalXP)}</span><span class="l">Total XP</span></div>
+    <div class="stat"><span class="n sm">${fmt(c.xpToNextLevel)}</span><span class="l">XP to next</span></div>
+    <div class="stat"><span class="n sm onl"><span class="dot ${c.online?'on':''}"></span>${c.online?'Online':'Offline'}</span><span class="l">${c.online?'Now':(c.lastLogin?'Last '+timeAgo(c.lastLogin):'Status')}</span></div>
+    ${loc?`<div class="stat"><span class="n sm">${c.location.place}</span><span class="l">Last location</span></div>`:''}`;
+}
+function statRow(o,kind){
+  const badge = o.group==='specialized' ? '<span class="sb">SPEC</span>' : '';
+  const vlcls = kind==='attr' ? 'trained' : o.group;
+  return `<div class="row" data-key="${o.key}" data-kind="${kind}">${icon(o)}<span class="nm">${o.label}${badge}</span><span class="vl ${vlcls}">${o.trueRank??o.base??0}</span></div>`;
+}
+function renderAttributes(c){
+  let h = `<div class="grouphdr">Attributes</div>` + (c.attributes||[]).map(a=>statRow(a,'attr')).join('');
+  if(c.vitals&&c.vitals.length){ h += `<div class="grouphdr">Vitals</div>` + c.vitals.map(v=>
+    `<div class="row" data-key="${v.key}" data-kind="vital" style="cursor:default">${icon(v)}<span class="nm">${v.label}</span><span class="vl trained">${v.current}/${v.max}</span></div>`).join(''); }
+  $('#pane-attributes').innerHTML = h;
+}
+function renderSkills(c){
+  const groups=[['specialized','Specialized'],['trained','Trained'],['untrained','Untrained (pruned)'],['unusable','Unusable']];
+  const skills=c.skills||[]; let h='';
+  for(const [g,label] of groups){
+    const items=skills.filter(s=>s.group===g).sort((a,b)=>(b.trueRank||0)-(a.trueRank||0));
+    h+=`<div class="grouphdr">${label}<span class="ct">${items.length}</span></div>`;
+    h+= items.length ? items.map(s=>statRow(s,'skill')).join('') : `<div class="emptygrp">None</div>`;
+  }
+  $('#pane-skills').innerHTML=h;
+}
+function renderTitles(c){
+  const t=c.titles||[];
+  $('#pane-titles').innerHTML = `<div class="grouphdr">Titles<span class="ct">${t.length}</span></div>` + (t.length?t.map(x=>
+    `<div class="row" style="cursor:default"><span class="ico" style="background:linear-gradient(180deg,${PAL.craft},${shade(PAL.craft)})">&#9670;</span><span class="nm">${x.name}</span>${x.active?'<span class="sb">ACTIVE</span>':''}</div>`).join(''):`<div class="emptygrp">None</div>`);
+}
+function renderQuests(c){
+  const q=(c.quests||[]).slice().sort((a,b)=>(b.lastCompleted||'').localeCompare(a.lastCompleted||''));
+  $('#pane-quests').innerHTML = `<div class="grouphdr">Quests<span class="ct">${q.length}</span></div>` + (q.length?q.map(x=>{
+    const cd=untilTime(x.availableAt);
+    return `<div class="questrow"><div><div class="qn">${x.name||x.key}</div><div class="qm">${x.completions||0}&times; completed${x.lastCompleted?' &middot; last '+timeAgo(x.lastCompleted):''}</div></div>
+      <div class="qc">${cd?`<span class="cd">in ${cd}</span>`:'<span class="rdy">ready</span>'}</div></div>`;
+  }).join(''):`<div class="emptygrp">No quests recorded.</div>`);
+}
+function defaultReadout(){
+  const av=(CHAR.skillCredits&&CHAR.skillCredits.available)??0;
+  $('#readout').innerHTML = `<div class="hint">Click an attribute or skill to see its true rank and XP progress.</div>
+    <div class="credits"><span class="m">&nbsp;</span><span class="m">Skill Credits Available: <b>${av}</b></span></div>`;
+}
+function creditsLine(o){
+  const av=(CHAR.skillCredits&&CHAR.skillCredits.available)??0;
+  let left;
+  if(o.group==='specialized') left='<span>Specialized &#10003;</span>';
+  else if(o.canSpecialize===false||o.group==='unusable') left='<span class="m">Cannot be specialized</span>';
+  else left=`<span>Specialize: <b>${o.specCost??'—'}</b> credits</span>`;
+  return `<div class="credits">${left}<span class="m">Skill Credits Available: <b>${av}</b></span></div>`;
+}
+function showReadout(o){
+  const into=o.xpIntoRank||0, next=o.xpToNextRank||0, total=into+next;
+  const pct=total?Math.round(100*into/total):0;
+  const buff=(o.buffed!=null&&o.buffed!==o.base)?`<span class="buff">${o.buffed>o.base?'+':''}${o.buffed-o.base}</span>`:'';
+  const isSkill=!!o.group;
+  const body = total===0
+    ? `<div class="top"><span class="rn">${o.label}${buff}</span><span class="rk">${o.trueRank??o.base??0}</span></div><div class="hint" style="margin-top:6px">No XP progress to show.</div>`
+    : `<div class="top"><span class="rn">${o.label}${buff}<span class="truebadge">true rank</span></span><span class="rk">${o.trueRank??o.base}</span></div>
+       <div class="bar"><i style="width:${pct}%"></i></div>
+       <div class="xp"><span>${fmt(into)} into rank</span><span>${fmt(next)} to next</span></div>`;
+  $('#readout').innerHTML = body + (isSkill?creditsLine(o):'');
+}
+
+/* ---------- inventory (from equipped[] + containers[]) ---------- */
+const ARMOR_POS = { head:'top:6px;left:calc(50% - 19px)', chest:'top:64px;left:calc(50% - 19px)',
+  legs:'top:150px;left:calc(50% - 19px)', hands:'top:110px;left:10px', feet:'top:238px;left:calc(50% - 19px)' };
+const ARMOR_LABEL = { head:'Head', chest:'Chest', legs:'Legs', hands:'Hands', feet:'Feet' };
+const GEAR_SLOTS = [['weapon','Weapon'],['wand','Wand/Caster'],['shield','Shield']];
+function renderInventory(c){
+  const inv=c.inventory||{equipped:[],containers:[]};
+  const eq={}; (inv.equipped||[]).forEach(it=>{ if(it.slot==='other'){(eq.other=eq.other||[]).push(it);} else if(!eq[it.slot]) eq[it.slot]=it; });
+  $('#invName').textContent='Inventory of '+c.name;
+  const burden = c.burden ?? (c.inventory&&c.inventory.burden);
+  if(burden==null){ $('#burdenWrap').style.display='none'; } else { $('#burdenPct').textContent=burden+'%'; $('#burdenBar').style.width=Math.min(100,burden)+'%'; }
+
+  const armor = Object.keys(ARMOR_POS).map(k=>{ const it=eq[k];
+    return `<div class="aslot ${it?'fill':'empty'}" style="${ARMOR_POS[k]}" title="${ARMOR_LABEL[k]}${it?' — '+it.name:''}">${it?icon(it):''}</div>`; }).join('');
+  const gear = GEAR_SLOTS.map(([k,lbl])=>{ const it=eq[k];
+    return it?`<div class="islot" title="${lbl}: ${it.name}">${icon(it)}</div>`:`<div class="islot empty" title="${lbl} (empty)"></div>`; }).join('');
+
+  $('#equip').innerHTML = `
+    <div class="eqcol"><span class="lbl">Wield</span>${gear}</div>
+    <div class="doll ${showAvatar?'':'noavatar'}">
+      <svg class="figure" viewBox="0 0 96 212" aria-label="character">
+        <ellipse cx="48" cy="22" rx="15" ry="17" fill="#3a3324"/>
+        <path d="M48 40 C26 47 22 82 24 150 L24 206 L72 206 L72 150 C74 82 70 47 48 40 Z" fill="#c9a24b"/>
+        <path d="M48 46 L48 200" stroke="#8f6f2c" stroke-width="1.5"/>
+        <rect x="30" y="96" width="36" height="7" rx="2" fill="#6d3f86"/>
+      </svg>${armor}
+    </div>
+    <div class="eqcol"><span class="lbl">Slots</span></div>`;
+
+  const others = eq.other||[];
+  $('#otherbar').innerHTML = others.length
+    ? `<span class="lbl">Jewelry &amp; cloak</span>` + others.map(o=>`<div class="islot" title="${o.name}">${icon(o)}</div>`).join('')
+    : '';
+
+  const conts = inv.containers||[];
+  if(curCont>=conts.length) curCont=0;
+  $('#sidepacks').innerHTML = conts.length>1
+    ? `<span class="lbl">Packs (${conts.length})</span>` + conts.map((p,i)=>
+        `<div class="spk ${i===curCont?'sel':''}" data-cont="${i}" title="${p.name} (${(p.items||[]).length})">${i===0?'<span class="tag">BP</span>':''}${tile('util',p.name)}</div>`).join('')
+    : '';
+  renderGrid(c);
+}
+function renderGrid(c){
+  const conts=(c.inventory&&c.inventory.containers)||[];
+  const cont=conts[curCont]||{name:'Pack',items:[]}; const items=cont.items||[];
+  $('#contHdr').textContent = `Contents of ${cont.name} — ${items.length}`;
+  let cells=items.map(it=>`<div class="cell" title="${it.name}${it.stack>1?' ×'+it.stack:''}">${icon(it)}${it.stack>1?`<span class="stack">${it.stack>=1000?(Math.round(it.stack/100)/10)+'k':it.stack}</span>`:''}</div>`).join('');
+  const pad=Math.max(0,(Math.ceil(items.length/6)*6||6)-items.length);
+  cells+=Array(pad).fill('<div class="cell empty"></div>').join('');
+  $('#packgrid').innerHTML=cells;
+}
+
+boot();
 </script>
 </body>
 </html>

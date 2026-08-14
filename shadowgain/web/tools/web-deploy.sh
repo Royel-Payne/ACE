@@ -269,7 +269,31 @@ REMOTE
 fi
 
 echo "==> restarting the API"
-$SSH "$HOST" "systemctl daemon-reload && systemctl enable --now shadowgain-web && sleep 3 && systemctl is-active shadowgain-web"
+# `restart`, NOT `enable --now`.
+#
+# `--now` starts a STOPPED unit and does nothing at all to a running one. So every deploy after
+# the first shipped new code to disk, reported "active", and went on serving the old process -
+# silently, for 45 minutes, until a payload came back in the pre-fix shape and the file on disk
+# said otherwise. `is-active` cannot catch this: the service was genuinely active, just not the
+# version that had been deployed.
+#
+# `enable` is kept for boot persistence and split out, because it is idempotent and unrelated.
+$SSH "$HOST" "systemctl daemon-reload && systemctl enable -q shadowgain-web && systemctl restart shadowgain-web && sleep 3 && systemctl is-active shadowgain-web"
+
+# Prove the process is NEWER than the code it is supposed to be running. This is the check that
+# would have caught the above immediately, so it is the one that stays.
+$SSH "$HOST" 'bash -s' <<'REMOTE'
+set -euo pipefail
+started=$(date -d "$(systemctl show shadowgain-web -p ExecMainStartTimestamp --value)" +%s)
+newest=$(find /opt/shadowgain-web/api -name '*.py' -printf '%T@\n' | sort -rn | head -1 | cut -d. -f1)
+
+if [ "$started" -lt "$newest" ]; then
+  echo "!! the running process predates the deployed code - it did not pick up this deploy"
+  exit 1
+fi
+
+echo "    process started $((started - newest))s after the newest source file"
+REMOTE
 
 # ---------------------------------------------------------------------------------------------
 # verify: the deploy is not done until the thing answers

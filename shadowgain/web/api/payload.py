@@ -30,10 +30,35 @@ private object cannot leak into it by default.
 
 from __future__ import annotations
 
-import math
+import datetime
 from typing import Any
 
 from . import curves, db, names
+
+
+def iso(timestamp: float | int | None) -> str | None:
+    """Unix seconds -> an ISO 8601 UTC string, or None.
+
+    CONTRACT 1 SAYS `lastLogin(ISO)`, AND THE FIRST BUILD OF THIS FILE IGNORED IT. Handing over
+    the raw Unix double looked defensible in isolation — let the browser localise it — but the
+    front-end was written against the contract and does `new Date(value)`, which reads a bare
+    number as MILLISECONDS. Every timestamp landed in January 1970.
+
+    The quest list was worse than wrong, it was fatal: it sorts with
+    `(b.lastCompleted||'').localeCompare(...)`, and `localeCompare` does not exist on a Number.
+    That threw inside the sort, so `renderQuests` died, so `mountSheet` died, so nothing after it
+    rendered — the entire character sheet was blank.
+
+    So every timestamp crossing this boundary goes through here. Seconds precision, `Z`, no
+    offset: unambiguous to `new Date()` in every browser, and the shard has nothing finer worth
+    reporting anyway.
+    """
+    if not timestamp:
+        return None
+
+    return datetime.datetime.fromtimestamp(
+        float(timestamp), tz=datetime.timezone.utc
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 # --- property ids we read (ACE.Entity.Enum.Properties) ---------------------------------------
 
@@ -269,10 +294,20 @@ def build_vitals(raw: dict) -> list[dict]:
                 "key": key,
                 "label": label,
                 "cat": {"health": "def", "stamina": "phys", "mana": "magic"}[key],
-                # The mockup renders "current/max"; max here is the saved base, which is the
-                # honest number for a snapshot with no live enchantments in it.
+                # `max` IS NOT SIMPLY `base`, AND THE DIFFERENCE IS VISIBLE.
+                #
+                # `base` is the UNBUFFED ceiling, which is all a saved snapshot can compute — the
+                # buffed ceiling depends on live enchantments this service deliberately does not
+                # read. But `current_Level` is whatever the character had at their last save,
+                # buffs included. So a buffed character saves with current ABOVE base, and the
+                # page rendered "Health 205/199" — a ratio that cannot exist.
+                #
+                # `current` can never exceed the true maximum, so max(base, current) is a strictly
+                # better LOWER BOUND on that maximum than base alone, and it can never produce an
+                # impossible ratio. It is an estimate and is documented as one; `base` travels
+                # alongside, unmodified, for anything that wants the honest unbuffed figure.
                 "current": current,
-                "max": base,
+                "max": max(base, current),
                 "base": base,
                 "ranks": row["level_From_C_P"] or 0,
                 "xpSpent": row["c_P_Spent"] or 0,
@@ -470,12 +505,15 @@ def build_quests(raw: dict, now: float) -> list[dict]:
                 "name": meta.get("name") or key,
                 "completions": int(row["num_Times_Completed"] or 0),
                 "maxSolves": max_solves,
-                "lastCompleted": last or None,
-                "availableAt": available_at,
+                # ISO, like every other timestamp here. The front-end sorts these with
+                # localeCompare, which a Number does not have — see iso().
+                "lastCompleted": iso(last),
+                "availableAt": iso(available_at),
             }
         )
 
-    out.sort(key=lambda q: (q["lastCompleted"] or 0), reverse=True)
+    # Sorted here rather than trusting the client to: most recently completed first.
+    out.sort(key=lambda q: (q["lastCompleted"] or ""), reverse=True)
 
     return out
 
@@ -733,9 +771,9 @@ def build_private(cur, raw: dict, dials: dict, now: float) -> dict:
         "title": next((t["name"] for t in titles if t["active"]), None),
         "xpToNextLevel": to_next_level,
         "unassignedXP": raw["int64s"].get(INT64_AVAILABLE_EXPERIENCE, 0) or 0,
-        # last_Login_Timestamp is a Unix double. Handed over as a number rather than a formatted
-        # string so the browser renders it in the reader's own timezone.
-        "lastLogin": float(char["last_Login_Timestamp"] or 0) or None,
+        # ISO 8601 UTC, per Contract 1's `lastLogin(ISO)` — see iso() for what emitting the raw
+        # Unix double instead cost.
+        "lastLogin": iso(char["last_Login_Timestamp"]),
         "totalLogins": char["total_Logins"] or 0,
         "playtimeSeconds": raw["ints"].get(INT_AGE, 0) or 0,
         # Filled in by the app layer from the live status feed — the shard cannot know it.
