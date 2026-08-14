@@ -7,6 +7,7 @@ using ACE.Common;
 using ACE.Database;
 using ACE.Entity;
 using ACE.Entity.Enum;
+using ACE.Entity.Enum.Properties;
 using ACE.Server.Entity;
 using ACE.Server.Entity.Actions;
 using ACE.Server.Managers;
@@ -105,6 +106,197 @@ namespace ACE.Server.Command.Handlers
         private static string Normalize(string value)
         {
             return value.Replace(" ", "").Replace("-", "").Replace("'", "").ToLowerInvariant();
+        }
+
+        /// <summary>
+        /// Shadowgain 117: the same problem 108 solved for skills, now for attributes.
+        ///
+        /// The client's attribute table has 190 entries because retail's ceiling IS innate 100 + 190
+        /// ranks. Shadowgain wipes innate to 10 (013), so reaching attribute_max_value takes ~280
+        /// ranks - 90 past the end of the table the panel indexes into. Everything it derives past
+        /// rank 190, most visibly "experience to raise", is therefore garbage. Chris: *"it reads
+        /// infinity before it reaches the ceiling."*
+        ///
+        /// Raising innate to 100 would fix that at the source and was deliberately REJECTED (116) -
+        /// it works, but starting every attribute at 100 is not the game Greylock asked for. So the
+        /// client cannot be made truthful here, and a command is the only place the truth exists.
+        ///
+        /// @mystats rather than folding it into @myskills: the name stays honest, @myskills keeps
+        /// doing exactly what players already know it for, and this becomes the one entry point
+        /// worth pointing somebody at. Redundancy is deliberate.
+        /// </summary>
+        [CommandHandler("mystats", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
+            "(Shadowgain) Your real attributes, vitals and skills - the numbers your panel cannot show.",
+            "[ attributes | <name> ]\n"
+            + "  (no argument)  - what is available and where to look\n"
+            + "  attributes     - all six attributes and your vitals\n"
+            + "  <name>         - detail for any attribute, vital or skill\n"
+            + "Examples:  @mystats attributes    @mystats strength    @mystats war magic")]
+        public static void HandleMyStats(Session session, params string[] parameters)
+        {
+            var player = session.Player;
+
+            var query = parameters == null || parameters.Length == 0 ? "" : string.Join(" ", parameters).Trim();
+
+            if (query.Length == 0)
+            {
+                ReportStatsIndex(session, player);
+                return;
+            }
+
+            var wanted = Normalize(query);
+
+            if (wanted == "attributes" || wanted == "attribute" || wanted == "attrs" || wanted == "stats")
+            {
+                ReportAttributes(session, player);
+                return;
+            }
+
+            // Attributes and vitals first, then fall through to the skill matcher. No name is shared
+            // between the three sets, so the order only decides which lookup answers, never which
+            // answer is right.
+            foreach (var attr in new[] { PropertyAttribute.Strength, PropertyAttribute.Endurance, PropertyAttribute.Coordination,
+                                         PropertyAttribute.Quickness, PropertyAttribute.Focus, PropertyAttribute.Self })
+            {
+                if (Normalize(attr.ToString()) == wanted)
+                {
+                    ReportAttribute(session, player, attr, detailed: true);
+                    return;
+                }
+            }
+
+            foreach (var (label, vital) in Vitals(player))
+            {
+                if (Normalize(label) == wanted)
+                {
+                    ReportVital(session, label, vital);
+                    return;
+                }
+            }
+
+            HandleMySkills(session, parameters);
+        }
+
+        private static void ReportStatsIndex(Session session, Player player)
+        {
+            var trained = 0;
+            var above0 = 0;
+
+            foreach (var skill in SkillHelper.ValidSkills)
+            {
+                var cs = player.GetCreatureSkill(skill, false);
+
+                if (cs == null || cs.AdvancementClass < SkillAdvancementClass.Trained)
+                    continue;
+
+                trained++;
+
+                if (cs.Ranks > 0 || cs.TrueExperienceSpent > 0)
+                    above0++;
+            }
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                "Your character sheet cannot show everything this server tracks. This can.", ChatMessageType.Broadcast));
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"  @mystats attributes  - your six attributes and vitals, with real ranks (the panel stops counting early)", ChatMessageType.Broadcast));
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"  @myskills            - all {trained} trained skills, most experience first ({above0} above rank 0)", ChatMessageType.Broadcast));
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                "  @mystats <name>      - detail for any one of them, e.g. @mystats strength or @mystats war magic", ChatMessageType.Broadcast));
+        }
+
+        private static void ReportAttributes(Session session, Player player)
+        {
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"Attributes - real ranks out of {Player.AttributeMaxRanks():N0}. Your panel's table stops at 190, so past that it cannot show these.",
+                ChatMessageType.Broadcast));
+
+            foreach (var attr in new[] { PropertyAttribute.Strength, PropertyAttribute.Endurance, PropertyAttribute.Coordination,
+                                         PropertyAttribute.Quickness, PropertyAttribute.Focus, PropertyAttribute.Self })
+            {
+                ReportAttribute(session, player, attr, detailed: false);
+            }
+
+            // Vitals earn nothing of their own - they are held at the same fraction of their ceiling
+            // as the attribute that governs them, so they move when it moves. Saying so is the point:
+            // otherwise "my Health is not going up" reads as a bug rather than as "raise Endurance".
+            var lines = new List<string>();
+
+            foreach (var (label, cv) in Vitals(player))
+            {
+                if (cv != null)
+                    lines.Add($"{label} {cv.Base:N0}");
+            }
+
+            if (lines.Count > 0)
+            {
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    $"  Vitals: {string.Join(", ", lines)} - these follow their attribute rather than earning separately.",
+                    ChatMessageType.Broadcast));
+            }
+        }
+
+        private static void ReportAttribute(Session session, Player player, PropertyAttribute attribute, bool detailed)
+        {
+            if (!player.Attributes.TryGetValue(attribute, out var ca) || ca == null)
+                return;
+
+            var rank = Player.CalcAttributeRank(ca.ExperienceSpent);
+            var maxRanks = Player.AttributeMaxRanks();
+
+            var line = $"  {attribute,-13} {ca.Base,4:N0}   rank {rank:N0} / {maxRanks:N0}";
+
+            if (rank > 190)
+                line += "  (past your panel's table)";
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(line, ChatMessageType.Broadcast));
+
+            if (!detailed)
+                return;
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"    experience earned: {ca.ExperienceSpent:N0}", ChatMessageType.Broadcast));
+
+            if (rank >= maxRanks)
+            {
+                session.Network.EnqueueSend(new GameMessageSystemChat(
+                    "    this attribute is at its ceiling - it is finished.", ChatMessageType.Broadcast));
+                return;
+            }
+
+            var next = Player.AttributeRankCost(rank + 1);
+
+            var remaining = next > ca.ExperienceSpent ? next - ca.ExperienceSpent : 0;
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"    to rank {rank + 1:N0}: {remaining:N0} more", ChatMessageType.Broadcast));
+        }
+
+        /// <summary>
+        /// The three vitals, paired with the name a player would type. Keyed on MaxHealth/MaxStamina/
+        /// MaxMana internally, which is not what anyone would guess - hence the label.
+        /// </summary>
+        private static IEnumerable<(string Label, ACE.Server.WorldObjects.Entity.CreatureVital Vital)> Vitals(Player player)
+        {
+            yield return ("Health", player.Health);
+            yield return ("Stamina", player.Stamina);
+            yield return ("Mana", player.Mana);
+        }
+
+        private static void ReportVital(Session session, string label, ACE.Server.WorldObjects.Entity.CreatureVital cv)
+        {
+            if (cv == null)
+                return;
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"{label} - {cv.Current:N0} / {cv.MaxValue:N0}, base {cv.Base:N0}", ChatMessageType.Broadcast));
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                "  Vitals are not raised directly here - each is held at the same fraction of its ceiling as the attribute that governs it, so it rises when that attribute does.",
+                ChatMessageType.Broadcast));
         }
 
         private static void HandleMySkillsSummary(Session session, Player player)
