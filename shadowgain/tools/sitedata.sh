@@ -156,7 +156,16 @@ ONLINE=null; LANDBLOCKS=null; OBJECTS=null; CREATURES=null
 SERVING=false
 if [ "$UP" = true ]; then
   T0=$(date -u +%Y-%m-%dT%H:%M:%S)
-  echo "serverstatus" | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
+  # 124: `listplayers` rides along on the SAME attach as serverstatus, because the attach is the
+  # expensive part - a second one would double the console round-trips on a 30-second timer for
+  # one extra line of output. It names every online player ("<Name> : <accountId>", one per
+  # line), which is what my.shadowgain.com needs to put an "Online" dot next to the right
+  # character. Nothing else can supply it: PlayerManager's online list is in memory only, and
+  # the shard's login/logoff timestamps are NOT a substitute - ACE writes FUTURE values into
+  # LogoffTimestamp to drive the PK timer (Player.cs), so a character can look permanently
+  # online. This is still a console command on the existing binary, so no server code, no
+  # restart.
+  printf 'serverstatus\nlistplayers\n' | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
   sleep 2
   SS=$(timeout -s KILL 10 docker logs --since "$T0" ace-server 2>&1 || true)
 
@@ -171,7 +180,49 @@ if [ "$UP" = true ]; then
 
   C=$(printf '%s' "$SS" | grep -oE 'Creatures: [0-9]+' | tail -1 | grep -oE '[0-9]+$' || true)
   [ -n "$C" ] && CREATURES=$C
+
+  # 124: the online character NAMES, from listplayers. Feeds the "Online" dot on
+  # my.shadowgain.com, which needs to know WHICH character is on, not just how many.
+  #
+  # The format is one "<Name> : <accountId>" per line, with only the FIRST line carrying a log
+  # prefix ("ACE >> ... INFO : † Adramelech : 13") because the whole list is written as a single
+  # multi-line message. So the prefix is stripped conditionally rather than assumed.
+  #
+  # THE MARKER MUST COME OFF. Names arrive as "† Black Breath" - the hard-lane prefix is
+  # cosmetic and is NOT part of character.name, so leaving it on would make every hard-lane
+  # character fail the name comparison and read as offline. The sed strips everything before
+  # the first ASCII letter or digit, which handles any marker prefix the dial is ever set to.
+  #
+  # The account id is discarded on purpose: this feed is PUBLIC, and account ids have no
+  # business on shadowgain.com.
+  NAMES_JSON=$(printf '%s' "$SS" \
+    | grep -aE ' : [0-9]+[[:space:]]*$' \
+    | sed -E 's/^.*INFO : //' \
+    | sed -E 's/ : [0-9]+[[:space:]]*$//' \
+    | sed -E 's/^[^A-Za-z0-9]+//' \
+    | sed -E 's/[[:space:]]+$//' \
+    | grep -av '^$' \
+    | python3 -c 'import json,sys; print(json.dumps([l.rstrip("\n") for l in sys.stdin]))' 2>/dev/null || true)
 fi
+
+# An empty or unparseable list becomes [] rather than null: the consumer treats "not in the
+# list" as offline, and null would have to be special-cased at the other end for no gain.
+[ -z "${NAMES_JSON:-}" ] && NAMES_JSON="[]"
+
+# DELIBERATELY NOT IN status.json, AND NOT IN THE WEB ROOT.
+#
+# status.json is public, and a public who-is-online roster is a new disclosure about players
+# rather than about the server - a different thing from the player COUNT that feed already
+# carries, and not a call this script should make on its own. So the names land in /opt/ACE,
+# which Caddy does not serve, and only the character portal's API reads them (as the sgweb
+# user, over the filesystem). It uses them for one thing: an online dot beside a character the
+# viewer is already entitled to see.
+#
+# Written via a temp file and mv so a reader can never catch a half-written array.
+printf '{"generated":"%s","names":%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$NAMES_JSON" \
+  > /opt/ACE/.online-names.json.tmp
+chmod 644 /opt/ACE/.online-names.json.tmp
+mv /opt/ACE/.online-names.json.tmp /opt/ACE/online-names.json
 
 # --- host load ---------------------------------------------------------------
 # 2 vCPU / 4GB since the 025 upgrade. ACE's MAIN loop is single-threaded, but physics

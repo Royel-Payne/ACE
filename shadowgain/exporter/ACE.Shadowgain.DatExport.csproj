@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shadowgain 124: the dat-asset exporter for the web character sheet (my.shadowgain.com).
+
+    Lives OUTSIDE Source/ on purpose. Source/ tracks ACEmulator upstream, and every file we
+    add there is a merge conflict waiting to happen on the next `git pull` from master. This
+    project only ever *references* ACE.DatLoader; it never modifies it.
+
+    net10.0-windows because System.Drawing.Common - which ACE.DatLoader already depends on for
+    Texture.GetBitmap() - is Windows-only from .NET 7 onward. That is not a limitation in
+    practice: the dats only exist on Chris's machine anyway (Cowork's sandbox cannot reach
+    them), so this was always going to be a run-on-Windows, commit-the-output tool.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ACE.Shadowgain.DatExport</RootNamespace>
+    <AssemblyName>sg-datexport</AssemblyName>
+    <Platforms>AnyCPU</Platforms>
+    <!-- ACE.DatLoader is netstandard2.0 and pulls in a few transitive warnings we do not own. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Source\ACE.DatLoader\ACE.DatLoader.csproj" />
+    <ProjectReference Include="..\..\Source\ACE.Entity\ACE.Entity.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+# Shadowgain web character sheet (my.shadowgain.com) — Task.md 124.
+#
+# Deliberately small, and chosen the same way the bot's were: nothing that needs a compiler or a
+# -dev package on the droplet.
+#
+# PyMySQL rather than mysqlclient — pure Python, matches bot/requirements.txt.
+# bcrypt because ACE stores $2y$ hashes (BCryptProvider forces the 2y identifier); verified
+#   against a real 2y hash before this was written, since it IS the login path.
+# itsdangerous for signed session cookies — stateless, so the service needs nowhere to write.
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+PyMySQL>=1.1,<2
+bcrypt>=4.1,<6
+itsdangerous>=2.1,<3
+pydantic>=2.6,<3

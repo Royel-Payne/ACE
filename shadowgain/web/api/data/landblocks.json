@@ -1,0 +1,8712 @@
+{
+ "0001": {
+  "name": "Remote Empyrean Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0002": {
+  "name": "Viamontian Garrison",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0003": {
+  "name": "Niffis Fighting Pits",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0004": {
+  "name": "Northern Power Forge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0005": {
+  "name": "Southern Power Forge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0006": {
+  "name": "Western Power Forge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0007": {
+  "name": "Town Network",
+  "indoor": true,
+  "source": "poi"
+ },
+ "0008": {
+  "name": "Defiled Temple Lower Wing",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0009": {
+  "name": "Defiled Temple Upper Wing",
+  "indoor": true,
+  "source": "portal"
+ },
+ "000A": {
+  "name": "Defiled Temple Asylum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "000B": {
+  "name": "Banderling Shrine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "000C": {
+  "name": "Weakened Vault Sewers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "000D": {
+  "name": "Secured Vault Sewers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "000E": {
+  "name": "Reinforced Vault Sewers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "000F": {
+  "name": "Fortified Vault Sewers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0010": {
+  "name": "War Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0011": {
+  "name": "Weakened Royal Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0012": {
+  "name": "Secured Royal Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0013": {
+  "name": "Reinforced Royal Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0014": {
+  "name": "Fortified Royal Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0015": {
+  "name": "Banished Assembly",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0016": {
+  "name": "Ravaged Cathedral",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0017": {
+  "name": "Vile Sanctuary",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0018": {
+  "name": "Copper Legion Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0019": {
+  "name": "Gold Legion Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "001A": {
+  "name": "Platinum Legion Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "001B": {
+  "name": "Silver Legion Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "001C": {
+  "name": "Lugian Ice Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "001D": {
+  "name": "Ruschk Icehold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "001E": {
+  "name": "Viamontian Royal Prison",
+  "indoor": true,
+  "source": "portal"
+ },
+ "001F": {
+  "name": "Eater Pit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0020": {
+  "name": "Heart of Madness",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0021": {
+  "name": "Hall of Karlun",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0022": {
+  "name": "Cannibal Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0023": {
+  "name": "Sezzherei's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0024": {
+  "name": "Mausoleum of Bitterness",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0025": {
+  "name": "Mausoleum of Anger",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0026": {
+  "name": "Mausoleum of Cruelty",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0027": {
+  "name": "Accursed Mausoleum of Slaughter",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0028": {
+  "name": "Unholy Mausoleum of Slaughter",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0029": {
+  "name": "Thrungus Hole",
+  "indoor": true,
+  "source": "portal"
+ },
+ "002A": {
+  "name": "Path of the Blind",
+  "indoor": true,
+  "source": "portal"
+ },
+ "002B": {
+  "name": "Egg Orchard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "002C": {
+  "name": "Forgotten Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "002D": {
+  "name": "Dark Design",
+  "indoor": true,
+  "source": "portal"
+ },
+ "002E": {
+  "name": "Feeding Tubes",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0030": {
+  "name": "Renegade Incursion",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0031": {
+  "name": "Creepy Canyons",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0032": {
+  "name": "Tunnel of Love",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0033": {
+  "name": "Coral Caves",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0034": {
+  "name": "The Fazenda Caves",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0035": {
+  "name": "Lost Coastal Archive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0036": {
+  "name": "Lost Desert Archive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0037": {
+  "name": "Frozen Cenotaph",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0038": {
+  "name": "Crypt of Adhorix",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0039": {
+  "name": "Hagra's Holdfast",
+  "indoor": true,
+  "source": "portal"
+ },
+ "003E": {
+  "name": "Breached Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0040": {
+  "name": "Master Alizari's Dig",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0041": {
+  "name": "Mistress Halmera's Dig",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0042": {
+  "name": "Mistress Gabille's Dig",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0043": {
+  "name": "Master Vaserio's Dig",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0044": {
+  "name": "Collegium Occultus",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0045": {
+  "name": "Temple East Wing",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0046": {
+  "name": "Yanshi Upper Undermine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0047": {
+  "name": "Repository",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0048": {
+  "name": "Dardante's Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0049": {
+  "name": "Camp Entemarre",
+  "indoor": true,
+  "source": "portal"
+ },
+ "004A": {
+  "name": "Creepy Chambers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "004B": {
+  "name": "Path of the Blind West",
+  "indoor": true,
+  "source": "portal"
+ },
+ "004C": {
+  "name": "Mukkir Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "004D": {
+  "name": "Eastern Temple Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "004E": {
+  "name": "Vault of Eternal Slumber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "004F": {
+  "name": "Temple of the Black Spear",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0050": {
+  "name": "Realaidain Western Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0051": {
+  "name": "Eastern Pedestal Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0052": {
+  "name": "Silyun Chapterhouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0053": {
+  "name": "Shade Iron Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0054": {
+  "name": "Deep Mukkir Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0055": {
+  "name": "Back Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0056": {
+  "name": "Augmentation Realm Main Level",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0057": {
+  "name": "Tanada House of Earth",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0058": {
+  "name": "Viamont Staging Area",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0059": {
+  "name": "Viamont Staging Area",
+  "indoor": true,
+  "source": "portal"
+ },
+ "005A": {
+  "name": "Viamont Staging Area",
+  "indoor": true,
+  "source": "portal"
+ },
+ "005B": {
+  "name": "Bookcase",
+  "indoor": true,
+  "source": "portal"
+ },
+ "005D": {
+  "name": "Harbinger's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "005F": {
+  "name": "Tanada House of Pancakes",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0060": {
+  "name": "Harraag's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0061": {
+  "name": "Western Pedestal Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0063": {
+  "name": "Northern Pedestal Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0064": {
+  "name": "Egg Orchard East",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0065": {
+  "name": "Thrungal Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0066": {
+  "name": "PK Arena",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0067": {
+  "name": "PKL Arena",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0068": {
+  "name": "Viamontian Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "006D": {
+  "name": "Augmentation Realm Upper Level",
+  "indoor": true,
+  "source": "portal"
+ },
+ "006E": {
+  "name": "Empyrean Workshop",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0071": {
+  "name": "Dericost Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0072": {
+  "name": "Falatacot Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0073": {
+  "name": "Black Ferah's Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0074": {
+  "name": "Trophy Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0075": {
+  "name": "Trophy Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0076": {
+  "name": "Trophy Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0077": {
+  "name": "Muggy Guruk Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0078": {
+  "name": "Humid Guruk Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0079": {
+  "name": "Steamy Guruk Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "007A": {
+  "name": "Deep Guruk Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "007B": {
+  "name": "Tanada House of Wind",
+  "indoor": true,
+  "source": "portal"
+ },
+ "007C": {
+  "name": "Soul Hunter's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "007D": {
+  "name": "Augmentation Realm Lower Level",
+  "indoor": true,
+  "source": "portal"
+ },
+ "007E": {
+  "name": "Black Spear Temple Upper Levels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "007F": {
+  "name": "Binding Realm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0080": {
+  "name": "Rossu Morta Chapterhouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0081": {
+  "name": "Whispering Blade Chapterhouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0082": {
+  "name": "Assassins' Hideout",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0083": {
+  "name": "Pheraion's Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0084": {
+  "name": "Black Spear Summoning Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0085": {
+  "name": "Altar Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0086": {
+  "name": "Strange Swamp Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0087": {
+  "name": "Ikzisik Tika Ri Zikma",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0088": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0089": {
+  "name": "Cells of the Black Book",
+  "indoor": true,
+  "source": "portal"
+ },
+ "008A": {
+  "name": "Dark Monolith Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "008B": {
+  "name": "Ancient Masonry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "008C": {
+  "name": "Essence Chambers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0095": {
+  "name": "Lord Cynreft's Tomb",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0096": {
+  "name": "Insatiable Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0097": {
+  "name": "Son of Pooky's Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0099": {
+  "name": "Black Totem Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "009A": {
+  "name": "White Totem Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "009B": {
+  "name": "Crypt of Crimson Night",
+  "indoor": true,
+  "source": "portal"
+ },
+ "009C": {
+  "name": "Kor-Gursha",
+  "indoor": true,
+  "source": "portal"
+ },
+ "009D": {
+  "name": "Swamp Cavern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "009E": {
+  "name": "Tanada House of Water",
+  "indoor": true,
+  "source": "portal"
+ },
+ "009F": {
+  "name": "Trial of the Arm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A0": {
+  "name": "Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A1": {
+  "name": "Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A2": {
+  "name": "Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A3": {
+  "name": "The Path to More Recent Times",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A4": {
+  "name": "Hidden Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A5": {
+  "name": "Lonely Fortress",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A7": {
+  "name": "Shade of Dule",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A8": {
+  "name": "Roots of the Deru Tree",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00A9": {
+  "name": "Trial of the Deep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00AA": {
+  "name": "Olthoi Sanctuary",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00AF": {
+  "name": "Statue",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00B5": {
+  "name": "Mosswart Worship Cavern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00B6": {
+  "name": "Azaxis",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00B7": {
+  "name": "Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00B8": {
+  "name": "Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00B9": {
+  "name": "Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00BA": {
+  "name": "Corrupted Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C0": {
+  "name": "South Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C1": {
+  "name": "Blighted Rank Moarsman Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C2": {
+  "name": "Blighted Disgusting Moarsman Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C3": {
+  "name": "Blighted Putrid Moarsman Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C4": {
+  "name": "Blighted Desolation Moarsman Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C5": {
+  "name": "Blighted Grimy Moarsman Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C6": {
+  "name": "Blighted Verdant Moarsman Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C7": {
+  "name": "Crystalline",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C8": {
+  "name": "Egg Orchard West",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00C9": {
+  "name": "Chamber of Air",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00CB": {
+  "name": "the pyramid",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00CC": {
+  "name": "Renegade Fortress",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00CD": {
+  "name": "Tanada Temple of Black Water",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00CF": {
+  "name": "The Dark Spiral",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00D1": {
+  "name": "Deeper Caves",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00D2": {
+  "name": "Cavern Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00D3": {
+  "name": "Cavern Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00D4": {
+  "name": "Cavern Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00D6": {
+  "name": "Quiddity Seed",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00D9": {
+  "name": "Blightfinger's Warrens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00DC": {
+  "name": "Moarsmen Priory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00DD": {
+  "name": "Acolyte's Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00DE": {
+  "name": "Temple Door",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00DF": {
+  "name": "Temple of Tthuun",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E0": {
+  "name": "Rogue Delvings",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E1": {
+  "name": "Path of the Blind East",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E2": {
+  "name": "Ruschk Burial Mound",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E3": {
+  "name": "Sclavus Umbral Forge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E4": {
+  "name": "Ritual Chambers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E5": {
+  "name": "Temple of the Three",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E6": {
+  "name": "Prodigal Shadow Child's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00E7": {
+  "name": "Gardens of Menilesh",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00EA": {
+  "name": "Armory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00EB": {
+  "name": "Ancient Cloister",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00ED": {
+  "name": "Artifex Collegium",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00EE": {
+  "name": "Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00EF": {
+  "name": "Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00F0": {
+  "name": "Temple of Xik Minru",
+  "indoor": true,
+  "source": "portal"
+ },
+ "00F2": {
+  "name": "Qin Xikit's Hidden Crown",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0100": {
+  "name": "Murk Warrens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0101": {
+  "name": "Murk Warrens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0102": {
+  "name": "Murk Warrens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0103": {
+  "name": "Black Spawn Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0104": {
+  "name": "Black Spawn Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0105": {
+  "name": "Black Spawn Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0106": {
+  "name": "Setab's Barracks",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0107": {
+  "name": "Nor's Folly",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0108": {
+  "name": "Cursed Swamp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0109": {
+  "name": "Dungeon of Corpses",
+  "indoor": true,
+  "source": "portal"
+ },
+ "010A": {
+  "name": "Black Dominion",
+  "indoor": true,
+  "source": "portal"
+ },
+ "010B": {
+  "name": "Asuger Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "010C": {
+  "name": "TEMPORARY",
+  "indoor": true,
+  "source": "portal"
+ },
+ "010D": {
+  "name": "AC Orange Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "010E": {
+  "name": "AC Purple Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "010F": {
+  "name": "AC Red Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0110": {
+  "name": "Nexus",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0111": {
+  "name": "Storage",
+  "indoor": true,
+  "source": "poi"
+ },
+ "0113": {
+  "name": "Amiantos Bethel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0114": {
+  "name": "Sultry Hovel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0115": {
+  "name": "Wedding Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0116": {
+  "name": "Tenkarrdun Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0117": {
+  "name": "Serac Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0118": {
+  "name": "Drudge Hovel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0119": {
+  "name": "Amperehelion Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "011A": {
+  "name": "Incunabula Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "011B": {
+  "name": "Jahannan Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "011C": {
+  "name": "Mountain Fortress",
+  "indoor": true,
+  "source": "portal"
+ },
+ "011D": {
+  "name": "Al-Arqas Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "011E": {
+  "name": "Al-Jalima Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "011F": {
+  "name": "Arwic Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0120": {
+  "name": "Baishi Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0121": {
+  "name": "Cragstone Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0122": {
+  "name": "Eastham Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0123": {
+  "name": "Glenden Wood Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0124": {
+  "name": "Hebian-to Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0125": {
+  "name": "Holtburg Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0126": {
+  "name": "Khayyaban Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0127": {
+  "name": "Lin Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0128": {
+  "name": "Lytelthorpe Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0129": {
+  "name": "Mayoi Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "012A": {
+  "name": "Nanto Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "012B": {
+  "name": "Qalaba'r Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "012C": {
+  "name": "Rithwic Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "012D": {
+  "name": "Samsur Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "012E": {
+  "name": "Sawato Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "012F": {
+  "name": "Shoushi Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0130": {
+  "name": "Tou-Tou Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0131": {
+  "name": "Tufa Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0132": {
+  "name": "Uziz Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0133": {
+  "name": "Yanshi Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0134": {
+  "name": "Yaraq Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0135": {
+  "name": "Zaikhal Meeting Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0136": {
+  "name": "Empyrean Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0137": {
+  "name": "Stone Tool",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0138": {
+  "name": "Lost City of Frore",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0139": {
+  "name": "Mage Academy",
+  "indoor": true,
+  "source": "portal"
+ },
+ "013A": {
+  "name": "NightClub",
+  "indoor": true,
+  "source": "poi"
+ },
+ "013B": {
+  "name": "Folthid Cellar",
+  "indoor": true,
+  "source": "portal"
+ },
+ "013C": {
+  "name": "Underground Forest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "013D": {
+  "name": "Forbidden Crypts",
+  "indoor": true,
+  "source": "portal"
+ },
+ "013E": {
+  "name": "Burial Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "013F": {
+  "name": "Saadia's Retreat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0140": {
+  "name": "Virindi Fort",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0141": {
+  "name": "Enkindled Souls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0142": {
+  "name": "Recovered Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0143": {
+  "name": "Phyntos Menace",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0144": {
+  "name": "Darkened Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0145": {
+  "name": "Bone Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0146": {
+  "name": "Mount Lethe Magma Tubes",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0147": {
+  "name": "Mount Naipenset Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0148": {
+  "name": "A Small Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0149": {
+  "name": "Thieves' Galleries",
+  "indoor": true,
+  "source": "portal"
+ },
+ "014A": {
+  "name": "Mysterious Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "014B": {
+  "name": "Winthura's Garden",
+  "indoor": true,
+  "source": "portal"
+ },
+ "014C": {
+  "name": "Nevius Passage",
+  "indoor": true,
+  "source": "portal"
+ },
+ "014D": {
+  "name": "Damp Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "014E": {
+  "name": "Smugglers Hideaway",
+  "indoor": true,
+  "source": "portal"
+ },
+ "014F": {
+  "name": "Dungeon Maggreth",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0150": {
+  "name": "Filos' Doom",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0151": {
+  "name": "Forgotten Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0152": {
+  "name": "Ruined Cave Outpost",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0153": {
+  "name": "Shreth Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0154": {
+  "name": "Stone Cathedral",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0155": {
+  "name": "Musansayn's Vaults",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0156": {
+  "name": "Sea Temple Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0157": {
+  "name": "Under-Cove Crypt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0158": {
+  "name": "Lytaway",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0159": {
+  "name": "Abandoned Shops",
+  "indoor": true,
+  "source": "portal"
+ },
+ "015A": {
+  "name": "Dry Well",
+  "indoor": true,
+  "source": "portal"
+ },
+ "015B": {
+  "name": "Unfinished Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "015C": {
+  "name": "Nanto Rat Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "015D": {
+  "name": "Magical",
+  "indoor": true,
+  "source": "portal"
+ },
+ "015E": {
+  "name": "Impious Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "015F": {
+  "name": "Giant Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0160": {
+  "name": "Trial",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0161": {
+  "name": "Empyrean Garrison",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0162": {
+  "name": "Cave of Alabree",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0163": {
+  "name": "Holtburg Redoubt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0164": {
+  "name": "Lost Distillery",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0165": {
+  "name": "Old Warehouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0166": {
+  "name": "Deserted Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0167": {
+  "name": "Desert Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0168": {
+  "name": "Water Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0169": {
+  "name": "Mattekar Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "016A": {
+  "name": "Guardian Crypt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "016C": {
+  "name": "Marketplace",
+  "indoor": true,
+  "source": "poi"
+ },
+ "0175": {
+  "name": "Muggy Font",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0176": {
+  "name": "Humid Font",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0177": {
+  "name": "Mossy Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0178": {
+  "name": "Dark Mosswart Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0179": {
+  "name": "Umbral Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "017A": {
+  "name": "Banderling Hovel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "017B": {
+  "name": "Watery Grotto",
+  "indoor": true,
+  "source": "portal"
+ },
+ "017D": {
+  "name": "Hidden",
+  "indoor": true,
+  "source": "portal"
+ },
+ "017E": {
+  "name": "Underway",
+  "indoor": true,
+  "source": "portal"
+ },
+ "017F": {
+  "name": "Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0180": {
+  "name": "Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0181": {
+  "name": "Dungeon Nye",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0182": {
+  "name": "Desert Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0183": {
+  "name": "Dungeon Binar",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0184": {
+  "name": "Dungeon Mei",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0185": {
+  "name": "Daiklos Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0186": {
+  "name": "Sclavus Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0187": {
+  "name": "A Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0188": {
+  "name": "Mines of Despair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0189": {
+  "name": "Grievous Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "018A": {
+  "name": "Hotel",
+  "indoor": true,
+  "source": "poi"
+ },
+ "018B": {
+  "name": "A Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "018C": {
+  "name": "Crater Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "018D": {
+  "name": "Olthoi Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "018E": {
+  "name": "Abayar's Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "018F": {
+  "name": "Carved Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0190": {
+  "name": "Old Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0191": {
+  "name": "Mountain Sewer",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0192": {
+  "name": "Mountain Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0193": {
+  "name": "Knath Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0194": {
+  "name": "Ruined Empyrean Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0195": {
+  "name": "Xi Ru's Chapel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0196": {
+  "name": "Xi Ru's Crypt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0197": {
+  "name": "Marauder's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0198": {
+  "name": "Steamy Font",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0199": {
+  "name": "Abayar's Study",
+  "indoor": true,
+  "source": "portal"
+ },
+ "019A": {
+  "name": "Crater Caves Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "019B": {
+  "name": "Lightless Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "019C": {
+  "name": "Swamp Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "019D": {
+  "name": "Simple Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "019E": {
+  "name": "Drudge Hideout",
+  "indoor": true,
+  "source": "portal"
+ },
+ "019F": {
+  "name": "Tumerok Post",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A0": {
+  "name": "Tumerok Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A1": {
+  "name": "Tumerok Base",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A2": {
+  "name": "Swamp Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A3": {
+  "name": "The Pit Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A4": {
+  "name": "Mite Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A5": {
+  "name": "Inner Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A6": {
+  "name": "Disaster Maze",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A7": {
+  "name": "Crater Pathway",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A8": {
+  "name": "Ispar",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01A9": {
+  "name": "Ancient Lighthouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01AA": {
+  "name": "Lair of Death",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01AB": {
+  "name": "Forking Trail",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01AC": {
+  "name": "Adventurer's Haven",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01AD": {
+  "name": "Dungeon Gallery Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01AE": {
+  "name": "Colier Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01AF": {
+  "name": "Lakeside Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B0": {
+  "name": "Seaside Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B1": {
+  "name": "Lost Garden Ruins",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B2": {
+  "name": "Web Maze",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B3": {
+  "name": "Dungeon Fern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B4": {
+  "name": "Golem Burial Ground",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B5": {
+  "name": "Rocky Crypt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B6": {
+  "name": "Dungeon Muddy",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B7": {
+  "name": "Braid Mansion Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B8": {
+  "name": "A Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01B9": {
+  "name": "A Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01BA": {
+  "name": "Dungeon of Tatters",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01BB": {
+  "name": "Thief Trail",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01BC": {
+  "name": "Tumerok Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01BD": {
+  "name": "Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01BE": {
+  "name": "Tumerok Fortress",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01BF": {
+  "name": "Tumerok Outpost",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C0": {
+  "name": "Small Complex",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C1": {
+  "name": "Tumerok Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C2": {
+  "name": "Witshire Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C3": {
+  "name": "Trialos",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C4": {
+  "name": "Thasali",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C5": {
+  "name": "Swamp Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C6": {
+  "name": "Hunter's Leap",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C7": {
+  "name": "Lugian Outpost",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C8": {
+  "name": "Lugian Post",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01C9": {
+  "name": "Abandoned Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01CA": {
+  "name": "Hebian-to Sewers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01CB": {
+  "name": "Penguin Cave Hatchery",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01CC": {
+  "name": "Halls of the Helm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01CD": {
+  "name": "Rithwic Crypt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01CE": {
+  "name": "Halls of the Lost Light",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01CF": {
+  "name": "Eastham Sewer",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D0": {
+  "name": "Yanshi Tunnel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D1": {
+  "name": "Balmy Font",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D2": {
+  "name": "Mountain Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D3": {
+  "name": "Zabool Tower Base",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D4": {
+  "name": "Bellig Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D5": {
+  "name": "Syliph Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D6": {
+  "name": "Alfreth Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D7": {
+  "name": "Sylsfear Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D8": {
+  "name": "A Drudge Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01D9": {
+  "name": "A Red Rat Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01DA": {
+  "name": "A Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01DB": {
+  "name": "Moss Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01DC": {
+  "name": "A Drudge Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01DD": {
+  "name": "A Rat Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01DE": {
+  "name": "A Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01DF": {
+  "name": "A Mosswart Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E0": {
+  "name": "Banderling Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E1": {
+  "name": "Thieves' Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E2": {
+  "name": "Bandit Castle Prison",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E3": {
+  "name": "Glenden Wood Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E4": {
+  "name": "Forgotten Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E5": {
+  "name": "Green Mire Grave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E6": {
+  "name": "Small Icecave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E7": {
+  "name": "A Small Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E8": {
+  "name": "Dungeon Manor",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01E9": {
+  "name": "Underground",
+  "indoor": true,
+  "source": "poi"
+ },
+ "01EA": {
+  "name": "Old Talisman Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01EB": {
+  "name": "Lola's Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01EC": {
+  "name": "Defiled Temple Middle Wing",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01ED": {
+  "name": "Dungeon of Shadows",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01EF": {
+  "name": "Arwic Mines",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F1": {
+  "name": "Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F3": {
+  "name": "Tomb of The Dead",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F4": {
+  "name": "Trial 1",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F5": {
+  "name": "Aerfalle Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F6": {
+  "name": "Holtburg Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F7": {
+  "name": "Shoushi Grotto",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F8": {
+  "name": "Mite Maze",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01F9": {
+  "name": "Reservoir",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01FA": {
+  "name": "Crypt of Ashen Tears",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01FB": {
+  "name": "Witch Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01FC": {
+  "name": "ReedShark Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01FD": {
+  "name": "Trothyr's Rest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "01FE": {
+  "name": "Small Empyrean Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0272": {
+  "name": "Ogham Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0273": {
+  "name": "Hebian-To Reinforcements Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0274": {
+  "name": "Zaikhal Reinforcements Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0275": {
+  "name": "Cragstone Reinforcements Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0276": {
+  "name": "Hebian-To Middle Guard Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0277": {
+  "name": "Zaikhal Middle Guard Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0278": {
+  "name": "Vile-Smelling Refuse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0279": {
+  "name": "Vile-Smelling Refuse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "027A": {
+  "name": "Zaikhal Advance Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "027B": {
+  "name": "Vile-Smelling Refuse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "027C": {
+  "name": "Ancient Empyrean Grotto",
+  "indoor": true,
+  "source": "portal"
+ },
+ "027D": {
+  "name": "Lair of the Eviscerators",
+  "indoor": true,
+  "source": "portal"
+ },
+ "027E": {
+  "name": "Martinate Holding",
+  "indoor": true,
+  "source": "portal"
+ },
+ "027F": {
+  "name": "East Fork Dam Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0280": {
+  "name": "Vile-Smelling Refuse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0282": {
+  "name": "An Olthoi Soldier Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0283": {
+  "name": "The Dark Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0284": {
+  "name": "Abandoned Tumerok Site",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0285": {
+  "name": "Wasteland Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0286": {
+  "name": "Tumerok Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0287": {
+  "name": "Aun Papileona's Shrine to Raeta",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0288": {
+  "name": "Royal Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0289": {
+  "name": "Tiny Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "028A": {
+  "name": "Small Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "028B": {
+  "name": "Simple Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "028C": {
+  "name": "Shallow Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "028D": {
+  "name": "New Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "028E": {
+  "name": "Palenqual's Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "028F": {
+  "name": "Swamp Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0290": {
+  "name": "Stable Rift",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0291": {
+  "name": "Singularity Bore",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0292": {
+  "name": "Tumerok Cavern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0293": {
+  "name": "Habitat Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0294": {
+  "name": "Director's Chambers",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0295": {
+  "name": "Inculcation Cells",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0296": {
+  "name": "Southern Black Claw Outpost",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0297": {
+  "name": "Northern Black Claw Outpost",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0298": {
+  "name": "Land Bridge Staging Complex",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0299": {
+  "name": "Farmer's Garden",
+  "indoor": true,
+  "source": "portal"
+ },
+ "029A": {
+  "name": "The Envoy's Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "029B": {
+  "name": "Gredaline Consulate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "029C": {
+  "name": "Linvak Tukal Entryway",
+  "indoor": true,
+  "source": "portal"
+ },
+ "029D": {
+  "name": "Mnemosyne Collection Site",
+  "indoor": true,
+  "source": "portal"
+ },
+ "029E": {
+  "name": "Aerbax Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "029F": {
+  "name": "Aerbax Haven",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A0": {
+  "name": "Sand Shallow",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A1": {
+  "name": "Panopticon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A2": {
+  "name": "Trial 2",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A3": {
+  "name": "Moss Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A4": {
+  "name": "South Tumerok Vanguard Outpost",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A5": {
+  "name": "Tumerok Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A6": {
+  "name": "Trial 3",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A7": {
+  "name": "Trial 4",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A8": {
+  "name": "Trial 5",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02A9": {
+  "name": "Hieromancers' Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02AA": {
+  "name": "Desert March",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02AB": {
+  "name": "Strange Tunnel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02AC": {
+  "name": "Empyrean Mausoleum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02AD": {
+  "name": "Empyrean Cloister",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02AE": {
+  "name": "Chakron Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02AF": {
+  "name": "Chakron Flux",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B0": {
+  "name": "Sepulcher of the Hopeslayer",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B1": {
+  "name": "Shade Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B2": {
+  "name": "Heart of Darkness",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B3": {
+  "name": "Moars Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B4": {
+  "name": "A Mosswart Hideout",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B5": {
+  "name": "Moarsmen Spawning Grounds",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B6": {
+  "name": "Idol Spawning Grounds",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B7": {
+  "name": "Kelderam's Path",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B8": {
+  "name": "Rumuba's Hidey-Hole",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02B9": {
+  "name": "Baelzharon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02BA": {
+  "name": "Moars",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02BB": {
+  "name": "Jungle Shadows",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02BC": {
+  "name": "Mosswart Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02BD": {
+  "name": "Small Ruin",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02BE": {
+  "name": "Small Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02BF": {
+  "name": "Small Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C0": {
+  "name": "Small Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C1": {
+  "name": "Mud Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C2": {
+  "name": "Moarsmen Muck",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C3": {
+  "name": "Slithis Pit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C4": {
+  "name": "Moarsmen Hideout",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C5": {
+  "name": "Treacherous Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C6": {
+  "name": "Lightless Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C7": {
+  "name": "Tumideon Fortress",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C8": {
+  "name": "Banderling Conquest Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02C9": {
+  "name": "Sotiris",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02CA": {
+  "name": "Mosswart Maze",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02CB": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02CC": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02CD": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02CE": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02CF": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D0": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D1": {
+  "name": "The Floating City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D2": {
+  "name": "Uninhabited Area",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D3": {
+  "name": "Xarabydun Lifestone",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D4": {
+  "name": "Abhorrent Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D5": {
+  "name": "Waterfall Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D6": {
+  "name": "Hidden City",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D7": {
+  "name": "Shendolain",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D8": {
+  "name": "Fenmalain Menhir Ring",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02D9": {
+  "name": "Fenmalain Menhir Ring",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02DA": {
+  "name": "Fenmalain",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02DB": {
+  "name": "Fenmalain Vestibule",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02DC": {
+  "name": "Caulnalain Vestibule",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02DD": {
+  "name": "Penguin Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02DE": {
+  "name": "Ruschk Iceberg",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02DF": {
+  "name": "Caulnalain",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E0": {
+  "name": "Shendolain Vestibule",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E1": {
+  "name": "Golem Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E2": {
+  "name": "Arena",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E3": {
+  "name": "Arena",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E4": {
+  "name": "Humid Hovel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E5": {
+  "name": "Krau Li's Labyrinth",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E6": {
+  "name": "Catacombs of the Forgotten",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E7": {
+  "name": "Lugian Excavations",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E8": {
+  "name": "Lugian Quarry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02E9": {
+  "name": "Lugian Mines",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02EA": {
+  "name": "Ishaq's Cellar",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02EB": {
+  "name": "Domino's Lodge, Hebian-to",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02EC": {
+  "name": "Coral Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02ED": {
+  "name": "Aerlinthe Lower Reservoir",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02EE": {
+  "name": "Aerlinthe Reservoir",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02EF": {
+  "name": "Soul-Fearing Vestry Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F0": {
+  "name": "Hills Citadel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F1": {
+  "name": "Ridge Citadel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F2": {
+  "name": "Wilderness Citadel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F3": {
+  "name": "Halls of Metos",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F4": {
+  "name": "Halls of Metos",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F5": {
+  "name": "Halls of Metos",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F6": {
+  "name": "Sclavus Cathedral",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F7": {
+  "name": "Sclavus Cathedral",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F8": {
+  "name": "Burun Cathedral",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02F9": {
+  "name": "AC Room of Cheese",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02FA": {
+  "name": "AC Blue Room",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02FB": {
+  "name": "Olthoi Horde Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02FC": {
+  "name": "Olthoi Horde Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02FD": {
+  "name": "Olthoi Horde Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "02FE": {
+  "name": "Frozen Library",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0363": {
+  "name": "Holtburg South Training Academy",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0364": {
+  "name": "Outer Courtyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0365": {
+  "name": "Shoushi Southeast Training Academy",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0366": {
+  "name": "Outer Courtyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0367": {
+  "name": "Yaraq East Training Academy",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0368": {
+  "name": "Outer Courtyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "039B": {
+  "name": "Steaming Hovel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "039C": {
+  "name": "Arcanum Furniture Shop",
+  "indoor": true,
+  "source": "portal"
+ },
+ "039D": {
+  "name": "Ravenous Vault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "039E": {
+  "name": "Seat of the New Singularity",
+  "indoor": true,
+  "source": "portal"
+ },
+ "039F": {
+  "name": "Singular Obsidian Repository",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A0": {
+  "name": "Singular Chorizite Repository",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A1": {
+  "name": "Singular Pyreal Repository",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A2": {
+  "name": "Southern Infiltrator Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A3": {
+  "name": "Northern Infiltrator Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A4": {
+  "name": "The Asteliary",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A5": {
+  "name": "Weeping Pit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A6": {
+  "name": "North Fork Dam Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03A7": {
+  "name": "Ice Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "03FE": {
+  "name": "Mossy Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0503": {
+  "name": "Floating Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "05FC": {
+  "name": "Jot's Playground",
+  "indoor": false,
+  "source": "portal"
+ },
+ "05FD": {
+  "name": "Our House, is a very, very, very fine house!",
+  "indoor": false,
+  "source": "portal"
+ },
+ "070F": {
+  "name": "Burning Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0904": {
+  "name": "Singularity Caul",
+  "indoor": false,
+  "source": "portal"
+ },
+ "0909": {
+  "name": "Center of the Singularity Caul",
+  "indoor": false,
+  "source": "portal"
+ },
+ "0B0C": {
+  "name": "Spire's Head",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0B70": {
+  "name": "Escape Route",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0C09": {
+  "name": "Floating Bridge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "0D07": {
+  "name": "Caul Oasis",
+  "indoor": false,
+  "source": "portal"
+ },
+ "0D86": {
+  "name": "West Fork Dam Hive",
+  "indoor": false,
+  "source": "portal"
+ },
+ "0DB9": {
+  "name": "Way Back to Tekapuapuh's",
+  "indoor": false,
+  "source": "portal"
+ },
+ "0E34": {
+  "name": "Darktide Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "0FB9": {
+  "name": "Ahurenga",
+  "indoor": false,
+  "source": "poi"
+ },
+ "1048": {
+  "name": "Gate to Qin Xikit's Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1133": {
+  "name": "Ayan Baqur",
+  "indoor": false,
+  "source": "poi"
+ },
+ "1156": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1246": {
+  "name": "White Rabbit Lair",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1286": {
+  "name": "Northwest Direlands",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1293": {
+  "name": "Exit to the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "13C0": {
+  "name": "Northern Ahurenga Plains",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1455": {
+  "name": "Mount Tenkarrdun",
+  "indoor": false,
+  "source": "portal"
+ },
+ "147C": {
+  "name": "Northwest Direlands",
+  "indoor": false,
+  "source": "portal"
+ },
+ "15B1": {
+  "name": "Exit to the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "177B": {
+  "name": "Humming Crystal",
+  "indoor": false,
+  "source": "portal"
+ },
+ "17B2": {
+  "name": "Redspire",
+  "indoor": false,
+  "source": "poi"
+ },
+ "18B3": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "18B4": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1936": {
+  "name": "Archive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "19B0": {
+  "name": "Exit to the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "19BA": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1A8E": {
+  "name": "Inner Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "1B13": {
+  "name": "Direlands Southwest Shore",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1B7F": {
+  "name": "Slaughterhouse",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1DB6": {
+  "name": "Timaru",
+  "indoor": false,
+  "source": "poi"
+ },
+ "1DC1": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1E09": {
+  "name": "Water Island Access",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1E29": {
+  "name": "Dark Towers",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1EAF": {
+  "name": "Karab Delta",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1EB3": {
+  "name": "Base of the Cliffs",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1EB4": {
+  "name": "Marescent Plateau",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1EB6": {
+  "name": "Base of the Timaru Plateau",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1F29": {
+  "name": "Second Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1F2A": {
+  "name": "Consumed Wraith's Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1FC2": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "1FC9": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "20B0": {
+  "name": "Exit to the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "20B7": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2170": {
+  "name": "Gear Knight Invasion Area",
+  "indoor": false,
+  "source": "portal"
+ },
+ "21B0": {
+  "name": "Bluespire",
+  "indoor": false,
+  "source": "poi"
+ },
+ "21C5": {
+  "name": "Central Tuatara Plains",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2264": {
+  "name": "Walled Portals",
+  "indoor": false,
+  "source": "portal"
+ },
+ "22E6": {
+  "name": "Cataracts of Sabella",
+  "indoor": false,
+  "source": "portal"
+ },
+ "231D": {
+  "name": "Direlands Desert Edge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2384": {
+  "name": "Lighthouse",
+  "indoor": false,
+  "source": "portal"
+ },
+ "23DA": {
+  "name": "Westwatch",
+  "indoor": false,
+  "source": "poi"
+ },
+ "24BC": {
+  "name": "Exit to the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "24C0": {
+  "name": "Roots of Skuld, Urd and Verdandi",
+  "indoor": true,
+  "source": "portal"
+ },
+ "24C1": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2631": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2681": {
+  "name": "Fort Tethana",
+  "indoor": false,
+  "source": "poi"
+ },
+ "26EC": {
+  "name": "Silyun",
+  "indoor": false,
+  "source": "poi"
+ },
+ "277A": {
+  "name": "Gloaming Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2842": {
+  "name": "Apostate Citadel Mines",
+  "indoor": true,
+  "source": "portal"
+ },
+ "287A": {
+  "name": "Floating Spire",
+  "indoor": true,
+  "source": "portal"
+ },
+ "29B6": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2AB9": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2ABE": {
+  "name": "Northern Manumet Plains",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2AE2": {
+  "name": "Beacon Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2AEE": {
+  "name": "Karlun's Fort",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2B11": {
+  "name": "Ground",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2B12": {
+  "name": "Tree",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2B20": {
+  "name": "KEEP OUT!",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2BB5": {
+  "name": "Greenspire",
+  "indoor": false,
+  "source": "poi"
+ },
+ "2C30": {
+  "name": "Platforms of Rage",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D11": {
+  "name": "Crypts of the Sand Kings",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D2F": {
+  "name": "Obsidian Plains",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D31": {
+  "name": "Platforms of Torment",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D50": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D51": {
+  "name": "Mid Direlands",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D5B": {
+  "name": "the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2D6B": {
+  "name": "Facility",
+  "indoor": true,
+  "source": "portal"
+ },
+ "2E11": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2E32": {
+  "name": "Direland Volcano",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2E43": {
+  "name": "Obsidian Rim",
+  "indoor": false,
+  "source": "portal"
+ },
+ "2E6C": {
+  "name": "Crystalline",
+  "indoor": true,
+  "source": "portal"
+ },
+ "2E82": {
+  "name": "North Direlands Valley Junction",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3032": {
+  "name": "Rynthid Encampment",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3049": {
+  "name": "Direlands Valleys",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3150": {
+  "name": "Temple Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "316D": {
+  "name": "Crystalline",
+  "indoor": false,
+  "source": "portal"
+ },
+ "31D6": {
+  "name": "Botched Potion",
+  "indoor": false,
+  "source": "portal"
+ },
+ "33D9": {
+  "name": "Sanamar",
+  "indoor": false,
+  "source": "poi"
+ },
+ "344F": {
+  "name": "Precarious Sojourn",
+  "indoor": false,
+  "source": "portal"
+ },
+ "34E0": {
+  "name": "Fledgemaster's Camp",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3518": {
+  "name": "Direlands Desert Northeast",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3694": {
+  "name": "Direlands North Landbridge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3761": {
+  "name": "Outside Accursed Halls",
+  "indoor": false,
+  "source": "portal"
+ },
+ "376A": {
+  "name": "Chalicmere Castle",
+  "indoor": false,
+  "source": "portal"
+ },
+ "38F7": {
+  "name": "Fiun",
+  "indoor": false,
+  "source": "poi"
+ },
+ "3960": {
+  "name": "Apostate Excavation",
+  "indoor": true,
+  "source": "portal"
+ },
+ "3B4D": {
+  "name": "East Direlands Swamp",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3B9C": {
+  "name": "Dire's Edge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3C9D": {
+  "name": "North Direlands",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3DC7": {
+  "name": "Adams' Beach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3E31": {
+  "name": "Black Hill",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3EC5": {
+  "name": "River Mouth",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3ECC": {
+  "name": "Westshore Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3EEB": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3EEC": {
+  "name": "Exit Ruschk Icehold",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3EF6": {
+  "name": "Temple Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3F31": {
+  "name": "Wai Jhou",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3F4E": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3FB1": {
+  "name": "Arrival Chamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "3FE7": {
+  "name": "Corcima Castle Copper Ward",
+  "indoor": false,
+  "source": "portal"
+ },
+ "3FF0": {
+  "name": "Plains of Ruin",
+  "indoor": false,
+  "source": "portal"
+ },
+ "400A": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4031": {
+  "name": "Small Hill Base",
+  "indoor": false,
+  "source": "portal"
+ },
+ "40BF": {
+  "name": "Rivermouth Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "40E6": {
+  "name": "Corcima Castle Gold Ward",
+  "indoor": false,
+  "source": "portal"
+ },
+ "40E8": {
+  "name": "Corcima Castle Platinum Ward",
+  "indoor": false,
+  "source": "portal"
+ },
+ "40F4": {
+  "name": "Exit Lugian Ice Tunnels",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4198": {
+  "name": "Castle Pietrus",
+  "indoor": true,
+  "source": "portal"
+ },
+ "419C": {
+  "name": "Peril's Edge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "41C4": {
+  "name": "Caerlin Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "41E7": {
+  "name": "Corcima Castle Silver Ward",
+  "indoor": false,
+  "source": "portal"
+ },
+ "42AA": {
+  "name": "Sliver-of-BlueCottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "42AE": {
+  "name": "Wilomine Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "42DB": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "42DE": {
+  "name": "Beach Fort",
+  "indoor": false,
+  "source": "poi"
+ },
+ "459C": {
+  "name": "Last-Stop-Before-Dires Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "45DC": {
+  "name": "Lady Maila Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "46A5": {
+  "name": "Hero's Vale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "46C0": {
+  "name": "Auralla Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "472D": {
+  "name": "Massilor's Crypt",
+  "indoor": true,
+  "source": "portal"
+ },
+ "480F": {
+  "name": "Dawnsong Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "482D": {
+  "name": "Graveyard",
+  "indoor": false,
+  "source": "portal"
+ },
+ "482E": {
+  "name": "Graveyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "48B8": {
+  "name": "Plateau Base",
+  "indoor": false,
+  "source": "portal"
+ },
+ "48BC": {
+  "name": "Fadsahil Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "48E0": {
+  "name": "Woodshore Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "492D": {
+  "name": "Down to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "49B6": {
+  "name": "Plateau Top",
+  "indoor": false,
+  "source": "portal"
+ },
+ "49B7": {
+  "name": "Plateau",
+  "indoor": false,
+  "source": "poi"
+ },
+ "49B8": {
+  "name": "Plateau Wedding",
+  "indoor": false,
+  "source": "portal"
+ },
+ "49E4": {
+  "name": "Hoshino Fortress",
+  "indoor": false,
+  "source": "portal"
+ },
+ "49E6": {
+  "name": "Desolation Beach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "49F0": {
+  "name": "Eastwatch",
+  "indoor": false,
+  "source": "poi"
+ },
+ "4A9C": {
+  "name": "Mirthless Dale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4ADB": {
+  "name": "Brazenn Domain",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4BC8": {
+  "name": "Pine Deep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4BF2": {
+  "name": "Exit Viamontian Royal Prison",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4CA5": {
+  "name": "Axefall Glen",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4DC0": {
+  "name": "Rahvard Square",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4DE7": {
+  "name": "Empyrean Shore Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4EAC": {
+  "name": "Plateau Hollow Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4EBA": {
+  "name": "Rhynntal Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "4FF1": {
+  "name": "Count Dardante's Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "51A0": {
+  "name": "Merak",
+  "indoor": false,
+  "source": "portal"
+ },
+ "51A3": {
+  "name": "Adept's Domain",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5226": {
+  "name": "Direlands Southeast Shore",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5269": {
+  "name": "Wedding Trials Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "526A": {
+  "name": "Portal Space",
+  "indoor": true,
+  "source": "portal"
+ },
+ "526B": {
+  "name": "Portal Space",
+  "indoor": true,
+  "source": "portal"
+ },
+ "526C": {
+  "name": "Portal Space",
+  "indoor": true,
+  "source": "portal"
+ },
+ "526D": {
+  "name": "Lower Empyrean Acid Cistern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "526E": {
+  "name": "Empyrean Acid Propylaeum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "526F": {
+  "name": "Lower Empyrean Fire Cistern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5270": {
+  "name": "Empyrean Fire Propylaeum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5271": {
+  "name": "Lower Empyrean Ice Cistern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5272": {
+  "name": "Empyrean Ice Propylaeum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5273": {
+  "name": "Upper Empyrean Lightning Cistern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5274": {
+  "name": "Empyrean Lightning Propylaeum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5275": {
+  "name": "Regicide Basement",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5276": {
+  "name": "Hall of Hollows",
+  "indoor": true,
+  "source": "portal"
+ },
+ "52AB": {
+  "name": "Yee Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "52B8": {
+  "name": "Rytheran Dale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "52C1": {
+  "name": "Lithaenean Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "52DF": {
+  "name": "Sonel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5360": {
+  "name": "Alvan Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5361": {
+  "name": "Caerna Dwellings",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5362": {
+  "name": "Illsin Veranda",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5363": {
+  "name": "Marin Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5364": {
+  "name": "Ruadnar Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5365": {
+  "name": "Senmai Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5366": {
+  "name": "Sigil Veranda",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5367": {
+  "name": "Sorveya Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5368": {
+  "name": "Sylvan Dwellings",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5369": {
+  "name": "Treyval Veranda",
+  "indoor": true,
+  "source": "portal"
+ },
+ "536A": {
+  "name": "Hidden Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "536B": {
+  "name": "Convergent Median",
+  "indoor": true,
+  "source": "portal"
+ },
+ "536C": {
+  "name": "Malignant Tabernacle",
+  "indoor": true,
+  "source": "portal"
+ },
+ "536D": {
+  "name": "Bookcase",
+  "indoor": true,
+  "source": "portal"
+ },
+ "536E": {
+  "name": "Venemous Nidus",
+  "indoor": true,
+  "source": "portal"
+ },
+ "53C5": {
+  "name": "Stormtree Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "53E4": {
+  "name": "Sweet Maple Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5416": {
+  "name": "South Direlands",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5456": {
+  "name": "Grievver Caves",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5457": {
+  "name": "Colossus Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5458": {
+  "name": "Mammet Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5459": {
+  "name": "Effigy Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "545A": {
+  "name": "Mannikin Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "545B": {
+  "name": "Arcanum Research Facility",
+  "indoor": true,
+  "source": "portal"
+ },
+ "545C": {
+  "name": "Arcanum Storehouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "545D": {
+  "name": "The Callous Heart Left Wing",
+  "indoor": true,
+  "source": "portal"
+ },
+ "545E": {
+  "name": "Fathomless Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "545F": {
+  "name": "Fathomless Chasm Clough",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5460": {
+  "name": "Fathomless Chasm Abyss",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5462": {
+  "name": "Oubliette",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5463": {
+  "name": "Labyrinth",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5464": {
+  "name": "Gelidite Library",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5465": {
+  "name": "Sanctum Residential Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "54A8": {
+  "name": "Hopevale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "55A0": {
+  "name": "Inquisitor's Dale Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "55A4": {
+  "name": "Shield of Valor Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5643": {
+  "name": "Gromnie Clan Training Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5644": {
+  "name": "Mask Clan Training Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5645": {
+  "name": "Abandoned Armory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5646": {
+  "name": "An Archive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5647": {
+  "name": "Tower Base Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5648": {
+  "name": "Warehouse Annex Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5649": {
+  "name": "Dark Tree Crystal Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "564A": {
+  "name": "Spirit Cell",
+  "indoor": true,
+  "source": "portal"
+ },
+ "564B": {
+  "name": "Crystal Mine Extreme",
+  "indoor": true,
+  "source": "portal"
+ },
+ "564C": {
+  "name": "Crystal Mine High",
+  "indoor": true,
+  "source": "portal"
+ },
+ "564D": {
+  "name": "Warehouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "564E": {
+  "name": "Crystal Mine Low",
+  "indoor": true,
+  "source": "portal"
+ },
+ "564F": {
+  "name": "Crystal Mine New Isparians",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5650": {
+  "name": "Victory Residential Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5651": {
+  "name": "Mansion Dungeon",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5652": {
+  "name": "Hidden Treasury",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5653": {
+  "name": "Citadel Library",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5654": {
+  "name": "Gaerlan's Inner Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5655": {
+  "name": "Virindi Research Facility",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5656": {
+  "name": "Haven Residential Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5657": {
+  "name": "Acid Cistern Core",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5658": {
+  "name": "Fire Cistern Core",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5659": {
+  "name": "Ice Cistern Core",
+  "indoor": true,
+  "source": "portal"
+ },
+ "565A": {
+  "name": "Lightning Cistern Core Extreme",
+  "indoor": true,
+  "source": "portal"
+ },
+ "565B": {
+  "name": "Lightning Cistern Core High",
+  "indoor": true,
+  "source": "portal"
+ },
+ "565C": {
+  "name": "Lightning Cistern Core Low",
+  "indoor": true,
+  "source": "portal"
+ },
+ "565D": {
+  "name": "Lightning Cistern Core Mid",
+  "indoor": true,
+  "source": "portal"
+ },
+ "565E": {
+  "name": "Oriel Residential Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5660": {
+  "name": "Martine's Study",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5661": {
+  "name": "Atrium Residential Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "56AC": {
+  "name": "Stone Scythe Stronghold",
+  "indoor": false,
+  "source": "portal"
+ },
+ "56B0": {
+  "name": "Two Hills Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5743": {
+  "name": "Frost Guardian Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5744": {
+  "name": "Trap Floor Walk Low",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5745": {
+  "name": "Icy Demise",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5746": {
+  "name": "Lightning Ziggurat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5747": {
+  "name": "Electric Tumult",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5748": {
+  "name": "Tusker Burrow",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5749": {
+  "name": "Tusker Lodge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "574A": {
+  "name": "Warehouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "574B": {
+  "name": "Warehouse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "574C": {
+  "name": "Warehouse Annex Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "574D": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "574E": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "574F": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5750": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5751": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5752": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5753": {
+  "name": "Deeper Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5754": {
+  "name": "Catacombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5756": {
+  "name": "Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5760": {
+  "name": "Sand Caves",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5765": {
+  "name": "Lost Ruins",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5766": {
+  "name": "Nanjou Shou-jen Academy",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5768": {
+  "name": "Sclavus Santa's House",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5769": {
+  "name": "Firey Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "576A": {
+  "name": "Charged Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "576C": {
+  "name": "Acidic Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "576D": {
+  "name": "Cavernous Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "576E": {
+  "name": "Shadowy Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "576F": {
+  "name": "Twisted Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5770": {
+  "name": "Frozen Refuge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5771": {
+  "name": "Venerable Mausoleum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5772": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5773": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5774": {
+  "name": "Secret Putiputi Place",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5777": {
+  "name": "Falcon Clan Training Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5778": {
+  "name": "Serpent Clan Training Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5779": {
+  "name": "Shreth Clan Training Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "577A": {
+  "name": "Reedshark Clan Training Camp",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5843": {
+  "name": "Fire Guardian Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5844": {
+  "name": "Trap Floor Walk Mid",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5845": {
+  "name": "Fiery Consumption",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5846": {
+  "name": "Acid Ziggurat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5847": {
+  "name": "Electric Tumult",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5848": {
+  "name": "Tusker Freehold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5849": {
+  "name": "Tusker Assault",
+  "indoor": true,
+  "source": "portal"
+ },
+ "584B": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "584C": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "584D": {
+  "name": "Food Storage",
+  "indoor": true,
+  "source": "portal"
+ },
+ "584E": {
+  "name": "Serpent Burial Grounds",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5850": {
+  "name": "Prismatic Guardian Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5851": {
+  "name": "Prismatic Ziggurat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5852": {
+  "name": "Proving Grounds Uber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5853": {
+  "name": "Prismatic Devastation",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5854": {
+  "name": "Gaerlan's Inner Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5856": {
+  "name": "Foundry of Izexi",
+  "indoor": true,
+  "source": "portal"
+ },
+ "585E": {
+  "name": "Falatacot Depot",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5860": {
+  "name": "Colton Reeyan's Sanctuary",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5861": {
+  "name": "Crystal Core",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5862": {
+  "name": "Count Phainor's Tomb",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5863": {
+  "name": "Desert Dwelling",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5864": {
+  "name": "Samurai Hausu",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5865": {
+  "name": "Fiery Alcove",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5866": {
+  "name": "Sanctuary of the Recluse",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5867": {
+  "name": "Virindi Edifice",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5868": {
+  "name": "Chiming",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5869": {
+  "name": "West Fork Dam Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "586A": {
+  "name": "Grub Quarters",
+  "indoor": true,
+  "source": "portal"
+ },
+ "586B": {
+  "name": "Queen's Treasury",
+  "indoor": true,
+  "source": "portal"
+ },
+ "586C": {
+  "name": "Masked Preface",
+  "indoor": true,
+  "source": "portal"
+ },
+ "586D": {
+  "name": "Hive Eviscerator Burrow",
+  "indoor": true,
+  "source": "portal"
+ },
+ "586E": {
+  "name": "Hive Warrior Mound",
+  "indoor": true,
+  "source": "portal"
+ },
+ "586F": {
+  "name": "Tusker Den",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5870": {
+  "name": "Curator of Torment's Study",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5871": {
+  "name": "Seed of Hatred",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5872": {
+  "name": "Seed of Misery",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5873": {
+  "name": "Seed of Anger",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5874": {
+  "name": "Portal Floor Walk",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5875": {
+  "name": "Rynthid Genesis",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5876": {
+  "name": "Rynthid Foundry",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5877": {
+  "name": "Fear Factory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5878": {
+  "name": "Spirited Halls",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5879": {
+  "name": "Path of Rage",
+  "indoor": true,
+  "source": "portal"
+ },
+ "587A": {
+  "name": "Blue",
+  "indoor": true,
+  "source": "portal"
+ },
+ "58E8": {
+  "name": "Azaroth Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5943": {
+  "name": "Acid Guardian Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5944": {
+  "name": "Trap Floor Walk High",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5945": {
+  "name": "Entropic Decay",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5946": {
+  "name": "Fire Ziggurat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5947": {
+  "name": "Electric Tumult",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5948": {
+  "name": "Tusker Armory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5949": {
+  "name": "Tusker Lacuna",
+  "indoor": true,
+  "source": "portal"
+ },
+ "594A": {
+  "name": "Chapel of Mowen",
+  "indoor": true,
+  "source": "portal"
+ },
+ "594B": {
+  "name": "Aerbax's Holding",
+  "indoor": true,
+  "source": "portal"
+ },
+ "594C": {
+  "name": "Gerent's Compound",
+  "indoor": true,
+  "source": "portal"
+ },
+ "594D": {
+  "name": "Ancient Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "594E": {
+  "name": "Deep Caves",
+  "indoor": true,
+  "source": "portal"
+ },
+ "594F": {
+  "name": "Laboratory",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5951": {
+  "name": "Presk's Bunker",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5952": {
+  "name": "Swirling",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5953": {
+  "name": "Red",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5954": {
+  "name": "Inner Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "595E": {
+  "name": "Frozen Recess",
+  "indoor": true,
+  "source": "portal"
+ },
+ "596A": {
+  "name": "Fowl Basement",
+  "indoor": true,
+  "source": "portal"
+ },
+ "596B": {
+  "name": "Gauntlet Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A43": {
+  "name": "Lightning Guardian Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A44": {
+  "name": "Trap Floor Walk Extreme",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A45": {
+  "name": "Electric Destruction",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A46": {
+  "name": "Frost Ziggurat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A47": {
+  "name": "Electric Tumult",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A48": {
+  "name": "Tusker Barracks",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A49": {
+  "name": "Tusker Honeycombs",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A4A": {
+  "name": "Tusker Pits",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5A9C": {
+  "name": "Outpost",
+  "indoor": false,
+  "source": "poi"
+ },
+ "5AB0": {
+  "name": "Rending Talon Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5AB4": {
+  "name": "Tyrrin Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5AD8": {
+  "name": "Westward",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5B43": {
+  "name": "Olthoi Arcade",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B44": {
+  "name": "Olthoi Arcade Central",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B45": {
+  "name": "Virindi Complex",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B46": {
+  "name": "Tusker Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B47": {
+  "name": "Tusker Habitat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B48": {
+  "name": "Tusker Holding",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B49": {
+  "name": "Plated Rifts",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5B4A": {
+  "name": "Tusker Quarters",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5BA2": {
+  "name": "Tia-Leh Homestead",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5BA6": {
+  "name": "Wolfenvale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5BD8": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5C43": {
+  "name": "Tusker Cavern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C44": {
+  "name": "Tusker Encampments",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C45": {
+  "name": "Tusker Abode",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C46": {
+  "name": "Tusker Gauntlet",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C47": {
+  "name": "Tusker Grotto",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C48": {
+  "name": "Rampage Bluff",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C49": {
+  "name": "Tusker Retreat",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C4A": {
+  "name": "Tusker Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C4C": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C4D": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C4E": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C4F": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C50": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C51": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C52": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C53": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C54": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C55": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C56": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C58": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C59": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C5A": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C5B": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C5C": {
+  "name": "Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5C9F": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5CE7": {
+  "name": "Northfire Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5D43": {
+  "name": "Tusker Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D44": {
+  "name": "Tusker Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D45": {
+  "name": "Tusker Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D46": {
+  "name": "Vengeance Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D47": {
+  "name": "Inner Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D48": {
+  "name": "Inner Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D49": {
+  "name": "Olthoi Arcade",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D4A": {
+  "name": "Olthoi Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D4B": {
+  "name": "Shallow Olthoi Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D4C": {
+  "name": "Deep Olthoi Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D4D": {
+  "name": "Cavernous Olthoi Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5D4E": {
+  "name": "Abyssal Olthoi Chasm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5DC6": {
+  "name": "Asandra Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5E43": {
+  "name": "Antechamber",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E44": {
+  "name": "Tusker Food Storage",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E45": {
+  "name": "Upper Corridor",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E46": {
+  "name": "Catacombs of Opposition",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E47": {
+  "name": "Asheron's Sanctum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E48": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E49": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E4A": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5E4B": {
+  "name": "Olthoi Brood Hive",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5EAF": {
+  "name": "Firesong Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5EB4": {
+  "name": "Dame Tolani Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5EBE": {
+  "name": "Aloria",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5ED2": {
+  "name": "Stonehold Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5F43": {
+  "name": "Legend of the Tusker King",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5F44": {
+  "name": "Idol of Wishes",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5F45": {
+  "name": "Eagle's Sight",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5F46": {
+  "name": "Heart of Innocence",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5F47": {
+  "name": "Elemental Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5F48": {
+  "name": "Hidden Cavern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "5FA2": {
+  "name": "Tarn Vinara Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "5FA6": {
+  "name": "Nalib Cavana Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6043": {
+  "name": "Tusker Warrior's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6044": {
+  "name": "Behind the Waterfall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6045": {
+  "name": "Caul Asylum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6046": {
+  "name": "Caul Athenaeum",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6047": {
+  "name": "Caul Sanatorium",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6048": {
+  "name": "Caul Sanatorium",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6049": {
+  "name": "Relic",
+  "indoor": true,
+  "source": "portal"
+ },
+ "604A": {
+  "name": "Sclavus Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "60D6": {
+  "name": "Frostfell Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6143": {
+  "name": "Basement",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6144": {
+  "name": "Lower Corridor",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6145": {
+  "name": "Matron Hive West",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6146": {
+  "name": "Matron Hive East",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6147": {
+  "name": "Mountain Citadel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6148": {
+  "name": "Desert Citadel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6149": {
+  "name": "Crystal Mine",
+  "indoor": true,
+  "source": "portal"
+ },
+ "614A": {
+  "name": "Lair of the Ancient Queen",
+  "indoor": true,
+  "source": "portal"
+ },
+ "614B": {
+  "name": "Drudge Fight",
+  "indoor": true,
+  "source": "portal"
+ },
+ "614C": {
+  "name": "Resting Place",
+  "indoor": true,
+  "source": "portal"
+ },
+ "619E": {
+  "name": "East Danby",
+  "indoor": false,
+  "source": "portal"
+ },
+ "61AC": {
+  "name": "Deepvale Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "61CA": {
+  "name": "Verena",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6247": {
+  "name": "Burun Burrow",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6248": {
+  "name": "Renegade Fortress",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6249": {
+  "name": "Renegade Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "624A": {
+  "name": "Burun Cavern",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6343": {
+  "name": "Barracks Conveyance",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6345": {
+  "name": "Subterannean Farm",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6346": {
+  "name": "Matron Hive South",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6347": {
+  "name": "Matron Hive North",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6348": {
+  "name": "Caliginous Bethel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6349": {
+  "name": "Oubliette",
+  "indoor": true,
+  "source": "portal"
+ },
+ "634A": {
+  "name": "Lair of The Homunculus",
+  "indoor": true,
+  "source": "portal"
+ },
+ "634B": {
+  "name": "Sunken Mere",
+  "indoor": true,
+  "source": "portal"
+ },
+ "634C": {
+  "name": "Tainted Grotto",
+  "indoor": true,
+  "source": "portal"
+ },
+ "63A2": {
+  "name": "Harmonious Blade Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "63A8": {
+  "name": "Direvale Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "63B0": {
+  "name": "Majestic Saddle Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6443": {
+  "name": "Research Chambers Conveyance",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6444": {
+  "name": "East Library Conveyance",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6445": {
+  "name": "Forge Conveyance",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6446": {
+  "name": "Tunnels to the Harbinger",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6447": {
+  "name": "Tunnels to the Harbinger",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6448": {
+  "name": "Mount Ingot",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6449": {
+  "name": "Dragon's Power",
+  "indoor": true,
+  "source": "portal"
+ },
+ "644A": {
+  "name": "Decrepit Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "64D5": {
+  "name": "Stonehold",
+  "indoor": false,
+  "source": "poi"
+ },
+ "6548": {
+  "name": "The Orphanage",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6549": {
+  "name": "Renegade Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "654A": {
+  "name": "Renegade Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "654B": {
+  "name": "Renegade Stronghold",
+  "indoor": true,
+  "source": "portal"
+ },
+ "654C": {
+  "name": "Enchanted Mnemosyne Portal 1",
+  "indoor": true,
+  "source": "portal"
+ },
+ "654D": {
+  "name": "Acid Pit Bypass",
+  "indoor": true,
+  "source": "portal"
+ },
+ "65E5": {
+  "name": "Thyrinn Cant Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6651": {
+  "name": "Hoshino Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "665E": {
+  "name": "Great Hall",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6678": {
+  "name": "Olthoi Warrior Nest",
+  "indoor": true,
+  "source": "portal"
+ },
+ "6679": {
+  "name": "Crumbling Empyrean Mansion",
+  "indoor": true,
+  "source": "portal"
+ },
+ "667A": {
+  "name": "Mutilator Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "66C3": {
+  "name": "Regina Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6717": {
+  "name": "Direlands South Landbridge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6757": {
+  "name": "Tanada Toresen Temple",
+  "indoor": true,
+  "source": "portal"
+ },
+ "679D": {
+  "name": "Fearnot Valley Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "67C9": {
+  "name": "Hidden Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6897": {
+  "name": "Sanai",
+  "indoor": false,
+  "source": "portal"
+ },
+ "68A1": {
+  "name": "Embara",
+  "indoor": false,
+  "source": "portal"
+ },
+ "68A5": {
+  "name": "Rethux Vale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6912": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6992": {
+  "name": "Nidal-Taraq Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "69E5": {
+  "name": "Lightbringer Dale Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6ACF": {
+  "name": "Ice's Edge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6AD3": {
+  "name": "Laiti's Villa",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6AE1": {
+  "name": "Dires' Door Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6B8E": {
+  "name": "Shore Vista Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6CA7": {
+  "name": "Morntide Ascent Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6CAB": {
+  "name": "East Morntide Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6DD7": {
+  "name": "Rix Zilik",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6EED": {
+  "name": "Seaview Ridge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6F8B": {
+  "name": "Loredane Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6F95": {
+  "name": "Gharu'n Victory Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6F9A": {
+  "name": "Gold Hill Ruins",
+  "indoor": false,
+  "source": "portal"
+ },
+ "6FAF": {
+  "name": "East Morntide Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "70A6": {
+  "name": "Sanam Batal Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "70AA": {
+  "name": "Genem Causland",
+  "indoor": false,
+  "source": "portal"
+ },
+ "71C2": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "71E4": {
+  "name": "Lord Cambarth Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7200": {
+  "name": "Winthur Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "72C8": {
+  "name": "Patriarch's Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7300": {
+  "name": "Larkspur Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7308": {
+  "name": "Ulgrim's Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7394": {
+  "name": "West Zaikhal Freehold",
+  "indoor": false,
+  "source": "portal"
+ },
+ "73AF": {
+  "name": "Amarand Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7400": {
+  "name": "Mellas Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7488": {
+  "name": "Desert Boundary Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "74AB": {
+  "name": "Darasa Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "74EA": {
+  "name": "Snowy Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7500": {
+  "name": "Vesper Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7513": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "75D7": {
+  "name": "Access to Crystal Mines",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7600": {
+  "name": "Gajin Dwellings",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7700": {
+  "name": "Valorya Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7792": {
+  "name": "Sharvale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "77E7": {
+  "name": "Frozen Tomb",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7800": {
+  "name": "Heartland Yard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "78A1": {
+  "name": "Zaikhal Reinforcements Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "78B2": {
+  "name": "Tiofor Deeps",
+  "indoor": false,
+  "source": "portal"
+ },
+ "78F4": {
+  "name": "Northwater Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7900": {
+  "name": "Ivory Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7911": {
+  "name": "Gatekeepers",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7965": {
+  "name": "Warmtide Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7981": {
+  "name": "Bay of Sands",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7A00": {
+  "name": "Alphus Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7A9E": {
+  "name": "Mimiana Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7AA2": {
+  "name": "Blazing Wand Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7AD6": {
+  "name": "Anadil",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7B00": {
+  "name": "Hasina Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7B79": {
+  "name": "North Desert Edge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7C00": {
+  "name": "Sorac Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7C6C": {
+  "name": "North Yaraq Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7C70": {
+  "name": "Al-Arqis Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7C76": {
+  "name": "Aqalah",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7CF3": {
+  "name": "Far Horizon Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7D00": {
+  "name": "Maru Veranda",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7D64": {
+  "name": "Yaraq",
+  "indoor": false,
+  "source": "poi"
+ },
+ "7D7E": {
+  "name": "Midsong Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7D90": {
+  "name": "Exit Silver Legion Keep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7D96": {
+  "name": "Zaikhal Advance Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7DE8": {
+  "name": "Wisp Lake Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7E00": {
+  "name": "Forsythian Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7E02": {
+  "name": "The Shadows",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7E64": {
+  "name": "Yaraq Casino VIP",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7E82": {
+  "name": "Precarious Sojourn Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7E9B": {
+  "name": "Zaikhal Middle Guard Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7E9F": {
+  "name": "Bright Blade Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7EC8": {
+  "name": "Mountain Retreat Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7F00": {
+  "name": "Vindalan Dwellings",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7F15": {
+  "name": "Inner Sanctum",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7F76": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7F7F": {
+  "name": "Midsong Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7F8F": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7F90": {
+  "name": "Zaikhal Library",
+  "indoor": true,
+  "source": "portal"
+ },
+ "7FCD": {
+  "name": "Lake NemuelSettlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "7FEE": {
+  "name": "Inner Sanctum",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8000": {
+  "name": "Syrah Dwellings",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8004": {
+  "name": "Outer Courtyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "806F": {
+  "name": "Sand Shallow Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "808E": {
+  "name": "Exit Copper Legion Keep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8090": {
+  "name": "Zaikhal",
+  "indoor": false,
+  "source": "poi"
+ },
+ "8094": {
+  "name": "Exit Platinum Legion Keep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "809B": {
+  "name": "Helms Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "80AA": {
+  "name": "Reviled Maw Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "80AE": {
+  "name": "Lanadryll Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "80E1": {
+  "name": "Stone Triad Dell",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8100": {
+  "name": "Allain Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "815E": {
+  "name": "South Yaraq Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8190": {
+  "name": "Exit Gold Legion Keep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8196": {
+  "name": "Halls of Helm",
+  "indoor": false,
+  "source": "portal"
+ },
+ "81E9": {
+  "name": "Midhill Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8200": {
+  "name": "White Lotus Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "828E": {
+  "name": "Swamp",
+  "indoor": false,
+  "source": "portal"
+ },
+ "82C7": {
+  "name": "Defiant Prey Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8300": {
+  "name": "Autumn Moon Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8312": {
+  "name": "Land Bridge Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "83CD": {
+  "name": "Windrune Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8400": {
+  "name": "Trellyn Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8477": {
+  "name": "Return of Mumiyah Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8494": {
+  "name": "Suntik",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8496": {
+  "name": "New Suntik",
+  "indoor": false,
+  "source": "portal"
+ },
+ "84AC": {
+  "name": "Tusker Notch",
+  "indoor": false,
+  "source": "portal"
+ },
+ "84B0": {
+  "name": "Charnhold",
+  "indoor": false,
+  "source": "portal"
+ },
+ "84F5": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8500": {
+  "name": "Endara Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8556": {
+  "name": "Ijaniya",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8573": {
+  "name": "Arrak",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8588": {
+  "name": "Al-Jalima",
+  "indoor": false,
+  "source": "poi"
+ },
+ "85B4": {
+  "name": "Durglen",
+  "indoor": false,
+  "source": "portal"
+ },
+ "85C4": {
+  "name": "North Pass Hollow Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8600": {
+  "name": "Celcynd Grotto",
+  "indoor": true,
+  "source": "portal"
+ },
+ "866A": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "868E": {
+  "name": "Four Towers Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "86C0": {
+  "name": "Ianna",
+  "indoor": false,
+  "source": "portal"
+ },
+ "86F1": {
+  "name": "Tharesun",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8700": {
+  "name": "Trothyr Hollow",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8703": {
+  "name": "Outer Courtyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8704": {
+  "name": "Crystalline",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8763": {
+  "name": "Neftet",
+  "indoor": false,
+  "source": "portal"
+ },
+ "876C": {
+  "name": "Tufa",
+  "indoor": false,
+  "source": "poi"
+ },
+ "879F": {
+  "name": "Maitland",
+  "indoor": false,
+  "source": "portal"
+ },
+ "87E0": {
+  "name": "Frosty Dale Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8800": {
+  "name": "Jojii Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8802": {
+  "name": "Roost Floor Trap",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8803": {
+  "name": "Crystalline",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8850": {
+  "name": "Gearknight Lord's Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8851": {
+  "name": "Gearknight Lord's Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8852": {
+  "name": "Gearknight Lord's Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8865": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "88F7": {
+  "name": "Point Tremblant",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8900": {
+  "name": "Cedraic Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8904": {
+  "name": "Empyrean Facility Upper Level",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8954": {
+  "name": "Temple Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "89C9": {
+  "name": "Stonerune Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "89CD": {
+  "name": "Shaky Ledge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "89F4": {
+  "name": "Northern Point",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8A00": {
+  "name": "Ben Ten Lodge",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8A02": {
+  "name": "Facility Hub",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8A48": {
+  "name": "Pillars-on-the-Sea Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8A63": {
+  "name": "Temple Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8A7F": {
+  "name": "Jackcat Canyon",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8AA6": {
+  "name": "Majestic Hill Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8B00": {
+  "name": "Dulok Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8B02": {
+  "name": "Forgotten Tunnels",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8B03": {
+  "name": "Mysterious",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8B04": {
+  "name": "Frozen Wight Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8B55": {
+  "name": "Al-Kasan Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8B6D": {
+  "name": "Bleached Skull Wastes Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8BD1": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8BF2": {
+  "name": "Celcynd Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8C00": {
+  "name": "Crescent Moon Veranda",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8C04": {
+  "name": "Outer Courtyard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8C5F": {
+  "name": "Wi Badlands Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8C98": {
+  "name": "Alfreth Ridge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8C9D": {
+  "name": "Dovetail Valley Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8CB9": {
+  "name": "Firedew",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8CC2": {
+  "name": "New Nesortania",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8D00": {
+  "name": "Jade Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8D63": {
+  "name": "Djinaya Wind Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8D73": {
+  "name": "Naqut Dreams Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8D8E": {
+  "name": "To Top of Mt. Syliph",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8DE3": {
+  "name": "Greenvale Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E00": {
+  "name": "Ispar Yard",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8E40": {
+  "name": "Serpent Hills Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E48": {
+  "name": "Desert Vanguard Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E4C": {
+  "name": "Fadsahil's",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E51": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E72": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E84": {
+  "name": "Musansayn",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E8D": {
+  "name": "Mt. Syliph Plain",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8E8F": {
+  "name": "North Syliph",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8F00": {
+  "name": "Xao Wu Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "8F15": {
+  "name": "Artifice Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8F58": {
+  "name": "Al-Arqas",
+  "indoor": false,
+  "source": "poi"
+ },
+ "8F91": {
+  "name": "North Dalt",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8FC6": {
+  "name": "Southern Mt. Esper",
+  "indoor": false,
+  "source": "portal"
+ },
+ "8FD2": {
+  "name": "Outside Crater Caves Dungeon",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9000": {
+  "name": "Accord Veranda",
+  "indoor": true,
+  "source": "portal"
+ },
+ "906C": {
+  "name": "Desert Mirage Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "90AA": {
+  "name": "Whispering Pines Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "90D0": {
+  "name": "Silencia's Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "90D1": {
+  "name": "Snowreap Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9100": {
+  "name": "Candeth Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "912A": {
+  "name": "Qalaba'r Seaside Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9132": {
+  "name": "Ebbing Tide Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9170": {
+  "name": "Al-Nosaj",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9189": {
+  "name": "Mt Sylph View Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9193": {
+  "name": "North Gemm",
+  "indoor": false,
+  "source": "portal"
+ },
+ "91A5": {
+  "name": "Mistdweller Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "91B8": {
+  "name": "Pine Hillock Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "91CF": {
+  "name": "Northern Volcano",
+  "indoor": false,
+  "source": "portal"
+ },
+ "91EC": {
+  "name": "Pavanne Vale Freehold",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9200": {
+  "name": "Celdiseth Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "923B": {
+  "name": "Mahara Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9260": {
+  "name": "Arqasanti",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9264": {
+  "name": "Hamud Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9277": {
+  "name": "Samsur Butte Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "929E": {
+  "name": "Soltan Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "92B3": {
+  "name": "Bucolic Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9300": {
+  "name": "Festivus Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9302": {
+  "name": "Geraine's Study",
+  "indoor": true,
+  "source": "portal"
+ },
+ "934B": {
+  "name": "Xarabydun",
+  "indoor": false,
+  "source": "poi"
+ },
+ "9350": {
+  "name": "Monument Sands Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "937B": {
+  "name": "Verdantine Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9385": {
+  "name": "Stone Scar Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9390": {
+  "name": "Unified Heart Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9395": {
+  "name": "Bellig Top",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9398": {
+  "name": "Mt. Alphus Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9400": {
+  "name": "Hibiscus Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9414": {
+  "name": "Stormbrow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9419": {
+  "name": "Simda'r Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9444": {
+  "name": "Al-Mar Oasis",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9458": {
+  "name": "Solclaim Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9497": {
+  "name": "Base of Mt. Alphus",
+  "indoor": false,
+  "source": "portal"
+ },
+ "94CE": {
+  "name": "Highland Manors",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9500": {
+  "name": "Meditation Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "956E": {
+  "name": "Sand Kings Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9589": {
+  "name": "East Al-Jalima Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "958A": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9598": {
+  "name": "Mount Alphus",
+  "indoor": false,
+  "source": "portal"
+ },
+ "95A3": {
+  "name": "Howling Wolf Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "95D6": {
+  "name": "Neydisa",
+  "indoor": false,
+  "source": "poi"
+ },
+ "9600": {
+  "name": "Setera Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9633": {
+  "name": "Villalabar",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9654": {
+  "name": "Al-Hatar Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "965A": {
+  "name": "Dry Bone Manors",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9664": {
+  "name": "Ahr-Zona",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9699": {
+  "name": "South Zabool",
+  "indoor": false,
+  "source": "portal"
+ },
+ "96A8": {
+  "name": "Eaves of Tiofor Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "96B6": {
+  "name": "Woodsbane Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "96D6": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9700": {
+  "name": "Spirit Gate",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9721": {
+  "name": "Qalaba'r House",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9722": {
+  "name": "Qalabar",
+  "indoor": false,
+  "source": "poi"
+ },
+ "975F": {
+  "name": "Mosswart Maze",
+  "indoor": false,
+  "source": "portal"
+ },
+ "977B": {
+  "name": "Samsur",
+  "indoor": false,
+  "source": "poi"
+ },
+ "9791": {
+  "name": "Bellig Mesa Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9795": {
+  "name": "Desert Northern Edge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "979A": {
+  "name": "Base of Mt. Zabool",
+  "indoor": false,
+  "source": "portal"
+ },
+ "97CB": {
+  "name": "Songview",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9800": {
+  "name": "Triumphal Gardens",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9844": {
+  "name": "Dunes End Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "98C6": {
+  "name": "Prosper River Headwaters",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9900": {
+  "name": "Wilamil Court",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9938": {
+  "name": "Avatania Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "995B": {
+  "name": "Thasali Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9985": {
+  "name": "Nal Wadi Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "99E7": {
+  "name": "Return to Dereth",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9A21": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9A22": {
+  "name": "Wintersebb Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9A2C": {
+  "name": "Qalabar Oasis Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9A6B": {
+  "name": "Djebel al-Nar Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9A81": {
+  "name": "Stone Face Oasis Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9AEB": {
+  "name": "Celdiseth's",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9B5F": {
+  "name": "West Uziz Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9B76": {
+  "name": "Janaa Ridge Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9B91": {
+  "name": "Stonebend Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9B96": {
+  "name": "Redrock Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9B9B": {
+  "name": "Zabool Overlook Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9BAA": {
+  "name": "Mountain Ridge Abodes",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9C4D": {
+  "name": "Sands-of-the-Skull Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9C70": {
+  "name": "Yushad Ridge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9C8D": {
+  "name": "Dillo Butte Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9CD8": {
+  "name": "Neydisa Village",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9E33": {
+  "name": "Brigand Sands Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9E74": {
+  "name": "Cactus Acres",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9E88": {
+  "name": "Greenswath",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9EB6": {
+  "name": "Banderling Camp",
+  "indoor": false,
+  "source": "portal"
+ },
+ "9EE5": {
+  "name": "Northwatch Castle",
+  "indoor": true,
+  "source": "portal"
+ },
+ "9F44": {
+  "name": "Khayyaban",
+  "indoor": false,
+  "source": "poi"
+ },
+ "A04B": {
+  "name": "Bhah Dhah Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A06E": {
+  "name": "Vulture's Eye Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A08D": {
+  "name": "Palm-of-Stone Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A092": {
+  "name": "Maythen Geroyu Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A097": {
+  "name": "Lost Realm Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A09C": {
+  "name": "Auroch Pasture Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A0A4": {
+  "name": "Glenden Wood",
+  "indoor": false,
+  "source": "poi"
+ },
+ "A0AB": {
+  "name": "Glenden Hills North Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A177": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A1DD": {
+  "name": "Patron's Honor Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A21E": {
+  "name": "Linvak Tukal",
+  "indoor": false,
+  "source": "poi"
+ },
+ "A220": {
+  "name": "Outside Linvak Tukal",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A23D": {
+  "name": "South Khayyaban Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A260": {
+  "name": "Uziz",
+  "indoor": false,
+  "source": "poi"
+ },
+ "A274": {
+  "name": "Drytree Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A2C1": {
+  "name": "Ispan Hill",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A2DA": {
+  "name": "East Esper Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A3BB": {
+  "name": "Lilyglen Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A3E7": {
+  "name": "Dagger Vale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A3E9": {
+  "name": "Far North Shore",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A454": {
+  "name": "South Uzis Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A45D": {
+  "name": "Harvestgain Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A464": {
+  "name": "North Uziz Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A49F": {
+  "name": "Iceea Hills Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A4CF": {
+  "name": "Glystaene Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A4EB": {
+  "name": "Celdiseth's Beach Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A529": {
+  "name": "Mattekar Slopes Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A57F": {
+  "name": "Charbone Ridge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A586": {
+  "name": "Sand's Edge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A591": {
+  "name": "Hermit Hill Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A5B4": {
+  "name": "Hollow Lair near Yanshi",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A5D3": {
+  "name": "Dereth",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A60F": {
+  "name": "Brigands Bay Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A618": {
+  "name": "Linvak Tukal Foothills Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A6A7": {
+  "name": "Glenden Hills East Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A6CB": {
+  "name": "New Colier",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A734": {
+  "name": "Gredaline Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A738": {
+  "name": "Plainsview Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A78A": {
+  "name": "Demonsbane Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A7B7": {
+  "name": "Holtburg",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A84D": {
+  "name": "Ardent Realm",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A867": {
+  "name": "Narziz Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A895": {
+  "name": "Catacombs of the Forgotten",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A8DF": {
+  "name": "Defiled Temple Portals",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A953": {
+  "name": "Upper Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A973": {
+  "name": "Yinar",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A97D": {
+  "name": "Devana",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A98E": {
+  "name": "Middle Osteth",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A998": {
+  "name": "Solstice Hill",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A9AC": {
+  "name": "Hunter's Leap",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A9B2": {
+  "name": "Holtburg Casino VIP",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A9B3": {
+  "name": "Holtburg House",
+  "indoor": false,
+  "source": "portal"
+ },
+ "A9B4": {
+  "name": "Holtburg",
+  "indoor": false,
+  "source": "poi"
+ },
+ "AAA8": {
+  "name": "Hilltop",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AB30": {
+  "name": "Ro-Nan",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AB34": {
+  "name": "Ikama Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AB38": {
+  "name": "Erevana Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AB48": {
+  "name": "Sonpay",
+  "indoor": false,
+  "source": "portal"
+ },
+ "ABBE": {
+  "name": "Mountain Keep Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "ABDE": {
+  "name": "Zatara",
+  "indoor": false,
+  "source": "portal"
+ },
+ "ABE7": {
+  "name": "Northreach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AC3F": {
+  "name": "Kanasa",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AC4D": {
+  "name": "Shield of Ispar Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AC7A": {
+  "name": "Nuhmudira's Mansion",
+  "indoor": true,
+  "source": "portal"
+ },
+ "AC81": {
+  "name": "Adventurer's Haven Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AC95": {
+  "name": "Tinkelo Hold Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "ACA6": {
+  "name": "Taralla",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AD20": {
+  "name": "Southern Park",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AD62": {
+  "name": "Arida Butte",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AD6A": {
+  "name": "Broken Sword Bethel Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AD86": {
+  "name": "Enchanter's Meadow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AD8B": {
+  "name": "King Pwyll Square",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AD9B": {
+  "name": "Heartland",
+  "indoor": false,
+  "source": "portal"
+ },
+ "ADB4": {
+  "name": "Evensong Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "ADD4": {
+  "name": "Bretslef Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AE13": {
+  "name": "Scimitar Lake Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AE91": {
+  "name": "Forgotten Hills",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AE9E": {
+  "name": "Fort Witshire Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AEA0": {
+  "name": "Cragstone Reinforcements Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "AEC6": {
+  "name": "Colier",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AED0": {
+  "name": "Baron's Domain",
+  "indoor": false,
+  "source": "portal"
+ },
+ "AFB6": {
+  "name": "Holtburg",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B013": {
+  "name": "South Shore Heights",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B04F": {
+  "name": "Taklihuan Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B098": {
+  "name": "Meerthus Square",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B11F": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B132": {
+  "name": "Ancient Town",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B13B": {
+  "name": "Spire Hills Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B141": {
+  "name": "Oboro",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B178": {
+  "name": "Desert Ridge Border",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B17E": {
+  "name": "Asbel Domain",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B19F": {
+  "name": "Cragstone Middle Guard Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "B1DD": {
+  "name": "West Norstead",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B252": {
+  "name": "Kuyiza",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B264": {
+  "name": "West Yanshi Namoon",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B26C": {
+  "name": "Faranar Foothills",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B286": {
+  "name": "Osric Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B28B": {
+  "name": "Darawyll Village",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B2B3": {
+  "name": "Evensong Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B2B9": {
+  "name": "West Holtburg Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B2C9": {
+  "name": "Colier View Hill",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B2D4": {
+  "name": "Alvador",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B318": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B345": {
+  "name": "Kelnen Village",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B36F": {
+  "name": "Trap Floor",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B374": {
+  "name": "Liang Chi Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B3C2": {
+  "name": "Bleak Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B425": {
+  "name": "Lake Thrasyl Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B46F": {
+  "name": "Yanshi",
+  "indoor": false,
+  "source": "poi"
+ },
+ "B4AA": {
+  "name": "Obsidian Span",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B53B": {
+  "name": "Shara",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B54F": {
+  "name": "Empyrean Fields Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B55D": {
+  "name": "Jinianshi",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B56D": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B56F": {
+  "name": "Leafcull Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B598": {
+  "name": "Cragstone Farms",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B59D": {
+  "name": "Dangerous Cave",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B59E": {
+  "name": "Cragstone Advance Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "B5A2": {
+  "name": "Thistledown Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B634": {
+  "name": "Tattered Ridge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B661": {
+  "name": "Swamp Temple Place",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B667": {
+  "name": "Yanshi Namoon North",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B686": {
+  "name": "Haunted Mansion",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B687": {
+  "name": "House",
+  "indoor": true,
+  "source": "portal"
+ },
+ "B6A3": {
+  "name": "Cragstone Waterfall",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B6D8": {
+  "name": "Bandit Road Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B779": {
+  "name": "Jenshi Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B7C6": {
+  "name": "Gaerlan's Citadel Ground",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B86D": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B870": {
+  "name": "Surface Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B8E8": {
+  "name": "Western Aerlinthe Island",
+  "indoor": true,
+  "source": "portal"
+ },
+ "B953": {
+  "name": "Zin-Dai",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B957": {
+  "name": "Li-Po Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B95C": {
+  "name": "Blackmire Edge Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B95F": {
+  "name": "Burun Fortress",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B972": {
+  "name": "Destroyed Portal to Yanshi",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B980": {
+  "name": "Seedsow Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "B9F0": {
+  "name": "Mount Tenkarrdun",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BA11": {
+  "name": "Mainland",
+  "indoor": true,
+  "source": "portal"
+ },
+ "BA14": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BA17": {
+  "name": "Kara",
+  "indoor": false,
+  "source": "poi"
+ },
+ "BA25": {
+  "name": "Yukikaze",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BA61": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BA6F": {
+  "name": "Emote Test",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BA9F": {
+  "name": "Cragstone Library",
+  "indoor": true,
+  "source": "portal"
+ },
+ "BAA1": {
+  "name": "River Bridge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BAB2": {
+  "name": "Holtburg Wilderness Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BAC6": {
+  "name": "Citadel Apex",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BAC7": {
+  "name": "Citadel Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BAE8": {
+  "name": "Aerlinthe Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BB64": {
+  "name": "Blackmire Temple",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BB79": {
+  "name": "North Yanshi Plains Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BB8E": {
+  "name": "West Rithwic Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BB9F": {
+  "name": "Cragstone",
+  "indoor": false,
+  "source": "poi"
+ },
+ "BBA3": {
+  "name": "River Bridge",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BBA8": {
+  "name": "East Span Way Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BBC6": {
+  "name": "Citadel Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BBC7": {
+  "name": "Citadel Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BBC8": {
+  "name": "Citadel Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BC17": {
+  "name": "Coldeve Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BC87": {
+  "name": "North Lytelthorpe Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BC95": {
+  "name": "South Victory Harbor",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BCC7": {
+  "name": "Citadel Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BD47": {
+  "name": "Jasmine Meadow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BD70": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BD9F": {
+  "name": "Cragstone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BDD0": {
+  "name": "Bandit Castle",
+  "indoor": false,
+  "source": "poi"
+ },
+ "BDF0": {
+  "name": "Shimena Keep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BE5B": {
+  "name": "Banderling Conquest Dungeon",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BE68": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BE90": {
+  "name": "Trothyr's Rest",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BED7": {
+  "name": "Temple Exit",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BF15": {
+  "name": "Ishilai Inlet Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BF19": {
+  "name": "Ishilai Inlet Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "BF43": {
+  "name": "Ring of Crystals Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C080": {
+  "name": "Lytelthorpe",
+  "indoor": false,
+  "source": "poi"
+ },
+ "C081": {
+  "name": "Undisclosed Location",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C08B": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C09B": {
+  "name": "Isle of Tears",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C0D9": {
+  "name": "Norvale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C0DD": {
+  "name": "Norstead",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C13D": {
+  "name": "Mage's Pass",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C14B": {
+  "name": "Battlefield of Ayn Tayn",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C154": {
+  "name": "Lo-Han",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C18F": {
+  "name": "Leafdawning Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C220": {
+  "name": "North Adjamaer Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C258": {
+  "name": "West Sawato Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C25D": {
+  "name": "the Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C274": {
+  "name": "Folthid Estate",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C27C": {
+  "name": "South Lytelthorpe",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C2A9": {
+  "name": "Morningthaw Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C387": {
+  "name": "Meridian Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C38C": {
+  "name": "Leafdawning Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C3E3": {
+  "name": "Temple of N'cthail",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C44E": {
+  "name": "Ayn Tayan",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C46C": {
+  "name": "Snakehead",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C4A8": {
+  "name": "Cold Feet",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C4B6": {
+  "name": "Paradox-touched Valley Tent",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C4D9": {
+  "name": "Broken Haft Vale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C51A": {
+  "name": "South Adjamaer Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C566": {
+  "name": "North Sawato Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C5A7": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C5B2": {
+  "name": "Mountain Shortcut",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C641": {
+  "name": "West Baishi Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C676": {
+  "name": "Neu Gerz Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C6A9": {
+  "name": "Arwic",
+  "indoor": false,
+  "source": "poi"
+ },
+ "C6B2": {
+  "name": "Mite Maze",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C77F": {
+  "name": "East Lytelthorpe Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C794": {
+  "name": "Lake Blessed Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C798": {
+  "name": "Strathelar's Watch Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C7B7": {
+  "name": "Paradox Queen's Lair",
+  "indoor": true,
+  "source": "portal"
+ },
+ "C7D2": {
+  "name": "New Cannthalo",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C7EA": {
+  "name": "Olthoi Tunnel",
+  "indoor": true,
+  "source": "portal"
+ },
+ "C8E2": {
+  "name": "Vissidal Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C8E9": {
+  "name": "Dark Isle",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C946": {
+  "name": "Jai-Tan Dale",
+  "indoor": false,
+  "source": "portal"
+ },
+ "C95B": {
+  "name": "Sawato",
+  "indoor": false,
+  "source": "poi"
+ },
+ "C98C": {
+  "name": "Rithwic",
+  "indoor": false,
+  "source": "poi"
+ },
+ "C9C3": {
+  "name": "Far Claw Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CA1D": {
+  "name": "Xinh",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CA2D": {
+  "name": "High Mountain Valley",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CA50": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CA83": {
+  "name": "Slinker Meadows",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CA9C": {
+  "name": "North Eastham Meadow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CAA3": {
+  "name": "Southeast Arwic Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CB3D": {
+  "name": "Ridge Tower",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CB64": {
+  "name": "Mire Hill",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CB6B": {
+  "name": "Imuth Maer Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CB76": {
+  "name": "Jin-Lai Stronghold",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CBB2": {
+  "name": "Eotensfang Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CBB4": {
+  "name": "Eotensfang",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CBB8": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CBD6": {
+  "name": "P'rnelle Acres",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CBDA": {
+  "name": "Haliana",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CD41": {
+  "name": "End of the Story",
+  "indoor": true,
+  "source": "portal"
+ },
+ "CE41": {
+  "name": "Baishi",
+  "indoor": false,
+  "source": "poi"
+ },
+ "CE47": {
+  "name": "North Baishi Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE57": {
+  "name": "Sawato Foothills Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE68": {
+  "name": "Village Quan",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE70": {
+  "name": "Broadacre Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE7C": {
+  "name": "Riverbend",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE87": {
+  "name": "Gaerwel Edge Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE90": {
+  "name": "Filos' Font Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CE94": {
+  "name": "Eastham",
+  "indoor": false,
+  "source": "poi"
+ },
+ "CE9C": {
+  "name": "Beachside",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CEB1": {
+  "name": "Lost Wish Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CF5C": {
+  "name": "East Sawato Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "CFC0": {
+  "name": "Sennon Valley Retreat",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D054": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D074": {
+  "name": "Maedew",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D07B": {
+  "name": "Riverbend Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D122": {
+  "name": "Lugian Meadows Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D164": {
+  "name": "Sclavavania",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D183": {
+  "name": "Siege Road Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D196": {
+  "name": "Eastham Beach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D1A5": {
+  "name": "Cape Feirgard Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D1AB": {
+  "name": "South Beach Pass Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D1CC": {
+  "name": "Explorer's Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D1D0": {
+  "name": "Isparian Flame Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D23C": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D26D": {
+  "name": "Crescent Lane Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D28C": {
+  "name": "East Rithwic Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D2A7": {
+  "name": "Skeleton Fort",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D346": {
+  "name": "Tanshi",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D3C0": {
+  "name": "Secluded Valley Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D43E": {
+  "name": "South Osteth Peak",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D45C": {
+  "name": "Sho Roadside",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D47E": {
+  "name": "Siege Road Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D531": {
+  "name": "Font Alpa",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D53E": {
+  "name": "The Old Keep",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D53F": {
+  "name": "The Lee Side of The Mountain",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D551": {
+  "name": "Shou-Zin",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D563": {
+  "name": "San-Chin",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D599": {
+  "name": "Eastham Castle",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D59A": {
+  "name": "Asheron's Castle",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D59D": {
+  "name": "Asheron's Island North",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D5DA": {
+  "name": "Western Courtyard",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D642": {
+  "name": "Lin Kiln Park",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D64C": {
+  "name": "South Shoushi Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D65A": {
+  "name": "Chi Zou Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D65D": {
+  "name": "Sawato",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D693": {
+  "name": "Asheron's Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D6BA": {
+  "name": "Beach Pass Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D6BE": {
+  "name": "Hand-on-Sword Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D6DA": {
+  "name": "Eastern Courtyard",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D75D": {
+  "name": "Mosswart Camp",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D7C2": {
+  "name": "Jeweled Thorn Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D847": {
+  "name": "Hebian-To Reinforcements Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "D85C": {
+  "name": "Green Mire Grave",
+  "indoor": false,
+  "source": "portal"
+ },
+ "D9D0": {
+  "name": "Arrowdale Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DA55": {
+  "name": "Shoushi",
+  "indoor": false,
+  "source": "poi"
+ },
+ "DA57": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DA6B": {
+  "name": "Narsys",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DA6F": {
+  "name": "South Siege Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DA75": {
+  "name": "Dryreach",
+  "indoor": false,
+  "source": "poi"
+ },
+ "DA91": {
+  "name": "Asheron's Island South",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DB33": {
+  "name": "West Mayoi Mountain Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DB54": {
+  "name": "Shoushi Casino VIP",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DB63": {
+  "name": "Mosswart Place Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DB74": {
+  "name": "Dryreach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DB75": {
+  "name": "Dryreach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DC3C": {
+  "name": "Lin",
+  "indoor": false,
+  "source": "poi"
+ },
+ "DC48": {
+  "name": "Hebian-To Middle Guard Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "DC98": {
+  "name": "Asheron's Island East",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DD47": {
+  "name": "Sai-Nan",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DD50": {
+  "name": "Regicide Basement Exit",
+  "indoor": true,
+  "source": "portal"
+ },
+ "DD5C": {
+  "name": "Aimaru Plains Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DE55": {
+  "name": "Foredawn Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DE7A": {
+  "name": "Dryreach Beach Manors",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DF4C": {
+  "name": "Shian-To Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DF60": {
+  "name": "Castle of Baron Nuvillus",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DF6A": {
+  "name": "Ariake",
+  "indoor": false,
+  "source": "portal"
+ },
+ "DF6F": {
+  "name": "Dryreach Beach Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E02A": {
+  "name": "Vesayan Overlook",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E04A": {
+  "name": "Hebian-To Advance Tower",
+  "indoor": true,
+  "source": "portal"
+ },
+ "E13D": {
+  "name": "Morningtide Festival Stone",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E166": {
+  "name": "Bluewater Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E25F": {
+  "name": "Stoneport Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E342": {
+  "name": "Exit To Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E348": {
+  "name": "South Hebian-To Cottages",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E3D1": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E3D2": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E3D3": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E3D5": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E3D6": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E4CF": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E4D0": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E4D6": {
+  "name": "Passage to Olthoi Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E524": {
+  "name": "Vesayen Isles",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E533": {
+  "name": "Mountain Sewer",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E53F": {
+  "name": "Nanto",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E54E": {
+  "name": "Hebian-to Library",
+  "indoor": true,
+  "source": "portal"
+ },
+ "E5CE": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E5D0": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E5D3": {
+  "name": "Queen's Burrow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E5D4": {
+  "name": "Queen's Burrow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E632": {
+  "name": "Mayoi",
+  "indoor": false,
+  "source": "poi"
+ },
+ "E633": {
+  "name": "Mayoi Beach",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E63E": {
+  "name": "Nanto",
+  "indoor": false,
+  "source": "poi"
+ },
+ "E64E": {
+  "name": "Hebian-to",
+  "indoor": false,
+  "source": "poi"
+ },
+ "E6CE": {
+  "name": "Queen's Burrow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E6CF": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E6D1": {
+  "name": "Queen's Burrow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E720": {
+  "name": "Exit to Surface",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E746": {
+  "name": "South Hebian-To Estates",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E7D1": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E822": {
+  "name": "Kryst",
+  "indoor": false,
+  "source": "poi"
+ },
+ "E8D2": {
+  "name": "Passage to Olthoi Island",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E927": {
+  "name": "Savao Islet",
+  "indoor": false,
+  "source": "portal"
+ },
+ "E941": {
+  "name": "Meditation Meadow",
+  "indoor": false,
+  "source": "portal"
+ },
+ "EA30": {
+  "name": "Shoyanen's",
+  "indoor": false,
+  "source": "portal"
+ },
+ "EA6C": {
+  "name": "Whispering Caverns",
+  "indoor": true,
+  "source": "portal"
+ },
+ "EC0D": {
+  "name": "Portalling Device",
+  "indoor": false,
+  "source": "portal"
+ },
+ "EC45": {
+  "name": "Ong-Hau Village",
+  "indoor": false,
+  "source": "portal"
+ },
+ "EC49": {
+  "name": "Southwest Hebian-To Settlement",
+  "indoor": false,
+  "source": "portal"
+ },
+ "EE18": {
+  "name": "Ithaenc Archipelago",
+  "indoor": false,
+  "source": "portal"
+ },
+ "EE42": {
+  "name": "Nan-Zari",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F07E": {
+  "name": "Tusker Barracks",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F14A": {
+  "name": "Tou-Tou Road Villas",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F15A": {
+  "name": "Smugglers Fort",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F224": {
+  "name": "Freehold",
+  "indoor": false,
+  "source": "poi"
+ },
+ "F24F": {
+  "name": "Hebian-to",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F418": {
+  "name": "Cathedral Ruins",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F426": {
+  "name": "Forsaken",
+  "indoor": true,
+  "source": "portal"
+ },
+ "F559": {
+  "name": "Tou-Tou",
+  "indoor": false,
+  "source": "poi"
+ },
+ "F618": {
+  "name": "Cathedral Wedding",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F65D": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F67B": {
+  "name": "Tusker Abode",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F67C": {
+  "name": "Tusker Quarters",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F682": {
+  "name": "Refuge",
+  "indoor": false,
+  "source": "poi"
+ },
+ "F730": {
+  "name": "Olthoi Tunnel",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F77E": {
+  "name": "Tusker Habitat",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F81E": {
+  "name": "Blessed Cave",
+  "indoor": true,
+  "source": "portal"
+ },
+ "F880": {
+  "name": "Tusker Cavern",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F924": {
+  "name": "Perimeter",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F92F": {
+  "name": "Freebooter Keep",
+  "indoor": true,
+  "source": "portal"
+ },
+ "F93B": {
+  "name": "Sparkling",
+  "indoor": true,
+  "source": "portal"
+ },
+ "F97F": {
+  "name": "Tusker Cave",
+  "indoor": false,
+  "source": "portal"
+ },
+ "F981": {
+  "name": "Tusker Burrow",
+  "indoor": false,
+  "source": "portal"
+ }
+}

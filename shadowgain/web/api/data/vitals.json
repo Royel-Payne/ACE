@@ -1,0 +1,27 @@
+{
+  "_source": "portal.dat 0x0E000003",
+  "maxHealth": {
+    "attr1": "Endurance",
+    "attr1Id": 2,
+    "attr2": "Undef",
+    "attr2Id": 0,
+    "divisor": 2,
+    "x": 1
+  },
+  "maxStamina": {
+    "attr1": "Endurance",
+    "attr1Id": 2,
+    "attr2": "Undef",
+    "attr2Id": 0,
+    "divisor": 1,
+    "x": 1
+  },
+  "maxMana": {
+    "attr1": "Self",
+    "attr1Id": 6,
+    "attr2": "Undef",
+    "attr2Id": 0,
+    "divisor": 1,
+    "x": 1
+  }
+}

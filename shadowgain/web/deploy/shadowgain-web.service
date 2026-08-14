@@ -1,0 +1,66 @@
+# Shadowgain 124 - the read-only web character sheet API (my.shadowgain.com).
+#
+# Installed to /etc/systemd/system/shadowgain-web.service by web/tools/web-deploy.sh.
+#
+# This unit runs a service that CANNOT WRITE TO A GAME DATABASE. That is enforced by the MySQL
+# grant (api/setup.sql), and reinforced here: the process gets a read-only filesystem view of
+# everything except its own runtime directory, so even a code path that tried to persist
+# something would have nowhere to put it.
+
+[Unit]
+Description=Shadowgain web character sheet API
+Documentation=https://github.com/Royel-Payne/ACE
+After=network-online.target
+Wants=network-online.target
+# Not After=docker.service. The API talks to MySQL over the published 127.0.0.1:3306 port and
+# retries per request, so it can start before the database and simply serve 500s on /api/health
+# until the shard is up. Coupling it to docker would mean a game-server restart also bounced the
+# website, which is exactly the independence Part 1 was designed for.
+
+[Service]
+Type=exec
+User=sgweb
+Group=sgweb
+WorkingDirectory=/opt/shadowgain-web
+
+# Secrets and DB credentials. Mode 600, root-owned, never committed - same handling as the
+# bot's /opt/ACE/bot.env.
+EnvironmentFile=/opt/shadowgain-web/web.env
+
+ExecStart=/opt/shadowgain-web/venv/bin/uvicorn api.app:app \
+    --host 127.0.0.1 --port 8081 \
+    --workers 1 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1 \
+    --log-level info
+
+# ONE WORKER, DELIBERATELY. The per-character cache and the login rate-limiter are both in
+# process memory (see cache.py / auth.py), so a second worker would halve the cache hit rate and,
+# far worse, double the number of password guesses allowed before a lockout. At this scale one
+# worker is ample - the whole point of the 5-minute cache is that the database sees almost
+# nothing. Adding workers means moving both to Redis first.
+
+Restart=always
+RestartSec=5
+
+# Hardening. Nothing here needs to write outside its own runtime directory.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+# uvicorn needs somewhere for its own scratch; ProtectSystem=strict makes everything else
+# read-only, which is the point.
+RuntimeDirectory=shadowgain-web
+
+# Only loopback and outbound HTTPS are needed: MySQL on 127.0.0.1, and the status feed fetch.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,57 @@
+# Shadowgain 124 - my.shadowgain.com, the character portal.
+#
+# APPENDED to /etc/caddy/Caddyfile by web/tools/web-deploy.sh, between the markers
+#   # >>> shadowgain-web (managed by web-deploy.sh)
+#   # <<< shadowgain-web
+# so a redeploy replaces this block and never touches the shadowgain.com block above it.
+#
+# THE SPLIT: Caddy serves the front-end and the icons straight off disk; only /api/* is proxied
+# to uvicorn. A Python process has no business in the path of 663 icon requests, and the static
+# root is the same shape the main site already uses - one thing to reason about, not two.
+#
+# TLS is automatic. The apex site already sets `Strict-Transport-Security ... includeSubDomains`,
+# which means browsers will REFUSE plain HTTP to this subdomain from the first visit onward - so
+# the certificate is not optional, it is load-bearing. Caddy provisions it on first request; the
+# A record must exist and point here before this block is loaded, or the ACME challenge fails.
+
+my.shadowgain.com {
+	root * /var/www/my.shadowgain
+	encode gzip zstd
+
+	# Only the API is proxied. Everything else is a file.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8081 {
+			# The API reads the client address from X-Forwarded-For to key its login rate
+			# limiter. Without these, every visitor arrives as 127.0.0.1 and one person
+			# mistyping a password five times would lock out the entire internet.
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		# A single-page front-end: unknown paths fall back to index.html so /characters and
+		# /character/Foo are routable without the server knowing about them. try_files, not a
+		# rewrite, so real files (icons, css) still win.
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+	}
+
+	# Icons are content-addressed by IconId and never change for a given id, so they can be
+	# cached hard. The HTML must not be - a front-end update has to reach people the same day.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=604800, immutable"
+
+	@html path *.html /
+	header @html Cache-Control "no-cache"
+
+	# The session cookie is HttpOnly+Secure+SameSite=Lax and the API is same-origin, so no CORS
+	# block is needed or wanted here: adding one would be the only thing that could let another
+	# site read a logged-in player's private payload.
+}

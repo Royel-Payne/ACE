@@ -1,0 +1,4584 @@
+{
+  "skill": {
+    "0": {
+      "name": "None",
+      "label": "None"
+    },
+    "1": {
+      "name": "Axe",
+      "label": "Axe"
+    },
+    "2": {
+      "name": "Bow",
+      "label": "Bow"
+    },
+    "3": {
+      "name": "Crossbow",
+      "label": "Crossbow"
+    },
+    "4": {
+      "name": "Dagger",
+      "label": "Dagger"
+    },
+    "5": {
+      "name": "Mace",
+      "label": "Mace"
+    },
+    "6": {
+      "name": "MeleeDefense",
+      "label": "Melee Defense"
+    },
+    "7": {
+      "name": "MissileDefense",
+      "label": "Missile Defense"
+    },
+    "8": {
+      "name": "Sling",
+      "label": "Sling"
+    },
+    "9": {
+      "name": "Spear",
+      "label": "Spear"
+    },
+    "10": {
+      "name": "Staff",
+      "label": "Staff"
+    },
+    "11": {
+      "name": "Sword",
+      "label": "Sword"
+    },
+    "12": {
+      "name": "ThrownWeapon",
+      "label": "Thrown Weapon"
+    },
+    "13": {
+      "name": "UnarmedCombat",
+      "label": "Unarmed Combat"
+    },
+    "14": {
+      "name": "ArcaneLore",
+      "label": "Arcane Lore"
+    },
+    "15": {
+      "name": "MagicDefense",
+      "label": "Magic Defense"
+    },
+    "16": {
+      "name": "ManaConversion",
+      "label": "Mana Conversion"
+    },
+    "17": {
+      "name": "Spellcraft",
+      "label": "Spellcraft"
+    },
+    "18": {
+      "name": "ItemTinkering",
+      "label": "Item Tinkering"
+    },
+    "19": {
+      "name": "AssessPerson",
+      "label": "Assess Person"
+    },
+    "20": {
+      "name": "Deception",
+      "label": "Deception"
+    },
+    "21": {
+      "name": "Healing",
+      "label": "Healing"
+    },
+    "22": {
+      "name": "Jump",
+      "label": "Jump"
+    },
+    "23": {
+      "name": "Lockpick",
+      "label": "Lockpick"
+    },
+    "24": {
+      "name": "Run",
+      "label": "Run"
+    },
+    "25": {
+      "name": "Awareness",
+      "label": "Awareness"
+    },
+    "26": {
+      "name": "ArmsAndArmorRepair",
+      "label": "Arms And Armor Repair"
+    },
+    "27": {
+      "name": "AssessCreature",
+      "label": "Assess Creature"
+    },
+    "28": {
+      "name": "WeaponTinkering",
+      "label": "Weapon Tinkering"
+    },
+    "29": {
+      "name": "ArmorTinkering",
+      "label": "Armor Tinkering"
+    },
+    "30": {
+      "name": "MagicItemTinkering",
+      "label": "Magic Item Tinkering"
+    },
+    "31": {
+      "name": "CreatureEnchantment",
+      "label": "Creature Enchantment"
+    },
+    "32": {
+      "name": "ItemEnchantment",
+      "label": "Item Enchantment"
+    },
+    "33": {
+      "name": "LifeMagic",
+      "label": "Life Magic"
+    },
+    "34": {
+      "name": "WarMagic",
+      "label": "War Magic"
+    },
+    "35": {
+      "name": "Leadership",
+      "label": "Leadership"
+    },
+    "36": {
+      "name": "Loyalty",
+      "label": "Loyalty"
+    },
+    "37": {
+      "name": "Fletching",
+      "label": "Fletching"
+    },
+    "38": {
+      "name": "Alchemy",
+      "label": "Alchemy"
+    },
+    "39": {
+      "name": "Cooking",
+      "label": "Cooking"
+    },
+    "40": {
+      "name": "Salvaging",
+      "label": "Salvaging"
+    },
+    "41": {
+      "name": "TwoHandedCombat",
+      "label": "Two Handed Combat"
+    },
+    "42": {
+      "name": "Gearcraft",
+      "label": "Gearcraft"
+    },
+    "43": {
+      "name": "VoidMagic",
+      "label": "Void Magic"
+    },
+    "44": {
+      "name": "HeavyWeapons",
+      "label": "Heavy Weapons"
+    },
+    "45": {
+      "name": "LightWeapons",
+      "label": "Light Weapons"
+    },
+    "46": {
+      "name": "FinesseWeapons",
+      "label": "Finesse Weapons"
+    },
+    "47": {
+      "name": "MissileWeapons",
+      "label": "Missile Weapons"
+    },
+    "48": {
+      "name": "Shield",
+      "label": "Shield"
+    },
+    "49": {
+      "name": "DualWield",
+      "label": "Dual Wield"
+    },
+    "50": {
+      "name": "Recklessness",
+      "label": "Recklessness"
+    },
+    "51": {
+      "name": "SneakAttack",
+      "label": "Sneak Attack"
+    },
+    "52": {
+      "name": "DirtyFighting",
+      "label": "Dirty Fighting"
+    },
+    "53": {
+      "name": "Challenge",
+      "label": "Challenge"
+    },
+    "54": {
+      "name": "Summoning",
+      "label": "Summoning"
+    }
+  },
+  "heritage": {
+    "0": {
+      "name": "Invalid",
+      "label": "Invalid"
+    },
+    "1": {
+      "name": "Aluvian",
+      "label": "Aluvian"
+    },
+    "2": {
+      "name": "Gharundim",
+      "label": "Gharundim"
+    },
+    "3": {
+      "name": "Sho",
+      "label": "Sho"
+    },
+    "4": {
+      "name": "Viamontian",
+      "label": "Viamontian"
+    },
+    "5": {
+      "name": "Shadowbound",
+      "label": "Shadowbound"
+    },
+    "6": {
+      "name": "Gearknight",
+      "label": "Gearknight"
+    },
+    "7": {
+      "name": "Tumerok",
+      "label": "Tumerok"
+    },
+    "8": {
+      "name": "Lugian",
+      "label": "Lugian"
+    },
+    "9": {
+      "name": "Empyrean",
+      "label": "Empyrean"
+    },
+    "10": {
+      "name": "Penumbraen",
+      "label": "Penumbraen"
+    },
+    "11": {
+      "name": "Undead",
+      "label": "Undead"
+    },
+    "12": {
+      "name": "Olthoi",
+      "label": "Olthoi"
+    },
+    "13": {
+      "name": "OlthoiAcid",
+      "label": "Olthoi Acid"
+    }
+  },
+  "gender": {
+    "0": {
+      "name": "Invalid",
+      "label": "Invalid"
+    },
+    "1": {
+      "name": "Male",
+      "label": "Male"
+    },
+    "2": {
+      "name": "Female",
+      "label": "Female"
+    }
+  },
+  "playerKillerStatus": {
+    "0": {
+      "name": "Undef",
+      "label": "Undef"
+    },
+    "1": {
+      "name": "NPC",
+      "label": "NPC"
+    },
+    "2": {
+      "name": "NPK",
+      "label": "NPK"
+    },
+    "4": {
+      "name": "PK",
+      "label": "PK"
+    },
+    "8": {
+      "name": "Trap",
+      "label": "Trap"
+    },
+    "16": {
+      "name": "Vendor",
+      "label": "Vendor"
+    },
+    "32": {
+      "name": "Baelzharon",
+      "label": "Baelzharon"
+    },
+    "64": {
+      "name": "PKLite",
+      "label": "PKLite"
+    }
+  },
+  "skillAdvancementClass": {
+    "0": {
+      "name": "Inactive",
+      "label": "Inactive"
+    },
+    "1": {
+      "name": "Untrained",
+      "label": "Untrained"
+    },
+    "2": {
+      "name": "Trained",
+      "label": "Trained"
+    },
+    "3": {
+      "name": "Specialized",
+      "label": "Specialized"
+    }
+  },
+  "attribute": {
+    "0": {
+      "name": "Undef",
+      "label": "Undef"
+    },
+    "1": {
+      "name": "Strength",
+      "label": "Strength"
+    },
+    "2": {
+      "name": "Endurance",
+      "label": "Endurance"
+    },
+    "3": {
+      "name": "Quickness",
+      "label": "Quickness"
+    },
+    "4": {
+      "name": "Coordination",
+      "label": "Coordination"
+    },
+    "5": {
+      "name": "Focus",
+      "label": "Focus"
+    },
+    "6": {
+      "name": "Self",
+      "label": "Self"
+    }
+  },
+  "attribute2nd": {
+    "0": {
+      "name": "Undef",
+      "label": "Undef"
+    },
+    "1": {
+      "name": "MaxHealth",
+      "label": "Max Health"
+    },
+    "2": {
+      "name": "Health",
+      "label": "Health"
+    },
+    "3": {
+      "name": "MaxStamina",
+      "label": "Max Stamina"
+    },
+    "4": {
+      "name": "Stamina",
+      "label": "Stamina"
+    },
+    "5": {
+      "name": "MaxMana",
+      "label": "Max Mana"
+    },
+    "6": {
+      "name": "Mana",
+      "label": "Mana"
+    }
+  },
+  "title": {
+    "0": {
+      "name": "Invalid",
+      "label": "Invalid"
+    },
+    "1": {
+      "name": "Adventurer",
+      "label": "Adventurer"
+    },
+    "2": {
+      "name": "Archer",
+      "label": "Archer"
+    },
+    "3": {
+      "name": "Blademaster",
+      "label": "Blademaster"
+    },
+    "4": {
+      "name": "Enchanter",
+      "label": "Enchanter"
+    },
+    "5": {
+      "name": "LifeMage",
+      "label": "Life Mage"
+    },
+    "6": {
+      "name": "Sorcerer",
+      "label": "Sorcerer"
+    },
+    "7": {
+      "name": "Vagabond",
+      "label": "Vagabond"
+    },
+    "8": {
+      "name": "Warrior",
+      "label": "Warrior"
+    },
+    "9": {
+      "name": "BowHunter",
+      "label": "Bow Hunter"
+    },
+    "10": {
+      "name": "LifeCaster",
+      "label": "Life Caster"
+    },
+    "11": {
+      "name": "Soldier",
+      "label": "Soldier"
+    },
+    "12": {
+      "name": "Swashbuckler",
+      "label": "Swashbuckler"
+    },
+    "13": {
+      "name": "WarMage",
+      "label": "War Mage"
+    },
+    "14": {
+      "name": "Wayfarer",
+      "label": "Wayfarer"
+    },
+    "15": {
+      "name": "AbhorrentWarrior",
+      "label": "Abhorrent Warrior"
+    },
+    "16": {
+      "name": "Alchemist",
+      "label": "Alchemist"
+    },
+    "17": {
+      "name": "Annihilator",
+      "label": "Annihilator"
+    },
+    "18": {
+      "name": "Apothecary",
+      "label": "Apothecary"
+    },
+    "19": {
+      "name": "ArcticAdventurer",
+      "label": "Arctic Adventurer"
+    },
+    "20": {
+      "name": "ArcticMattekarAnnihilator",
+      "label": "Arctic Mattekar Annihilator"
+    },
+    "21": {
+      "name": "Artifex",
+      "label": "Artifex"
+    },
+    "22": {
+      "name": "AxeWarrior",
+      "label": "Axe Warrior"
+    },
+    "23": {
+      "name": "Ballisteer",
+      "label": "Ballisteer"
+    },
+    "24": {
+      "name": "BaneoftheRemoran",
+      "label": "Baneofthe Remoran"
+    },
+    "25": {
+      "name": "BloodShrethButcher",
+      "label": "Blood Shreth Butcher"
+    },
+    "26": {
+      "name": "Bloodletter",
+      "label": "Bloodletter"
+    },
+    "27": {
+      "name": "BrooduKiller",
+      "label": "Broodu Killer"
+    },
+    "28": {
+      "name": "BrowerkKiller",
+      "label": "Browerk Killer"
+    },
+    "29": {
+      "name": "BugButcher",
+      "label": "Bug Butcher"
+    },
+    "30": {
+      "name": "Bugstomper",
+      "label": "Bugstomper"
+    },
+    "31": {
+      "name": "BunnyMaster",
+      "label": "Bunny Master"
+    },
+    "32": {
+      "name": "CarenziSlayer",
+      "label": "Carenzi Slayer"
+    },
+    "33": {
+      "name": "ChainBreaker",
+      "label": "Chain Breaker"
+    },
+    "34": {
+      "name": "ChampionofDereth",
+      "label": "Championof Dereth"
+    },
+    "35": {
+      "name": "ChampionofSanamar",
+      "label": "Championof Sanamar"
+    },
+    "36": {
+      "name": "ChampionofSilyun",
+      "label": "Championof Silyun"
+    },
+    "37": {
+      "name": "Chef",
+      "label": "Chef"
+    },
+    "38": {
+      "name": "CreatureAdept",
+      "label": "Creature Adept"
+    },
+    "39": {
+      "name": "DaggerFighter",
+      "label": "Dagger Fighter"
+    },
+    "40": {
+      "name": "Deadeye",
+      "label": "Deadeye"
+    },
+    "41": {
+      "name": "DeathcapDefeater",
+      "label": "Deathcap Defeater"
+    },
+    "42": {
+      "name": "DefenderofDereth",
+      "label": "Defenderof Dereth"
+    },
+    "43": {
+      "name": "Deliverer",
+      "label": "Deliverer"
+    },
+    "44": {
+      "name": "Diplomat",
+      "label": "Diplomat"
+    },
+    "45": {
+      "name": "DireMattekarDispatcher",
+      "label": "Dire Mattekar Dispatcher"
+    },
+    "46": {
+      "name": "Duelist",
+      "label": "Duelist"
+    },
+    "47": {
+      "name": "EbonGromnieEradicator",
+      "label": "Ebon Gromnie Eradicator"
+    },
+    "48": {
+      "name": "EngorgedScourge",
+      "label": "Engorged Scourge"
+    },
+    "49": {
+      "name": "Evoker",
+      "label": "Evoker"
+    },
+    "50": {
+      "name": "Explorer",
+      "label": "Explorer"
+    },
+    "51": {
+      "name": "Exterminator",
+      "label": "Exterminator"
+    },
+    "52": {
+      "name": "Fisherman",
+      "label": "Fisherman"
+    },
+    "53": {
+      "name": "Fletcher",
+      "label": "Fletcher"
+    },
+    "54": {
+      "name": "FloesharkFlogger",
+      "label": "Floeshark Flogger"
+    },
+    "55": {
+      "name": "FriendofSanamar",
+      "label": "Friendof Sanamar"
+    },
+    "56": {
+      "name": "FriendofSilyun",
+      "label": "Friendof Silyun"
+    },
+    "57": {
+      "name": "GaerlanSlayer",
+      "label": "Gaerlan Slayer"
+    },
+    "58": {
+      "name": "GardenerWeeder",
+      "label": "Gardener Weeder"
+    },
+    "59": {
+      "name": "GlendenWoodKnight",
+      "label": "Glenden Wood Knight"
+    },
+    "60": {
+      "name": "GlendenWoodMilitia",
+      "label": "Glenden Wood Militia"
+    },
+    "61": {
+      "name": "GoldenGod",
+      "label": "Golden God"
+    },
+    "62": {
+      "name": "GraveRobber",
+      "label": "Grave Robber"
+    },
+    "63": {
+      "name": "GuardianofDereth",
+      "label": "Guardianof Dereth"
+    },
+    "64": {
+      "name": "Gumshoe",
+      "label": "Gumshoe"
+    },
+    "65": {
+      "name": "GuppyMaster",
+      "label": "Guppy Master"
+    },
+    "66": {
+      "name": "HeartRipper",
+      "label": "Heart Ripper"
+    },
+    "67": {
+      "name": "HeroofDereth",
+      "label": "Heroof Dereth"
+    },
+    "68": {
+      "name": "HeroofSanamar",
+      "label": "Heroof Sanamar"
+    },
+    "69": {
+      "name": "HeroofSilyun",
+      "label": "Heroof Silyun"
+    },
+    "70": {
+      "name": "HonorarySnowman",
+      "label": "Honorary Snowman"
+    },
+    "71": {
+      "name": "HonoraryWindreave",
+      "label": "Honorary Windreave"
+    },
+    "72": {
+      "name": "Hunter",
+      "label": "Hunter"
+    },
+    "73": {
+      "name": "Impaler",
+      "label": "Impaler"
+    },
+    "74": {
+      "name": "InsatiableSlayer",
+      "label": "Insatiable Slayer"
+    },
+    "75": {
+      "name": "InvadersBane",
+      "label": "Invaders Bane"
+    },
+    "76": {
+      "name": "IronChef",
+      "label": "Iron Chef"
+    },
+    "77": {
+      "name": "IronSpinedChittickImmolator",
+      "label": "Iron Spined Chittick Immolator"
+    },
+    "78": {
+      "name": "ItemAdept",
+      "label": "Item Adept"
+    },
+    "79": {
+      "name": "KeeperofDereth",
+      "label": "Keeperof Dereth"
+    },
+    "80": {
+      "name": "KeerikKiller",
+      "label": "Keerik Killer"
+    },
+    "81": {
+      "name": "Kingslayer",
+      "label": "Kingslayer"
+    },
+    "82": {
+      "name": "KireeKiller",
+      "label": "Kiree Killer"
+    },
+    "83": {
+      "name": "KnathAndrasAssassinator",
+      "label": "Knath Andras Assassinator"
+    },
+    "84": {
+      "name": "Lakeman",
+      "label": "Lakeman"
+    },
+    "85": {
+      "name": "LifeAdept",
+      "label": "Life Adept"
+    },
+    "86": {
+      "name": "Lightbringer",
+      "label": "Lightbringer"
+    },
+    "87": {
+      "name": "MaceWarrior",
+      "label": "Mace Warrior"
+    },
+    "88": {
+      "name": "ManAtArmsThrasher",
+      "label": "Man At Arms Thrasher"
+    },
+    "89": {
+      "name": "MasterFletcher",
+      "label": "Master Fletcher"
+    },
+    "90": {
+      "name": "MasterofSlaughter",
+      "label": "Masterof Slaughter"
+    },
+    "91": {
+      "name": "MasterofStaves",
+      "label": "Masterof Staves"
+    },
+    "92": {
+      "name": "Miner",
+      "label": "Miner"
+    },
+    "93": {
+      "name": "MoarsmanDefiler",
+      "label": "Moarsman Defiler"
+    },
+    "94": {
+      "name": "MoraleSmasher",
+      "label": "Morale Smasher"
+    },
+    "95": {
+      "name": "MosswartWorshipperWhipper",
+      "label": "Mosswart Worshipper Whipper"
+    },
+    "96": {
+      "name": "MottledCarenziMauler",
+      "label": "Mottled Carenzi Mauler"
+    },
+    "97": {
+      "name": "MudSlinger",
+      "label": "Mud Slinger"
+    },
+    "98": {
+      "name": "NaughtySkeletonSnuffer",
+      "label": "Naughty Skeleton Snuffer"
+    },
+    "99": {
+      "name": "OlthoiRipperReducer",
+      "label": "Olthoi Ripper Reducer"
+    },
+    "100": {
+      "name": "ParagonofDeath",
+      "label": "Paragonof Death"
+    },
+    "101": {
+      "name": "Philanthropist",
+      "label": "Philanthropist"
+    },
+    "102": {
+      "name": "PlateArmoredilloPunisher",
+      "label": "Plate Armoredillo Punisher"
+    },
+    "103": {
+      "name": "PlatinumProwler",
+      "label": "Platinum Prowler"
+    },
+    "104": {
+      "name": "PolarUrsuinPounder",
+      "label": "Polar Ursuin Pounder"
+    },
+    "105": {
+      "name": "PolardilloPummeler",
+      "label": "Polardillo Pummeler"
+    },
+    "106": {
+      "name": "PondScum",
+      "label": "Pond Scum"
+    },
+    "107": {
+      "name": "ProFisherman",
+      "label": "Pro Fisherman"
+    },
+    "108": {
+      "name": "Projectilist",
+      "label": "Projectilist"
+    },
+    "109": {
+      "name": "Pugilist",
+      "label": "Pugilist"
+    },
+    "110": {
+      "name": "Queenslayer",
+      "label": "Queenslayer"
+    },
+    "111": {
+      "name": "RavenousKiller",
+      "label": "Ravenous Killer"
+    },
+    "112": {
+      "name": "RedFury",
+      "label": "Red Fury"
+    },
+    "113": {
+      "name": "ReeshanKiller",
+      "label": "Reeshan Killer"
+    },
+    "114": {
+      "name": "RehirKiller",
+      "label": "Rehir Killer"
+    },
+    "115": {
+      "name": "RepugnantEaterRipper",
+      "label": "Repugnant Eater Ripper"
+    },
+    "116": {
+      "name": "ResistanceFighter",
+      "label": "Resistance Fighter"
+    },
+    "117": {
+      "name": "ResistanceRecruit",
+      "label": "Resistance Recruit"
+    },
+    "118": {
+      "name": "ServantofTheDeep",
+      "label": "Servantof The Deep"
+    },
+    "119": {
+      "name": "SezzhereiSlayer",
+      "label": "Sezzherei Slayer"
+    },
+    "120": {
+      "name": "ShadowStalker",
+      "label": "Shadow Stalker"
+    },
+    "121": {
+      "name": "ShallowsSharkNemesis",
+      "label": "Shallows Shark Nemesis"
+    },
+    "122": {
+      "name": "Sharpshooter",
+      "label": "Sharpshooter"
+    },
+    "123": {
+      "name": "ShellfishHater",
+      "label": "Shellfish Hater"
+    },
+    "124": {
+      "name": "ShieldofGlenden",
+      "label": "Shieldof Glenden"
+    },
+    "125": {
+      "name": "Shredder",
+      "label": "Shredder"
+    },
+    "126": {
+      "name": "SilverSerf",
+      "label": "Silver Serf"
+    },
+    "127": {
+      "name": "SiraluunSlasher",
+      "label": "Siraluun Slasher"
+    },
+    "128": {
+      "name": "Skipper",
+      "label": "Skipper"
+    },
+    "129": {
+      "name": "Skullcrusher",
+      "label": "Skullcrusher"
+    },
+    "130": {
+      "name": "Skullsplitter",
+      "label": "Skullsplitter"
+    },
+    "131": {
+      "name": "Slicer",
+      "label": "Slicer"
+    },
+    "132": {
+      "name": "Sniper",
+      "label": "Sniper"
+    },
+    "133": {
+      "name": "SoldierSlaughterer",
+      "label": "Soldier Slaughterer"
+    },
+    "134": {
+      "name": "SpearWarrior",
+      "label": "Spear Warrior"
+    },
+    "135": {
+      "name": "SpringCleaner",
+      "label": "Spring Cleaner"
+    },
+    "136": {
+      "name": "StaffWarrior",
+      "label": "Staff Warrior"
+    },
+    "137": {
+      "name": "Stonebreaker",
+      "label": "Stonebreaker"
+    },
+    "138": {
+      "name": "Sureshot",
+      "label": "Sureshot"
+    },
+    "139": {
+      "name": "Swordfighter",
+      "label": "Swordfighter"
+    },
+    "140": {
+      "name": "Theurgist",
+      "label": "Theurgist"
+    },
+    "141": {
+      "name": "ThrungusReaper",
+      "label": "Thrungus Reaper"
+    },
+    "142": {
+      "name": "Timberman",
+      "label": "Timberman"
+    },
+    "143": {
+      "name": "Tracker",
+      "label": "Tracker"
+    },
+    "144": {
+      "name": "Trapper",
+      "label": "Trapper"
+    },
+    "145": {
+      "name": "TukoraLieutenantTrouncer",
+      "label": "Tukora Lieutenant Trouncer"
+    },
+    "146": {
+      "name": "UnarmedBrawler",
+      "label": "Unarmed Brawler"
+    },
+    "147": {
+      "name": "ViolatorGrievverVetoer",
+      "label": "Violator Grievver Vetoer"
+    },
+    "148": {
+      "name": "VoraciousFlayer",
+      "label": "Voracious Flayer"
+    },
+    "149": {
+      "name": "VoraciousHunter",
+      "label": "Voracious Hunter"
+    },
+    "150": {
+      "name": "WarAdept",
+      "label": "War Adept"
+    },
+    "151": {
+      "name": "WardenofDereth",
+      "label": "Wardenof Dereth"
+    },
+    "152": {
+      "name": "Warlock",
+      "label": "Warlock"
+    },
+    "153": {
+      "name": "WarlordofDereth",
+      "label": "Warlordof Dereth"
+    },
+    "154": {
+      "name": "WarriorVanquisher",
+      "label": "Warrior Vanquisher"
+    },
+    "155": {
+      "name": "WickedSkeletonWalloper",
+      "label": "Wicked Skeleton Walloper"
+    },
+    "156": {
+      "name": "WindreaveStalker",
+      "label": "Windreave Stalker"
+    },
+    "157": {
+      "name": "WorkerObliterator",
+      "label": "Worker Obliterator"
+    },
+    "158": {
+      "name": "DryreachMilitia",
+      "label": "Dryreach Militia"
+    },
+    "159": {
+      "name": "HonoraryShadowHunter",
+      "label": "Honorary Shadow Hunter"
+    },
+    "160": {
+      "name": "PerforatedKnight",
+      "label": "Perforated Knight"
+    },
+    "161": {
+      "name": "UNKNOWNGUESSEDNAME161",
+      "label": "UNKNOWNGUESSEDNAME161"
+    },
+    "162": {
+      "name": "PestControl",
+      "label": "Pest Control"
+    },
+    "163": {
+      "name": "RatReaper",
+      "label": "Rat Reaper"
+    },
+    "164": {
+      "name": "NymphManiac",
+      "label": "Nymph Maniac"
+    },
+    "165": {
+      "name": "SimiuS",
+      "label": "Simiu S"
+    },
+    "166": {
+      "name": "SecondPlaceLoreQuizNight",
+      "label": "Second Place Lore Quiz Night"
+    },
+    "167": {
+      "name": "ACVeteran",
+      "label": "ACVeteran"
+    },
+    "168": {
+      "name": "Aintafraidofnoghost",
+      "label": "Aintafraidofnoghost"
+    },
+    "169": {
+      "name": "Aintafraidofnoghosttwo",
+      "label": "Aintafraidofnoghosttwo"
+    },
+    "170": {
+      "name": "Aintafraidofnoghostthree",
+      "label": "Aintafraidofnoghostthree"
+    },
+    "171": {
+      "name": "AnkleBiter",
+      "label": "Ankle Biter"
+    },
+    "172": {
+      "name": "AnnoyingFurryTalkingAnimal",
+      "label": "Annoying Furry Talking Animal"
+    },
+    "173": {
+      "name": "ArcherAssassin",
+      "label": "Archer Assassin"
+    },
+    "174": {
+      "name": "Archmage",
+      "label": "Archmage"
+    },
+    "175": {
+      "name": "AsheronsCallGod",
+      "label": "Asherons Call God"
+    },
+    "176": {
+      "name": "AvatarofKain",
+      "label": "Avatarof Kain"
+    },
+    "177": {
+      "name": "AzureAssailant",
+      "label": "Azure Assailant"
+    },
+    "178": {
+      "name": "BabyBunnyMaster",
+      "label": "Baby Bunny Master"
+    },
+    "179": {
+      "name": "BaronOddity",
+      "label": "Baron Oddity"
+    },
+    "180": {
+      "name": "BeginningoftheEnd",
+      "label": "Beginningofthe End"
+    },
+    "181": {
+      "name": "BestMeleeinDT",
+      "label": "Best Meleein DT"
+    },
+    "182": {
+      "name": "BigBlock",
+      "label": "Big Block"
+    },
+    "183": {
+      "name": "BigRocx",
+      "label": "Big Rocx"
+    },
+    "184": {
+      "name": "Blood",
+      "label": "Blood"
+    },
+    "185": {
+      "name": "BountyHunter",
+      "label": "Bounty Hunter"
+    },
+    "186": {
+      "name": "BritishTootsie",
+      "label": "British Tootsie"
+    },
+    "187": {
+      "name": "BugBait",
+      "label": "Bug Bait"
+    },
+    "188": {
+      "name": "BunnyKiller",
+      "label": "Bunny Killer"
+    },
+    "189": {
+      "name": "CarebearStare",
+      "label": "Carebear Stare"
+    },
+    "190": {
+      "name": "CertifiedGanksta",
+      "label": "Certified Ganksta"
+    },
+    "191": {
+      "name": "ChickenNugget",
+      "label": "Chicken Nugget"
+    },
+    "192": {
+      "name": "ChickenSelect",
+      "label": "Chicken Select"
+    },
+    "193": {
+      "name": "ChimaerasChampion",
+      "label": "Chimaeras Champion"
+    },
+    "194": {
+      "name": "CoMonarchofTheChosen",
+      "label": "Co Monarchof The Chosen"
+    },
+    "195": {
+      "name": "ContainmentUnit",
+      "label": "Containment Unit"
+    },
+    "196": {
+      "name": "CoolestTitleEver",
+      "label": "Coolest Title Ever"
+    },
+    "197": {
+      "name": "CorrosiveSoul",
+      "label": "Corrosive Soul"
+    },
+    "198": {
+      "name": "CowKiller",
+      "label": "Cow Killer"
+    },
+    "199": {
+      "name": "Cowboy",
+      "label": "Cowboy"
+    },
+    "200": {
+      "name": "CrystalLordKing",
+      "label": "Crystal Lord King"
+    },
+    "201": {
+      "name": "CuddlyKitten",
+      "label": "Cuddly Kitten"
+    },
+    "202": {
+      "name": "CurmudgeonsFriend",
+      "label": "Curmudgeons Friend"
+    },
+    "203": {
+      "name": "CursedAdventurer",
+      "label": "Cursed Adventurer"
+    },
+    "204": {
+      "name": "DaggerMaster",
+      "label": "Dagger Master"
+    },
+    "205": {
+      "name": "DarkSwordLady",
+      "label": "Dark Sword Lady"
+    },
+    "206": {
+      "name": "DarktidesFinest",
+      "label": "Darktides Finest"
+    },
+    "207": {
+      "name": "DarktidesMostWanted",
+      "label": "Darktides Most Wanted"
+    },
+    "208": {
+      "name": "DeadMeat",
+      "label": "Dead Meat"
+    },
+    "209": {
+      "name": "DeadlyEggburt",
+      "label": "Deadly Eggburt"
+    },
+    "210": {
+      "name": "DeathbyDefault",
+      "label": "Deathby Default"
+    },
+    "211": {
+      "name": "DeathbyPumpkin",
+      "label": "Deathby Pumpkin"
+    },
+    "212": {
+      "name": "DeathbySappho",
+      "label": "Deathby Sappho"
+    },
+    "213": {
+      "name": "DeathSpecialist",
+      "label": "Death Specialist"
+    },
+    "214": {
+      "name": "DefenderofMrP",
+      "label": "Defenderof Mr P"
+    },
+    "215": {
+      "name": "DerethsGladiator",
+      "label": "Dereths Gladiator"
+    },
+    "216": {
+      "name": "DerethsMasterDodger",
+      "label": "Dereths Master Dodger"
+    },
+    "217": {
+      "name": "DevEvader",
+      "label": "Dev Evader"
+    },
+    "218": {
+      "name": "DevKiller",
+      "label": "Dev Killer"
+    },
+    "219": {
+      "name": "DevSlayer",
+      "label": "Dev Slayer"
+    },
+    "220": {
+      "name": "DoubleFashionKing",
+      "label": "Double Fashion King"
+    },
+    "221": {
+      "name": "DoubleGolemKiller",
+      "label": "Double Golem Killer"
+    },
+    "222": {
+      "name": "DoubleSurvivalChampion",
+      "label": "Double Survival Champion"
+    },
+    "223": {
+      "name": "DudeofDOOM",
+      "label": "Dudeof DOOM"
+    },
+    "224": {
+      "name": "EctoCooler",
+      "label": "Ecto Cooler"
+    },
+    "225": {
+      "name": "EctoCoolertwo",
+      "label": "Ecto Coolertwo"
+    },
+    "226": {
+      "name": "EnvoySlayer",
+      "label": "Envoy Slayer"
+    },
+    "227": {
+      "name": "EscapeeKiller",
+      "label": "Escapee Killer"
+    },
+    "228": {
+      "name": "EvilToothfairy",
+      "label": "Evil Toothfairy"
+    },
+    "229": {
+      "name": "FancyTitle",
+      "label": "Fancy Title"
+    },
+    "230": {
+      "name": "FashionKing",
+      "label": "Fashion King"
+    },
+    "231": {
+      "name": "FashionPenguinKing",
+      "label": "Fashion Penguin King"
+    },
+    "232": {
+      "name": "FashionQueen",
+      "label": "Fashion Queen"
+    },
+    "233": {
+      "name": "FashionVictim",
+      "label": "Fashion Victim"
+    },
+    "234": {
+      "name": "FearlessFighter",
+      "label": "Fearless Fighter"
+    },
+    "235": {
+      "name": "FlagBoy",
+      "label": "Flag Boy"
+    },
+    "236": {
+      "name": "FrelornSlayer",
+      "label": "Frelorn Slayer"
+    },
+    "237": {
+      "name": "FriendtoMrP",
+      "label": "Friendto Mr P"
+    },
+    "238": {
+      "name": "GangstaStyle",
+      "label": "Gangsta Style"
+    },
+    "239": {
+      "name": "Gangster",
+      "label": "Gangster"
+    },
+    "240": {
+      "name": "Ghostbuster",
+      "label": "Ghostbuster"
+    },
+    "241": {
+      "name": "Gimp",
+      "label": "Gimp"
+    },
+    "242": {
+      "name": "GimpGoddess",
+      "label": "Gimp Goddess"
+    },
+    "243": {
+      "name": "GimpyMageofMight",
+      "label": "Gimpy Mageof Might"
+    },
+    "244": {
+      "name": "GladiatorChampion",
+      "label": "Gladiator Champion"
+    },
+    "245": {
+      "name": "GlowingArcher",
+      "label": "Glowing Archer"
+    },
+    "246": {
+      "name": "GodoftheSwordsman",
+      "label": "Godofthe Swordsman"
+    },
+    "247": {
+      "name": "GolemKiller",
+      "label": "Golem Killer"
+    },
+    "248": {
+      "name": "GolemSlayer",
+      "label": "Golem Slayer"
+    },
+    "249": {
+      "name": "GreatPookieSlayer",
+      "label": "Great Pookie Slayer"
+    },
+    "250": {
+      "name": "GuardianAngel",
+      "label": "Guardian Angel"
+    },
+    "251": {
+      "name": "GuardianofArwic",
+      "label": "Guardianof Arwic"
+    },
+    "252": {
+      "name": "HamsterHerder",
+      "label": "Hamster Herder"
+    },
+    "253": {
+      "name": "HamsterVitae",
+      "label": "Hamster Vitae"
+    },
+    "254": {
+      "name": "HaveBunniesWillTravel",
+      "label": "Have Bunnies Will Travel"
+    },
+    "255": {
+      "name": "HaveTrikeWillBabble",
+      "label": "Have Trike Will Babble"
+    },
+    "256": {
+      "name": "HideandSeekSpecialist",
+      "label": "Hideand Seek Specialist"
+    },
+    "257": {
+      "name": "HollywoodBud",
+      "label": "Hollywood Bud"
+    },
+    "258": {
+      "name": "HoltburgSurvivalChampion",
+      "label": "Holtburg Survival Champion"
+    },
+    "259": {
+      "name": "HoltburgsSurvivorChampion",
+      "label": "Holtburgs Survivor Champion"
+    },
+    "260": {
+      "name": "HonoraryPinkEep",
+      "label": "Honorary Pink Eep"
+    },
+    "261": {
+      "name": "HungryHungryHippo",
+      "label": "Hungry Hungry Hippo"
+    },
+    "262": {
+      "name": "HusbandofLynnie",
+      "label": "Husbandof Lynnie"
+    },
+    "263": {
+      "name": "HusbandsHealer",
+      "label": "Husbands Healer"
+    },
+    "264": {
+      "name": "IamBigPIMPIN",
+      "label": "Iam Big PIMPIN"
+    },
+    "265": {
+      "name": "Ilikeddying",
+      "label": "Ilikeddying"
+    },
+    "266": {
+      "name": "JessicaHeart",
+      "label": "Jessica Heart"
+    },
+    "267": {
+      "name": "KingofallthatisPumpkin",
+      "label": "Kingofallthatis Pumpkin"
+    },
+    "268": {
+      "name": "KingofCaul",
+      "label": "Kingof Caul"
+    },
+    "269": {
+      "name": "KingofDarktide",
+      "label": "Kingof Darktide"
+    },
+    "270": {
+      "name": "KingofPierceDiggys",
+      "label": "Kingof Pierce Diggys"
+    },
+    "271": {
+      "name": "KnightRider",
+      "label": "Knight Rider"
+    },
+    "272": {
+      "name": "LadyoftheFourTowers",
+      "label": "Ladyofthe Four Towers"
+    },
+    "273": {
+      "name": "LangeGang",
+      "label": "Lange Gang"
+    },
+    "274": {
+      "name": "LevelMaster",
+      "label": "Level Master"
+    },
+    "275": {
+      "name": "Leviathan",
+      "label": "Leviathan"
+    },
+    "276": {
+      "name": "LeviathanSlayer",
+      "label": "Leviathan Slayer"
+    },
+    "277": {
+      "name": "LibeEventsManager",
+      "label": "Libe Events Manager"
+    },
+    "278": {
+      "name": "LifePreserver",
+      "label": "Life Preserver"
+    },
+    "279": {
+      "name": "LiveEventCoordinator",
+      "label": "Live Event Coordinator"
+    },
+    "280": {
+      "name": "LiveEventsManager",
+      "label": "Live Events Manager"
+    },
+    "281": {
+      "name": "LiveOpCoordinator",
+      "label": "Live Op Coordinator"
+    },
+    "282": {
+      "name": "LoreSecondPlace",
+      "label": "Lore Second Place"
+    },
+    "283": {
+      "name": "LoreSecondPlaceQuizNight",
+      "label": "Lore Second Place Quiz Night"
+    },
+    "284": {
+      "name": "LoreChampionQuizNight1",
+      "label": "Lore Champion Quiz Night1"
+    },
+    "285": {
+      "name": "LoreChampionQuizNight2",
+      "label": "Lore Champion Quiz Night2"
+    },
+    "286": {
+      "name": "LoreMaster",
+      "label": "Lore Master"
+    },
+    "287": {
+      "name": "LoreMasterQuizNight1",
+      "label": "Lore Master Quiz Night1"
+    },
+    "288": {
+      "name": "LoreMasterQuizNight2",
+      "label": "Lore Master Quiz Night2"
+    },
+    "289": {
+      "name": "LoreMasterSecondPlace",
+      "label": "Lore Master Second Place"
+    },
+    "290": {
+      "name": "LoreMasterofStaves",
+      "label": "Lore Masterof Staves"
+    },
+    "291": {
+      "name": "LotsofVitae",
+      "label": "Lotsof Vitae"
+    },
+    "292": {
+      "name": "LuckyLady",
+      "label": "Lucky Lady"
+    },
+    "293": {
+      "name": "MadCowSlayer",
+      "label": "Mad Cow Slayer"
+    },
+    "294": {
+      "name": "MagesAssitant",
+      "label": "Mages Assitant"
+    },
+    "295": {
+      "name": "MasterTinkerer",
+      "label": "Master Tinkerer"
+    },
+    "296": {
+      "name": "MayorofAyanBaqur",
+      "label": "Mayorof Ayan Baqur"
+    },
+    "297": {
+      "name": "MintyFresh",
+      "label": "Minty Fresh"
+    },
+    "298": {
+      "name": "MisunderstoodPengy",
+      "label": "Misunderstood Pengy"
+    },
+    "299": {
+      "name": "Mom",
+      "label": "Mom"
+    },
+    "300": {
+      "name": "MommyPengy",
+      "label": "Mommy Pengy"
+    },
+    "301": {
+      "name": "MosswartAlly",
+      "label": "Mosswart Ally"
+    },
+    "302": {
+      "name": "MrNiceGuy",
+      "label": "Mr Nice Guy"
+    },
+    "303": {
+      "name": "Murderer",
+      "label": "Murderer"
+    },
+    "304": {
+      "name": "Murderertwo",
+      "label": "Murderertwo"
+    },
+    "305": {
+      "name": "NewbyTitle",
+      "label": "Newby Title"
+    },
+    "306": {
+      "name": "NiceBlueLady",
+      "label": "Nice Blue Lady"
+    },
+    "307": {
+      "name": "Numberonedraftpick",
+      "label": "Numberonedraftpick"
+    },
+    "308": {
+      "name": "OldSchool",
+      "label": "Old School"
+    },
+    "309": {
+      "name": "ParadoxSlayer",
+      "label": "Paradox Slayer"
+    },
+    "310": {
+      "name": "PatronSaintoftheLifestone",
+      "label": "Patron Saintofthe Lifestone"
+    },
+    "311": {
+      "name": "Peacebear",
+      "label": "Peacebear"
+    },
+    "312": {
+      "name": "PenguinKiller",
+      "label": "Penguin Killer"
+    },
+    "313": {
+      "name": "PigFarmer",
+      "label": "Pig Farmer"
+    },
+    "314": {
+      "name": "PinkBunnyKiller",
+      "label": "Pink Bunny Killer"
+    },
+    "315": {
+      "name": "PinkBunnyMaster",
+      "label": "Pink Bunny Master"
+    },
+    "316": {
+      "name": "PinkGoddess",
+      "label": "Pink Goddess"
+    },
+    "317": {
+      "name": "PinkLady",
+      "label": "Pink Lady"
+    },
+    "318": {
+      "name": "PKQueen",
+      "label": "PKQueen"
+    },
+    "319": {
+      "name": "PlayaKillaKing",
+      "label": "Playa Killa King"
+    },
+    "320": {
+      "name": "PokemonSlayer",
+      "label": "Pokemon Slayer"
+    },
+    "321": {
+      "name": "PrettyPumpkin",
+      "label": "Pretty Pumpkin"
+    },
+    "322": {
+      "name": "Prisoner",
+      "label": "Prisoner"
+    },
+    "323": {
+      "name": "ProtectoroftheCheese",
+      "label": "Protectorofthe Cheese"
+    },
+    "324": {
+      "name": "ProtonPack",
+      "label": "Proton Pack"
+    },
+    "325": {
+      "name": "PumpkinSlayer",
+      "label": "Pumpkin Slayer"
+    },
+    "326": {
+      "name": "PumpkinStalker",
+      "label": "Pumpkin Stalker"
+    },
+    "327": {
+      "name": "PurplePengy",
+      "label": "Purple Pengy"
+    },
+    "328": {
+      "name": "PwnerofNewbs",
+      "label": "Pwnerof Newbs"
+    },
+    "329": {
+      "name": "QueenofBrats",
+      "label": "Queenof Brats"
+    },
+    "330": {
+      "name": "QueensCrafter",
+      "label": "Queens Crafter"
+    },
+    "331": {
+      "name": "QueensCraftertwo",
+      "label": "Queens Craftertwo"
+    },
+    "332": {
+      "name": "QueensPackRat",
+      "label": "Queens Pack Rat"
+    },
+    "333": {
+      "name": "QueensPackrat",
+      "label": "Queens Packrat"
+    },
+    "334": {
+      "name": "QueensTinker",
+      "label": "Queens Tinker"
+    },
+    "335": {
+      "name": "Rawr",
+      "label": "Rawr"
+    },
+    "336": {
+      "name": "RaynesMagePet",
+      "label": "Raynes Mage Pet"
+    },
+    "337": {
+      "name": "ReggaeRenegade",
+      "label": "Reggae Renegade"
+    },
+    "338": {
+      "name": "RingBearer",
+      "label": "Ring Bearer"
+    },
+    "339": {
+      "name": "RingringringBananaphone",
+      "label": "Ringringring Bananaphone"
+    },
+    "340": {
+      "name": "RoadKill",
+      "label": "Road Kill"
+    },
+    "341": {
+      "name": "RollingDeathDestroyer",
+      "label": "Rolling Death Destroyer"
+    },
+    "342": {
+      "name": "RoyalChef",
+      "label": "Royal Chef"
+    },
+    "343": {
+      "name": "RoyalCook",
+      "label": "Royal Cook"
+    },
+    "344": {
+      "name": "Rugged",
+      "label": "Rugged"
+    },
+    "345": {
+      "name": "SanitationEngineer",
+      "label": "Sanitation Engineer"
+    },
+    "346": {
+      "name": "ScarecrowSlayer",
+      "label": "Scarecrow Slayer"
+    },
+    "347": {
+      "name": "ScaryPumkpkinDominator",
+      "label": "Scary Pumkpkin Dominator"
+    },
+    "348": {
+      "name": "ScaryPumpkinSlayer",
+      "label": "Scary Pumpkin Slayer"
+    },
+    "349": {
+      "name": "Sentinal",
+      "label": "Sentinal"
+    },
+    "350": {
+      "name": "Sentry",
+      "label": "Sentry"
+    },
+    "351": {
+      "name": "ShadowChild",
+      "label": "Shadow Child"
+    },
+    "352": {
+      "name": "ShadowHunter",
+      "label": "Shadow Hunter"
+    },
+    "353": {
+      "name": "ShadowSlayer",
+      "label": "Shadow Slayer"
+    },
+    "354": {
+      "name": "SlayeroftheGreatPookie",
+      "label": "Slayerofthe Great Pookie"
+    },
+    "355": {
+      "name": "Slimer",
+      "label": "Slimer"
+    },
+    "356": {
+      "name": "SnazzyDresser",
+      "label": "Snazzy Dresser"
+    },
+    "357": {
+      "name": "SoulMan",
+      "label": "Soul Man"
+    },
+    "358": {
+      "name": "SpookyTitle",
+      "label": "Spooky Title"
+    },
+    "359": {
+      "name": "StaffMasta",
+      "label": "Staff Masta"
+    },
+    "360": {
+      "name": "StaypuffedMallowGirl",
+      "label": "Staypuffed Mallow Girl"
+    },
+    "361": {
+      "name": "SuperGimpedAdventurer",
+      "label": "Super Gimped Adventurer"
+    },
+    "362": {
+      "name": "Supercalifragilisticexpialidocious",
+      "label": "Supercalifragilisticexpialidocious"
+    },
+    "363": {
+      "name": "Superman",
+      "label": "Superman"
+    },
+    "364": {
+      "name": "SurvivorChampion",
+      "label": "Survivor Champion"
+    },
+    "365": {
+      "name": "SwordScholar",
+      "label": "Sword Scholar"
+    },
+    "366": {
+      "name": "TehNewb",
+      "label": "Teh Newb"
+    },
+    "367": {
+      "name": "TehSaint",
+      "label": "Teh Saint"
+    },
+    "368": {
+      "name": "TestingGuy",
+      "label": "Testing Guy"
+    },
+    "369": {
+      "name": "TheBait",
+      "label": "The Bait"
+    },
+    "370": {
+      "name": "TheChosenKing",
+      "label": "The Chosen King"
+    },
+    "371": {
+      "name": "TheComeBackKid",
+      "label": "The Come Back Kid"
+    },
+    "372": {
+      "name": "TheForgotten",
+      "label": "The Forgotten"
+    },
+    "373": {
+      "name": "TheGimped",
+      "label": "The Gimped"
+    },
+    "374": {
+      "name": "TheGreatandPowerful",
+      "label": "The Greatand Powerful"
+    },
+    "375": {
+      "name": "TheHalfFox",
+      "label": "The Half Fox"
+    },
+    "376": {
+      "name": "TheNoob",
+      "label": "The Noob"
+    },
+    "377": {
+      "name": "ThePurpleFez",
+      "label": "The Purple Fez"
+    },
+    "378": {
+      "name": "ThePwnerer",
+      "label": "The Pwnerer"
+    },
+    "379": {
+      "name": "TheUnknownPk",
+      "label": "The Unknown Pk"
+    },
+    "380": {
+      "name": "ThunderChickenSlayer",
+      "label": "Thunder Chicken Slayer"
+    },
+    "381": {
+      "name": "TMKiller",
+      "label": "TMKiller"
+    },
+    "382": {
+      "name": "ToughGuy",
+      "label": "Tough Guy"
+    },
+    "383": {
+      "name": "TradesmanofAuberean",
+      "label": "Tradesmanof Auberean"
+    },
+    "384": {
+      "name": "TreasureHunter",
+      "label": "Treasure Hunter"
+    },
+    "385": {
+      "name": "TremendousMonougaMaster",
+      "label": "Tremendous Monouga Master"
+    },
+    "386": {
+      "name": "TripleGolemKiller",
+      "label": "Triple Golem Killer"
+    },
+    "387": {
+      "name": "TurbineSlayer",
+      "label": "Turbine Slayer"
+    },
+    "388": {
+      "name": "TwinsofTerror",
+      "label": "Twinsof Terror"
+    },
+    "389": {
+      "name": "UberestNoobonFrostfell",
+      "label": "Uberest Noobon Frostfell"
+    },
+    "390": {
+      "name": "UnderworldThugg",
+      "label": "Underworld Thugg"
+    },
+    "391": {
+      "name": "ViamontianSlayer",
+      "label": "Viamontian Slayer"
+    },
+    "392": {
+      "name": "VitaeKing",
+      "label": "Vitae King"
+    },
+    "393": {
+      "name": "VitaeVixen",
+      "label": "Vitae Vixen"
+    },
+    "394": {
+      "name": "VixenofVitae",
+      "label": "Vixenof Vitae"
+    },
+    "395": {
+      "name": "WabbitBait",
+      "label": "Wabbit Bait"
+    },
+    "396": {
+      "name": "WabbitKiller",
+      "label": "Wabbit Killer"
+    },
+    "397": {
+      "name": "WanderingFool",
+      "label": "Wandering Fool"
+    },
+    "398": {
+      "name": "WardensAssistant",
+      "label": "Wardens Assistant"
+    },
+    "399": {
+      "name": "WardensThug",
+      "label": "Wardens Thug"
+    },
+    "400": {
+      "name": "Wimp",
+      "label": "Wimp"
+    },
+    "401": {
+      "name": "WolfpackCrafter",
+      "label": "Wolfpack Crafter"
+    },
+    "402": {
+      "name": "WonderWoman",
+      "label": "Wonder Woman"
+    },
+    "403": {
+      "name": "Yagotserved",
+      "label": "Yagotserved"
+    },
+    "404": {
+      "name": "GIMPcaps",
+      "label": "GIMPcaps"
+    },
+    "405": {
+      "name": "WardensAssistanttwo",
+      "label": "Wardens Assistanttwo"
+    },
+    "406": {
+      "name": "SupremeBunnyMaster",
+      "label": "Supreme Bunny Master"
+    },
+    "407": {
+      "name": "GuardianoftheDark",
+      "label": "Guardianofthe Dark"
+    },
+    "408": {
+      "name": "AprilsFool",
+      "label": "Aprils Fool"
+    },
+    "409": {
+      "name": "UlgrimsEep",
+      "label": "Ulgrims Eep"
+    },
+    "410": {
+      "name": "MukkirMasher",
+      "label": "Mukkir Masher"
+    },
+    "411": {
+      "name": "HarbingersBane",
+      "label": "Harbingers Bane"
+    },
+    "412": {
+      "name": "MasteroftheElements",
+      "label": "Masterofthe Elements"
+    },
+    "413": {
+      "name": "KillcranesAlly",
+      "label": "Killcranes Ally"
+    },
+    "414": {
+      "name": "ApprenticeShadowHunter",
+      "label": "Apprentice Shadow Hunter"
+    },
+    "415": {
+      "name": "SquireoftheGoldenFlame",
+      "label": "Squireofthe Golden Flame"
+    },
+    "416": {
+      "name": "KnightoftheGoldenFlame",
+      "label": "Knightofthe Golden Flame"
+    },
+    "417": {
+      "name": "KnightoftheWhisperingBlade",
+      "label": "Knightofthe Whispering Blade"
+    },
+    "418": {
+      "name": "TheBlackSpear",
+      "label": "The Black Spear"
+    },
+    "419": {
+      "name": "UNKNOWNGUESSEDNAME419",
+      "label": "UNKNOWNGUESSEDNAME419"
+    },
+    "420": {
+      "name": "CarraidasAvenger",
+      "label": "Carraidas Avenger"
+    },
+    "421": {
+      "name": "ParagonoftheWhisperingBlade",
+      "label": "Paragonofthe Whispering Blade"
+    },
+    "422": {
+      "name": "ParagonoftheRossuMorta",
+      "label": "Paragonofthe Rossu Morta"
+    },
+    "423": {
+      "name": "ChosenofVaricci",
+      "label": "Chosenof Varicci"
+    },
+    "424": {
+      "name": "ChosenofElysa",
+      "label": "Chosenof Elysa"
+    },
+    "425": {
+      "name": "SmallMukkirSquasher",
+      "label": "Small Mukkir Squasher"
+    },
+    "426": {
+      "name": "BloodWarrior",
+      "label": "Blood Warrior"
+    },
+    "427": {
+      "name": "Strategist",
+      "label": "Strategist"
+    },
+    "428": {
+      "name": "WarBeast",
+      "label": "War Beast"
+    },
+    "429": {
+      "name": "ChampionofDaemal",
+      "label": "Championof Daemal"
+    },
+    "430": {
+      "name": "HerooftheGoldenFlame",
+      "label": "Heroofthe Golden Flame"
+    },
+    "431": {
+      "name": "SlayeroftheBlackSpear",
+      "label": "Slayerofthe Black Spear"
+    },
+    "432": {
+      "name": "UNKNOWNGUESSEDNAME432",
+      "label": "UNKNOWNGUESSEDNAME432"
+    },
+    "433": {
+      "name": "ObviouslyBored",
+      "label": "Obviously Bored"
+    },
+    "434": {
+      "name": "ZefirZapper",
+      "label": "Zefir Zapper"
+    },
+    "435": {
+      "name": "TuskerBlight",
+      "label": "Tusker Blight"
+    },
+    "436": {
+      "name": "ElementalEradicator",
+      "label": "Elemental Eradicator"
+    },
+    "437": {
+      "name": "ExpertBanishedHunter",
+      "label": "Expert Banished Hunter"
+    },
+    "438": {
+      "name": "ExpertFallenHunter",
+      "label": "Expert Fallen Hunter"
+    },
+    "439": {
+      "name": "EliteHeadHunter",
+      "label": "Elite Head Hunter"
+    },
+    "440": {
+      "name": "FriendoftheFrostglaive",
+      "label": "Friendofthe Frostglaive"
+    },
+    "441": {
+      "name": "SquireofNewViamont",
+      "label": "Squireof New Viamont"
+    },
+    "442": {
+      "name": "Reanimator",
+      "label": "Reanimator"
+    },
+    "443": {
+      "name": "ZombieIncursionSurvivor",
+      "label": "Zombie Incursion Survivor"
+    },
+    "444": {
+      "name": "UlgrimsDrinkingBuddy",
+      "label": "Ulgrims Drinking Buddy"
+    },
+    "445": {
+      "name": "MasterofthePorcelainAltar",
+      "label": "Masterofthe Porcelain Altar"
+    },
+    "446": {
+      "name": "MasteroftheMysticalMug",
+      "label": "Masterofthe Mystical Mug"
+    },
+    "447": {
+      "name": "ColosseumChampion",
+      "label": "Colosseum Champion"
+    },
+    "448": {
+      "name": "Titan",
+      "label": "Titan"
+    },
+    "449": {
+      "name": "Colossus",
+      "label": "Colossus"
+    },
+    "450": {
+      "name": "MasterGladiator",
+      "label": "Master Gladiator"
+    },
+    "451": {
+      "name": "Fearless",
+      "label": "Fearless"
+    },
+    "452": {
+      "name": "LordoftheArena",
+      "label": "Lordofthe Arena"
+    },
+    "453": {
+      "name": "RingMaster",
+      "label": "Ring Master"
+    },
+    "454": {
+      "name": "PitFighter",
+      "label": "Pit Fighter"
+    },
+    "455": {
+      "name": "Myrmidon",
+      "label": "Myrmidon"
+    },
+    "456": {
+      "name": "HostileCombatant",
+      "label": "Hostile Combatant"
+    },
+    "457": {
+      "name": "Survivalist",
+      "label": "Survivalist"
+    },
+    "458": {
+      "name": "WarrioroftheSeventhCircle",
+      "label": "Warriorofthe Seventh Circle"
+    },
+    "459": {
+      "name": "Gladiator",
+      "label": "Gladiator"
+    },
+    "460": {
+      "name": "Contender",
+      "label": "Contender"
+    },
+    "461": {
+      "name": "DrudgeDread",
+      "label": "Drudge Dread"
+    },
+    "462": {
+      "name": "ArenaCustodian",
+      "label": "Arena Custodian"
+    },
+    "463": {
+      "name": "ArenaRat",
+      "label": "Arena Rat"
+    },
+    "464": {
+      "name": "Scrapper",
+      "label": "Scrapper"
+    },
+    "465": {
+      "name": "ChampionRingIII",
+      "label": "Champion Ring III"
+    },
+    "466": {
+      "name": "ChampionRingV",
+      "label": "Champion Ring V"
+    },
+    "467": {
+      "name": "ChampionRingVI",
+      "label": "Champion Ring VI"
+    },
+    "468": {
+      "name": "ChampionRingVII",
+      "label": "Champion Ring VII"
+    },
+    "469": {
+      "name": "ChampionRingXII",
+      "label": "Champion Ring XII"
+    },
+    "470": {
+      "name": "MasterChampionRingX",
+      "label": "Master Champion Ring X"
+    },
+    "471": {
+      "name": "RuukAlly",
+      "label": "Ruuk Ally"
+    },
+    "472": {
+      "name": "SeekerofAsheron",
+      "label": "Seekerof Asheron"
+    },
+    "473": {
+      "name": "SeekerofTorgluuk",
+      "label": "Seekerof Torgluuk"
+    },
+    "474": {
+      "name": "PortalRitualist",
+      "label": "Portal Ritualist"
+    },
+    "475": {
+      "name": "RangerRuuk",
+      "label": "Ranger Ruuk"
+    },
+    "476": {
+      "name": "BasherSlasher",
+      "label": "Basher Slasher"
+    },
+    "477": {
+      "name": "GurukHunter",
+      "label": "Guruk Hunter"
+    },
+    "478": {
+      "name": "DeadEyefortheColossi",
+      "label": "Dead Eyeforthe Colossi"
+    },
+    "479": {
+      "name": "FiendishHuntsman",
+      "label": "Fiendish Huntsman"
+    },
+    "480": {
+      "name": "MonsterKiller",
+      "label": "Monster Killer"
+    },
+    "481": {
+      "name": "BoshBoshKibosh",
+      "label": "Bosh Bosh Kibosh"
+    },
+    "482": {
+      "name": "MushroomCollector",
+      "label": "Mushroom Collector"
+    },
+    "483": {
+      "name": "FungalFarmer",
+      "label": "Fungal Farmer"
+    },
+    "484": {
+      "name": "MushroomMan",
+      "label": "Mushroom Man"
+    },
+    "485": {
+      "name": "Fungi",
+      "label": "Fungi"
+    },
+    "486": {
+      "name": "MushroomKing",
+      "label": "Mushroom King"
+    },
+    "487": {
+      "name": "Thrungamandius",
+      "label": "Thrungamandius"
+    },
+    "488": {
+      "name": "InitiateoftheBlade",
+      "label": "Initiateofthe Blade"
+    },
+    "489": {
+      "name": "TorgluuksLiberator",
+      "label": "Torgluuks Liberator"
+    },
+    "490": {
+      "name": "BurunLiberator",
+      "label": "Burun Liberator"
+    },
+    "491": {
+      "name": "AsheronsSavior",
+      "label": "Asherons Savior"
+    },
+    "492": {
+      "name": "AsheronsDefender",
+      "label": "Asherons Defender"
+    },
+    "493": {
+      "name": "UNKNOWNGUESSEDNAME493",
+      "label": "UNKNOWNGUESSEDNAME493"
+    },
+    "494": {
+      "name": "FuzzyBunnySlayer",
+      "label": "Fuzzy Bunny Slayer"
+    },
+    "495": {
+      "name": "MoarHunter",
+      "label": "Moar Hunter"
+    },
+    "496": {
+      "name": "SpiketoothSlayer",
+      "label": "Spiketooth Slayer"
+    },
+    "497": {
+      "name": "TowerGuardianArchitect",
+      "label": "Tower Guardian Architect"
+    },
+    "498": {
+      "name": "ArtisanoftheFlameandLight",
+      "label": "Artisanofthe Flameand Light"
+    },
+    "499": {
+      "name": "GuardianoftheTower",
+      "label": "Guardianofthe Tower"
+    },
+    "500": {
+      "name": "CragstoneMilitia",
+      "label": "Cragstone Militia"
+    },
+    "501": {
+      "name": "CragstoneKnight",
+      "label": "Cragstone Knight"
+    },
+    "502": {
+      "name": "GuardianofCragstone",
+      "label": "Guardianof Cragstone"
+    },
+    "503": {
+      "name": "KnightoftheWindmill",
+      "label": "Knightofthe Windmill"
+    },
+    "504": {
+      "name": "HeroOfHouseMhoire",
+      "label": "Hero Of House Mhoire"
+    },
+    "505": {
+      "name": "LadyTairlasChampion",
+      "label": "Lady Tairlas Champion"
+    },
+    "506": {
+      "name": "RoyalInvestigator",
+      "label": "Royal Investigator"
+    },
+    "507": {
+      "name": "WangaFighter",
+      "label": "Wanga Fighter"
+    },
+    "508": {
+      "name": "HoogansHero",
+      "label": "Hoogans Hero"
+    },
+    "509": {
+      "name": "CragstoneFirefighter",
+      "label": "Cragstone Firefighter"
+    },
+    "510": {
+      "name": "UNKNOWNGUESSEDNAME510",
+      "label": "UNKNOWNGUESSEDNAME510"
+    },
+    "511": {
+      "name": "StalkerStalker",
+      "label": "Stalker Stalker"
+    },
+    "512": {
+      "name": "Ravenous",
+      "label": "Ravenous"
+    },
+    "513": {
+      "name": "AlteredHunter",
+      "label": "Altered Hunter"
+    },
+    "514": {
+      "name": "AugmentedHunter",
+      "label": "Augmented Hunter"
+    },
+    "515": {
+      "name": "DrudgeDoom",
+      "label": "Drudge Doom"
+    },
+    "516": {
+      "name": "DefenderofKryst",
+      "label": "Defenderof Kryst"
+    },
+    "517": {
+      "name": "ParadoxtouchedQueenslayer",
+      "label": "Paradoxtouched Queenslayer"
+    },
+    "518": {
+      "name": "AmeliasCaretaker",
+      "label": "Amelias Caretaker"
+    },
+    "519": {
+      "name": "ProdigalTuskerSlayer",
+      "label": "Prodigal Tusker Slayer"
+    },
+    "520": {
+      "name": "MudmouthsBane",
+      "label": "Mudmouths Bane"
+    },
+    "521": {
+      "name": "OolutangasBane",
+      "label": "Oolutangas Bane"
+    },
+    "522": {
+      "name": "ProdigalShadowSlayer",
+      "label": "Prodigal Shadow Slayer"
+    },
+    "523": {
+      "name": "ProdigalHarbingerSlayer",
+      "label": "Prodigal Harbinger Slayer"
+    },
+    "524": {
+      "name": "BloodSeeker",
+      "label": "Blood Seeker"
+    },
+    "525": {
+      "name": "StormRider",
+      "label": "Storm Rider"
+    },
+    "526": {
+      "name": "Meddler",
+      "label": "Meddler"
+    },
+    "527": {
+      "name": "VileBetrayer",
+      "label": "Vile Betrayer"
+    },
+    "528": {
+      "name": "Spy",
+      "label": "Spy"
+    },
+    "529": {
+      "name": "SlithisSlayer",
+      "label": "Slithis Slayer"
+    },
+    "530": {
+      "name": "ChosenoftheRift",
+      "label": "Chosenofthe Rift"
+    },
+    "531": {
+      "name": "RiftShifter",
+      "label": "Rift Shifter"
+    },
+    "532": {
+      "name": "RiftWalker",
+      "label": "Rift Walker"
+    },
+    "533": {
+      "name": "ReefBuilder",
+      "label": "Reef Builder"
+    },
+    "534": {
+      "name": "ReefBreaker",
+      "label": "Reef Breaker"
+    },
+    "535": {
+      "name": "CryptRat",
+      "label": "Crypt Rat"
+    },
+    "536": {
+      "name": "GraveStalker",
+      "label": "Grave Stalker"
+    },
+    "537": {
+      "name": "BoneBreaker",
+      "label": "Bone Breaker"
+    },
+    "538": {
+      "name": "CryptCreeper",
+      "label": "Crypt Creeper"
+    },
+    "539": {
+      "name": "TombRaider",
+      "label": "Tomb Raider"
+    },
+    "540": {
+      "name": "FolloweroftheVine",
+      "label": "Followerofthe Vine"
+    },
+    "541": {
+      "name": "Harvester",
+      "label": "Harvester"
+    },
+    "542": {
+      "name": "HarvesterHarvester",
+      "label": "Harvester Harvester"
+    },
+    "543": {
+      "name": "HarvesterHarvesterHarvester",
+      "label": "Harvester Harvester Harvester"
+    },
+    "544": {
+      "name": "PumpkinThroneUsurper",
+      "label": "Pumpkin Throne Usurper"
+    },
+    "545": {
+      "name": "DeathKnight",
+      "label": "Death Knight"
+    },
+    "546": {
+      "name": "NullTitle",
+      "label": "Null Title"
+    },
+    "547": {
+      "name": "TrackerGuardian",
+      "label": "Tracker Guardian"
+    },
+    "548": {
+      "name": "DojiroSangisSavior",
+      "label": "Dojiro Sangis Savior"
+    },
+    "549": {
+      "name": "MasteroftheHunt",
+      "label": "Masterofthe Hunt"
+    },
+    "550": {
+      "name": "InitiateoftheHunt",
+      "label": "Initiateofthe Hunt"
+    },
+    "551": {
+      "name": "ApprenticeoftheHunt",
+      "label": "Apprenticeofthe Hunt"
+    },
+    "552": {
+      "name": "DiscipleoftheHunt",
+      "label": "Discipleofthe Hunt"
+    },
+    "553": {
+      "name": "SeekeroftheHunt",
+      "label": "Seekerofthe Hunt"
+    },
+    "554": {
+      "name": "ChampionoftheHunt",
+      "label": "Championofthe Hunt"
+    },
+    "555": {
+      "name": "GuardianofLinvakTukal",
+      "label": "Guardianof Linvak Tukal"
+    },
+    "556": {
+      "name": "UnwittingParticipant",
+      "label": "Unwitting Participant"
+    },
+    "557": {
+      "name": "FriendofRheaga",
+      "label": "Friendof Rheaga"
+    },
+    "558": {
+      "name": "SlayerofRheaga",
+      "label": "Slayerof Rheaga"
+    },
+    "559": {
+      "name": "ProtectorofthePast",
+      "label": "Protectorofthe Past"
+    },
+    "560": {
+      "name": "WarriorofthePast",
+      "label": "Warriorofthe Past"
+    },
+    "561": {
+      "name": "Anthropologist",
+      "label": "Anthropologist"
+    },
+    "562": {
+      "name": "GoldFarmer",
+      "label": "Gold Farmer"
+    },
+    "563": {
+      "name": "ThirdEyeBlinder",
+      "label": "Third Eye Blinder"
+    },
+    "564": {
+      "name": "DireDrudgeDecapitator",
+      "label": "Dire Drudge Decapitator"
+    },
+    "565": {
+      "name": "RenegadeHunter",
+      "label": "Renegade Hunter"
+    },
+    "566": {
+      "name": "BanderlingBully",
+      "label": "Banderling Bully"
+    },
+    "567": {
+      "name": "Xenophobic",
+      "label": "Xenophobic"
+    },
+    "568": {
+      "name": "ShadowSunderer",
+      "label": "Shadow Sunderer"
+    },
+    "569": {
+      "name": "DireHuntsman",
+      "label": "Dire Huntsman"
+    },
+    "570": {
+      "name": "GameWarden",
+      "label": "Game Warden"
+    },
+    "571": {
+      "name": "HonoraryReaoftheAun",
+      "label": "Honorary Reaofthe Aun"
+    },
+    "572": {
+      "name": "HopeofthePast",
+      "label": "Hopeofthe Past"
+    },
+    "573": {
+      "name": "BeaconofHope",
+      "label": "Beaconof Hope"
+    },
+    "574": {
+      "name": "AerbaxsBane",
+      "label": "Aerbaxs Bane"
+    },
+    "575": {
+      "name": "AerbaxSlayer",
+      "label": "Aerbax Slayer"
+    },
+    "576": {
+      "name": "JestersEmancipator",
+      "label": "Jesters Emancipator"
+    },
+    "577": {
+      "name": "JestersFool",
+      "label": "Jesters Fool"
+    },
+    "578": {
+      "name": "JestersAccomplice",
+      "label": "Jesters Accomplice"
+    },
+    "579": {
+      "name": "HonoraryBurunScout",
+      "label": "Honorary Burun Scout"
+    },
+    "580": {
+      "name": "MarbleWrangler",
+      "label": "Marble Wrangler"
+    },
+    "581": {
+      "name": "SecretKeeper",
+      "label": "Secret Keeper"
+    },
+    "582": {
+      "name": "JestersLittleHelper",
+      "label": "Jesters Little Helper"
+    },
+    "583": {
+      "name": "HardToKill",
+      "label": "Hard To Kill"
+    },
+    "584": {
+      "name": "Expendable",
+      "label": "Expendable"
+    },
+    "585": {
+      "name": "NoviceoftheSea",
+      "label": "Noviceofthe Sea"
+    },
+    "586": {
+      "name": "AcolyteoftheSea",
+      "label": "Acolyteofthe Sea"
+    },
+    "587": {
+      "name": "MinisteroftheSea",
+      "label": "Ministerofthe Sea"
+    },
+    "588": {
+      "name": "DefenderoftheSea",
+      "label": "Defenderofthe Sea"
+    },
+    "589": {
+      "name": "ChampionoftheSea",
+      "label": "Championofthe Sea"
+    },
+    "590": {
+      "name": "MasteroftheSea",
+      "label": "Masterofthe Sea"
+    },
+    "591": {
+      "name": "DefeaterOfTheBlight",
+      "label": "Defeater Of The Blight"
+    },
+    "592": {
+      "name": "ChampionoftheAerlintheNode",
+      "label": "Championofthe Aerlinthe Node"
+    },
+    "593": {
+      "name": "ChampionoftheAmunNode",
+      "label": "Championofthe Amun Node"
+    },
+    "594": {
+      "name": "ChampionoftheEsperNode",
+      "label": "Championofthe Esper Node"
+    },
+    "595": {
+      "name": "ChampionoftheHalaetanNode",
+      "label": "Championofthe Halaetan Node"
+    },
+    "596": {
+      "name": "ChampionoftheLinvakNode",
+      "label": "Championofthe Linvak Node"
+    },
+    "597": {
+      "name": "ChampionoftheObsidianNode",
+      "label": "Championofthe Obsidian Node"
+    },
+    "598": {
+      "name": "UNKNOWNGUESSEDNAME598",
+      "label": "UNKNOWNGUESSEDNAME598"
+    },
+    "599": {
+      "name": "UlgrimsHappyHundredth",
+      "label": "Ulgrims Happy Hundredth"
+    },
+    "600": {
+      "name": "PluckerofEyes",
+      "label": "Pluckerof Eyes"
+    },
+    "601": {
+      "name": "WardenoftheBurningWood",
+      "label": "Wardenofthe Burning Wood"
+    },
+    "602": {
+      "name": "ToughTough",
+      "label": "Tough Tough"
+    },
+    "603": {
+      "name": "Archaeologist",
+      "label": "Archaeologist"
+    },
+    "604": {
+      "name": "HeroofWoe",
+      "label": "Heroof Woe"
+    },
+    "605": {
+      "name": "DefenderofSilyun",
+      "label": "Defenderof Silyun"
+    },
+    "606": {
+      "name": "MemorialChampion",
+      "label": "Memorial Champion"
+    },
+    "607": {
+      "name": "ThaneofColier",
+      "label": "Thaneof Colier"
+    },
+    "608": {
+      "name": "GuardianoftheKeep",
+      "label": "Guardianofthe Keep"
+    },
+    "609": {
+      "name": "WarrioroftheCraterLake",
+      "label": "Warriorofthe Crater Lake"
+    },
+    "610": {
+      "name": "UNKNOWNGUESSEDNAME610",
+      "label": "UNKNOWNGUESSEDNAME610"
+    },
+    "611": {
+      "name": "Arwician",
+      "label": "Arwician"
+    },
+    "612": {
+      "name": "DesertWarrior",
+      "label": "Desert Warrior"
+    },
+    "613": {
+      "name": "MayoiProtector",
+      "label": "Mayoi Protector"
+    },
+    "614": {
+      "name": "StoneCollector",
+      "label": "Stone Collector"
+    },
+    "615": {
+      "name": "RockStar",
+      "label": "Rock Star"
+    },
+    "616": {
+      "name": "RockHound",
+      "label": "Rock Hound"
+    },
+    "617": {
+      "name": "WarriorofWoe",
+      "label": "Warriorof Woe"
+    },
+    "618": {
+      "name": "Haswaytoomuchtime",
+      "label": "Haswaytoomuchtime"
+    },
+    "619": {
+      "name": "ChampionImmemorial",
+      "label": "Champion Immemorial"
+    },
+    "620": {
+      "name": "ColierMiner",
+      "label": "Colier Miner"
+    },
+    "621": {
+      "name": "Legionnaire",
+      "label": "Legionnaire"
+    },
+    "622": {
+      "name": "Volcanologist",
+      "label": "Volcanologist"
+    },
+    "623": {
+      "name": "HilltopDefender",
+      "label": "Hilltop Defender"
+    },
+    "624": {
+      "name": "ArwicNoble",
+      "label": "Arwic Noble"
+    },
+    "625": {
+      "name": "Zharalim",
+      "label": "Zharalim"
+    },
+    "626": {
+      "name": "Samurai",
+      "label": "Samurai"
+    },
+    "627": {
+      "name": "GuardianinthePatriarchRaids",
+      "label": "Guardianinthe Patriarch Raids"
+    },
+    "628": {
+      "name": "WardeninthePatriarchRaids",
+      "label": "Wardeninthe Patriarch Raids"
+    },
+    "629": {
+      "name": "HeroofthePatriarchRaids",
+      "label": "Heroofthe Patriarch Raids"
+    },
+    "630": {
+      "name": "MarkedbythePatriarchs",
+      "label": "Markedbythe Patriarchs"
+    },
+    "631": {
+      "name": "UNKNOWNGUESSEDNAME631",
+      "label": "UNKNOWNGUESSEDNAME631"
+    },
+    "632": {
+      "name": "UNKNOWNGUESSEDNAME632",
+      "label": "UNKNOWNGUESSEDNAME632"
+    },
+    "633": {
+      "name": "UNKNOWNGUESSEDNAME633",
+      "label": "UNKNOWNGUESSEDNAME633"
+    },
+    "634": {
+      "name": "UNKNOWNGUESSEDNAME634",
+      "label": "UNKNOWNGUESSEDNAME634"
+    },
+    "635": {
+      "name": "UNKNOWNGUESSEDNAME635",
+      "label": "UNKNOWNGUESSEDNAME635"
+    },
+    "636": {
+      "name": "UNKNOWNGUESSEDNAME636",
+      "label": "UNKNOWNGUESSEDNAME636"
+    },
+    "637": {
+      "name": "CathedralsChampion",
+      "label": "Cathedrals Champion"
+    },
+    "638": {
+      "name": "AsheronsMilitia",
+      "label": "Asherons Militia"
+    },
+    "639": {
+      "name": "MinikRasBane",
+      "label": "Minik Ras Bane"
+    },
+    "640": {
+      "name": "KazykRisBane",
+      "label": "Kazyk Ris Bane"
+    },
+    "641": {
+      "name": "NivinizksBane",
+      "label": "Nivinizks Bane"
+    },
+    "642": {
+      "name": "MinikRasNemesis",
+      "label": "Minik Ras Nemesis"
+    },
+    "643": {
+      "name": "KazykRisNemesis",
+      "label": "Kazyk Ris Nemesis"
+    },
+    "644": {
+      "name": "NivinizksNemesis",
+      "label": "Nivinizks Nemesis"
+    },
+    "645": {
+      "name": "AubereansSentinel",
+      "label": "Aubereans Sentinel"
+    },
+    "646": {
+      "name": "DerethsElite",
+      "label": "Dereths Elite"
+    },
+    "647": {
+      "name": "DefenderoftheDeru",
+      "label": "Defenderofthe Deru"
+    },
+    "648": {
+      "name": "BaneoftheBlessed",
+      "label": "Baneofthe Blessed"
+    },
+    "649": {
+      "name": "Negotiator",
+      "label": "Negotiator"
+    },
+    "650": {
+      "name": "BaneoftheBlight",
+      "label": "Baneofthe Blight"
+    },
+    "651": {
+      "name": "Gifted",
+      "label": "Gifted"
+    },
+    "652": {
+      "name": "SeasonalSeeker",
+      "label": "Seasonal Seeker"
+    },
+    "653": {
+      "name": "AmateurExplorer",
+      "label": "Amateur Explorer"
+    },
+    "654": {
+      "name": "ExperiencedExplorer",
+      "label": "Experienced Explorer"
+    },
+    "655": {
+      "name": "AdeptExplorer",
+      "label": "Adept Explorer"
+    },
+    "656": {
+      "name": "MasterExplorer",
+      "label": "Master Explorer"
+    },
+    "657": {
+      "name": "EliteExplorer",
+      "label": "Elite Explorer"
+    },
+    "658": {
+      "name": "MountainClimber",
+      "label": "Mountain Climber"
+    },
+    "659": {
+      "name": "Daredevil",
+      "label": "Daredevil"
+    },
+    "660": {
+      "name": "SkyDiver",
+      "label": "Sky Diver"
+    },
+    "661": {
+      "name": "Spelunker",
+      "label": "Spelunker"
+    },
+    "662": {
+      "name": "PartyGoer",
+      "label": "Party Goer"
+    },
+    "663": {
+      "name": "CraterCrasher",
+      "label": "Crater Crasher"
+    },
+    "664": {
+      "name": "TacticalAid",
+      "label": "Tactical Aid"
+    },
+    "665": {
+      "name": "TrueTactician",
+      "label": "True Tactician"
+    },
+    "666": {
+      "name": "TacticalFantastical",
+      "label": "Tactical Fantastical"
+    },
+    "667": {
+      "name": "FireoftheTanada",
+      "label": "Fireofthe Tanada"
+    },
+    "668": {
+      "name": "CrystallineAdventurer",
+      "label": "Crystalline Adventurer"
+    },
+    "669": {
+      "name": "WispWhipper",
+      "label": "Wisp Whipper"
+    },
+    "670": {
+      "name": "BurningSoul",
+      "label": "Burning Soul"
+    },
+    "671": {
+      "name": "FrozenFighter",
+      "label": "Frozen Fighter"
+    },
+    "672": {
+      "name": "Dedicated",
+      "label": "Dedicated"
+    },
+    "673": {
+      "name": "Assassin",
+      "label": "Assassin"
+    },
+    "674": {
+      "name": "DeathDealer",
+      "label": "Death Dealer"
+    },
+    "675": {
+      "name": "BridgeJumper",
+      "label": "Bridge Jumper"
+    },
+    "676": {
+      "name": "SureStep",
+      "label": "Sure Step"
+    },
+    "677": {
+      "name": "PlayerSlayer",
+      "label": "Player Slayer"
+    },
+    "678": {
+      "name": "BathedinBlood",
+      "label": "Bathedin Blood"
+    },
+    "679": {
+      "name": "IAmDarktide",
+      "label": "IAm Darktide"
+    },
+    "680": {
+      "name": "DarknessintheLight",
+      "label": "Darknessinthe Light"
+    },
+    "681": {
+      "name": "BeginningsEnd",
+      "label": "Beginnings End"
+    },
+    "682": {
+      "name": "NexusCrawler",
+      "label": "Nexus Crawler"
+    },
+    "683": {
+      "name": "SelflessSoul",
+      "label": "Selfless Soul"
+    },
+    "684": {
+      "name": "TimelessAdventurer",
+      "label": "Timeless Adventurer"
+    },
+    "685": {
+      "name": "VirindiInformer",
+      "label": "Virindi Informer"
+    },
+    "686": {
+      "name": "NoCageCouldHoldMe",
+      "label": "No Cage Could Hold Me"
+    },
+    "687": {
+      "name": "AllforOne",
+      "label": "Allfor One"
+    },
+    "688": {
+      "name": "OneforAll",
+      "label": "Onefor All"
+    },
+    "689": {
+      "name": "JackOAllTrades",
+      "label": "Jack OAll Trades"
+    },
+    "690": {
+      "name": "KnightoftheNortheastTower",
+      "label": "Knightofthe Northeast Tower"
+    },
+    "691": {
+      "name": "KnightoftheNorthwestTower",
+      "label": "Knightofthe Northwest Tower"
+    },
+    "692": {
+      "name": "KnightoftheSoutheastTower",
+      "label": "Knightofthe Southeast Tower"
+    },
+    "693": {
+      "name": "KnightoftheSouthwestTower",
+      "label": "Knightofthe Southwest Tower"
+    },
+    "694": {
+      "name": "KnightoftheMhoireThrone",
+      "label": "Knightofthe Mhoire Throne"
+    },
+    "695": {
+      "name": "HistorianoftheMhoireThrone",
+      "label": "Historianofthe Mhoire Throne"
+    },
+    "696": {
+      "name": "ChampionofHouseMhoire",
+      "label": "Championof House Mhoire"
+    },
+    "697": {
+      "name": "SwordbearerofHouseMhoire",
+      "label": "Swordbearerof House Mhoire"
+    },
+    "698": {
+      "name": "ArchmageofHouseMhoire",
+      "label": "Archmageof House Mhoire"
+    },
+    "699": {
+      "name": "SeekerofCastleMhoire",
+      "label": "Seekerof Castle Mhoire"
+    },
+    "700": {
+      "name": "StewardofCastleMhoire",
+      "label": "Stewardof Castle Mhoire"
+    },
+    "701": {
+      "name": "GoldenGearCrafter",
+      "label": "Golden Gear Crafter"
+    },
+    "702": {
+      "name": "AllyoftheGoldPrimus",
+      "label": "Allyofthe Gold Primus"
+    },
+    "703": {
+      "name": "GearKnightAssassin",
+      "label": "Gear Knight Assassin"
+    },
+    "704": {
+      "name": "GearKnightRecruiter",
+      "label": "Gear Knight Recruiter"
+    },
+    "705": {
+      "name": "GearKnightEmissary",
+      "label": "Gear Knight Emissary"
+    },
+    "706": {
+      "name": "MenhirSeeker",
+      "label": "Menhir Seeker"
+    },
+    "707": {
+      "name": "ManaFieldFinder",
+      "label": "Mana Field Finder"
+    },
+    "708": {
+      "name": "AssistantsAssistant",
+      "label": "Assistants Assistant"
+    },
+    "709": {
+      "name": "ArcanumAdventurer",
+      "label": "Arcanum Adventurer"
+    },
+    "710": {
+      "name": "GearKnightDefender",
+      "label": "Gear Knight Defender"
+    },
+    "711": {
+      "name": "Ripper",
+      "label": "Ripper"
+    },
+    "712": {
+      "name": "AcidSpitter",
+      "label": "Acid Spitter"
+    },
+    "713": {
+      "name": "BloodstoneHunter",
+      "label": "Bloodstone Hunter"
+    },
+    "714": {
+      "name": "GuidingLight",
+      "label": "Guiding Light"
+    },
+    "715": {
+      "name": "CloudedSoul",
+      "label": "Clouded Soul"
+    },
+    "716": {
+      "name": "UndercoverofDarkness",
+      "label": "Undercoverof Darkness"
+    },
+    "717": {
+      "name": "BroughttoLight",
+      "label": "Broughtto Light"
+    },
+    "718": {
+      "name": "UNKNOWNGUESSEDNAME718",
+      "label": "UNKNOWNGUESSEDNAME718"
+    },
+    "719": {
+      "name": "IlluminatingtheShadows",
+      "label": "Illuminatingthe Shadows"
+    },
+    "720": {
+      "name": "ExploringArchaeologist",
+      "label": "Exploring Archaeologist"
+    },
+    "721": {
+      "name": "ContractKiller",
+      "label": "Contract Killer"
+    },
+    "722": {
+      "name": "ShadowPuppet",
+      "label": "Shadow Puppet"
+    },
+    "723": {
+      "name": "Hopebringer",
+      "label": "Hopebringer"
+    },
+    "724": {
+      "name": "IntheDark",
+      "label": "Inthe Dark"
+    },
+    "725": {
+      "name": "UNKNOWNGUESSEDNAME725",
+      "label": "UNKNOWNGUESSEDNAME725"
+    },
+    "726": {
+      "name": "SearchingShadows",
+      "label": "Searching Shadows"
+    },
+    "727": {
+      "name": "ShadowSoldier",
+      "label": "Shadow Soldier"
+    },
+    "728": {
+      "name": "BrightKnight",
+      "label": "Bright Knight"
+    },
+    "729": {
+      "name": "MercifulKiller",
+      "label": "Merciful Killer"
+    },
+    "730": {
+      "name": "SoulSiphon",
+      "label": "Soul Siphon"
+    },
+    "731": {
+      "name": "TheTouTouTerror",
+      "label": "The Tou Tou Terror"
+    },
+    "732": {
+      "name": "DoubleAgent",
+      "label": "Double Agent"
+    },
+    "733": {
+      "name": "DuleingwiththeDark",
+      "label": "Duleingwiththe Dark"
+    },
+    "734": {
+      "name": "CreatureofChaos",
+      "label": "Creatureof Chaos"
+    },
+    "735": {
+      "name": "Conspirator",
+      "label": "Conspirator"
+    },
+    "736": {
+      "name": "HerooftheNight",
+      "label": "Heroofthe Night"
+    },
+    "737": {
+      "name": "MasteroftheTwistedWord",
+      "label": "Masterofthe Twisted Word"
+    },
+    "738": {
+      "name": "TheNightmareLord",
+      "label": "The Nightmare Lord"
+    },
+    "739": {
+      "name": "TheNightmareMage",
+      "label": "The Nightmare Mage"
+    },
+    "740": {
+      "name": "TheTwistedWeaver",
+      "label": "The Twisted Weaver"
+    },
+    "741": {
+      "name": "LordofDarkDreams",
+      "label": "Lordof Dark Dreams"
+    },
+    "742": {
+      "name": "UNKNOWNGUESSEDNAME742",
+      "label": "UNKNOWNGUESSEDNAME742"
+    },
+    "743": {
+      "name": "TheDarkDreamwalker",
+      "label": "The Dark Dreamwalker"
+    },
+    "744": {
+      "name": "UNKNOWNGUESSEDNAME744",
+      "label": "UNKNOWNGUESSEDNAME744"
+    },
+    "745": {
+      "name": "TheDreamslayer",
+      "label": "The Dreamslayer"
+    },
+    "746": {
+      "name": "TheNightmareStalker",
+      "label": "The Nightmare Stalker"
+    },
+    "747": {
+      "name": "UNKNOWNGUESSEDNAME747",
+      "label": "UNKNOWNGUESSEDNAME747"
+    },
+    "748": {
+      "name": "TheThoughtSpiral",
+      "label": "The Thought Spiral"
+    },
+    "749": {
+      "name": "UNKNOWNGUESSEDNAME749",
+      "label": "UNKNOWNGUESSEDNAME749"
+    },
+    "750": {
+      "name": "UNKNOWNGUESSEDNAME750",
+      "label": "UNKNOWNGUESSEDNAME750"
+    },
+    "751": {
+      "name": "MasteroftheOubliette",
+      "label": "Masterofthe Oubliette"
+    },
+    "752": {
+      "name": "UNKNOWNGUESSEDNAME751",
+      "label": "UNKNOWNGUESSEDNAME751"
+    },
+    "753": {
+      "name": "TheRestless",
+      "label": "The Restless"
+    },
+    "754": {
+      "name": "FierySpirit",
+      "label": "Fiery Spirit"
+    },
+    "755": {
+      "name": "IcyVeins",
+      "label": "Icy Veins"
+    },
+    "756": {
+      "name": "ShockingDisposition",
+      "label": "Shocking Disposition"
+    },
+    "757": {
+      "name": "AcidicSoul",
+      "label": "Acidic Soul"
+    },
+    "758": {
+      "name": "GroundedMorals",
+      "label": "Grounded Morals"
+    },
+    "759": {
+      "name": "DarkenedHeart",
+      "label": "Darkened Heart"
+    },
+    "760": {
+      "name": "TheTrueEmperor",
+      "label": "The True Emperor"
+    },
+    "761": {
+      "name": "BearerofDarkness",
+      "label": "Bearerof Darkness"
+    },
+    "762": {
+      "name": "UNKNOWNGUESSEDNAME762",
+      "label": "UNKNOWNGUESSEDNAME762"
+    },
+    "763": {
+      "name": "HealerRitualist",
+      "label": "Healer Ritualist"
+    },
+    "764": {
+      "name": "VanquisheroftheTitan",
+      "label": "Vanquisherofthe Titan"
+    },
+    "765": {
+      "name": "DerethianNewbie",
+      "label": "Derethian Newbie"
+    },
+    "766": {
+      "name": "NoviceWanderer",
+      "label": "Novice Wanderer"
+    },
+    "767": {
+      "name": "NotableCitizen",
+      "label": "Notable Citizen"
+    },
+    "768": {
+      "name": "AdeptAdventurer",
+      "label": "Adept Adventurer"
+    },
+    "769": {
+      "name": "IntrepidExplorer",
+      "label": "Intrepid Explorer"
+    },
+    "770": {
+      "name": "SupremeSoldier",
+      "label": "Supreme Soldier"
+    },
+    "771": {
+      "name": "EpicWarrior",
+      "label": "Epic Warrior"
+    },
+    "772": {
+      "name": "ParagonofNewAluvia",
+      "label": "Paragonof New Aluvia"
+    },
+    "773": {
+      "name": "AnAubereanLegend",
+      "label": "An Auberean Legend"
+    },
+    "774": {
+      "name": "Heretic",
+      "label": "Heretic"
+    },
+    "775": {
+      "name": "Captain",
+      "label": "Captain"
+    },
+    "776": {
+      "name": "PetSavior",
+      "label": "Pet Savior"
+    },
+    "777": {
+      "name": "AvalancheAvoider",
+      "label": "Avalanche Avoider"
+    },
+    "778": {
+      "name": "LiberatorofUziz",
+      "label": "Liberatorof Uziz"
+    },
+    "779": {
+      "name": "OutofTune",
+      "label": "Outof Tune"
+    },
+    "780": {
+      "name": "HiveQueenslayer",
+      "label": "Hive Queenslayer"
+    },
+    "781": {
+      "name": "EvisceratorDecimator",
+      "label": "Eviscerator Decimator"
+    },
+    "782": {
+      "name": "UltimateWarrior",
+      "label": "Ultimate Warrior"
+    },
+    "783": {
+      "name": "StoneColdKiller",
+      "label": "Stone Cold Killer"
+    },
+    "784": {
+      "name": "QuellerofRage",
+      "label": "Quellerof Rage"
+    },
+    "785": {
+      "name": "EnderofTorment",
+      "label": "Enderof Torment"
+    },
+    "786": {
+      "name": "ControllerofEmotions",
+      "label": "Controllerof Emotions"
+    },
+    "787": {
+      "name": "RynthidRavager",
+      "label": "Rynthid Ravager"
+    },
+    "788": {
+      "name": "LothusServitor",
+      "label": "Lothus Servitor"
+    },
+    "789": {
+      "name": "AllyoftheLothus",
+      "label": "Allyofthe Lothus"
+    },
+    "790": {
+      "name": "AllyoftheCouncil",
+      "label": "Allyofthe Council"
+    },
+    "791": {
+      "name": "EmotionalWreck",
+      "label": "Emotional Wreck"
+    },
+    "792": {
+      "name": "MinionMarauder",
+      "label": "Minion Marauder"
+    },
+    "793": {
+      "name": "RynthidWrecker",
+      "label": "Rynthid Wrecker"
+    },
+    "794": {
+      "name": "NightOwl",
+      "label": "Night Owl"
+    },
+    "795": {
+      "name": "MenderoftheRift",
+      "label": "Menderofthe Rift"
+    },
+    "796": {
+      "name": "SorcererSlayer",
+      "label": "Sorcerer Slayer"
+    },
+    "797": {
+      "name": "RageQuitter",
+      "label": "Rage Quitter"
+    },
+    "798": {
+      "name": "Purifier",
+      "label": "Purifier"
+    },
+    "799": {
+      "name": "FanOfAsheron",
+      "label": "Fan Of Asheron"
+    },
+    "800": {
+      "name": "Asherons1",
+      "label": "Asherons1"
+    },
+    "801": {
+      "name": "Shutterbug",
+      "label": "Shutterbug"
+    },
+    "802": {
+      "name": "TheFocused",
+      "label": "The Focused"
+    },
+    "803": {
+      "name": "DerethRecruiter",
+      "label": "Dereth Recruiter"
+    },
+    "804": {
+      "name": "FowlFollower",
+      "label": "Fowl Follower"
+    },
+    "805": {
+      "name": "FollowerofAsheron",
+      "label": "Followerof Asheron"
+    },
+    "806": {
+      "name": "FollowsDirections",
+      "label": "Follows Directions"
+    },
+    "807": {
+      "name": "CantFollowDirections",
+      "label": "Cant Follow Directions"
+    },
+    "808": {
+      "name": "LikesAsheron",
+      "label": "Likes Asheron"
+    },
+    "809": {
+      "name": "LikesGettingTitles",
+      "label": "Likes Getting Titles"
+    },
+    "810": {
+      "name": "LikesWhereThisIsGoing",
+      "label": "Likes Where This Is Going"
+    },
+    "811": {
+      "name": "LikesUlgrim",
+      "label": "Likes Ulgrim"
+    },
+    "812": {
+      "name": "Likable",
+      "label": "Likable"
+    },
+    "813": {
+      "name": "Captivating",
+      "label": "Captivating"
+    },
+    "814": {
+      "name": "MasterofCeremony",
+      "label": "Masterof Ceremony"
+    },
+    "815": {
+      "name": "RoadWarrior",
+      "label": "Road Warrior"
+    },
+    "816": {
+      "name": "Thriller",
+      "label": "Thriller"
+    },
+    "817": {
+      "name": "HauntsYourDreams",
+      "label": "Haunts Your Dreams"
+    },
+    "818": {
+      "name": "AsheronsCollectCaller",
+      "label": "Asherons Collect Caller"
+    },
+    "819": {
+      "name": "TheInquisitive",
+      "label": "The Inquisitive"
+    },
+    "820": {
+      "name": "PortalStormer",
+      "label": "Portal Stormer"
+    },
+    "821": {
+      "name": "BringerofPain",
+      "label": "Bringerof Pain"
+    },
+    "822": {
+      "name": "HarbingerofMadness",
+      "label": "Harbingerof Madness"
+    },
+    "823": {
+      "name": "MarkedByLuck",
+      "label": "Marked By Luck"
+    },
+    "824": {
+      "name": "MarkedByFate",
+      "label": "Marked By Fate"
+    },
+    "825": {
+      "name": "MarkedByFame",
+      "label": "Marked By Fame"
+    },
+    "826": {
+      "name": "MarkedByGlamour",
+      "label": "Marked By Glamour"
+    },
+    "827": {
+      "name": "MarkedByBacon",
+      "label": "Marked By Bacon"
+    },
+    "828": {
+      "name": "Puzzlemaster",
+      "label": "Puzzlemaster"
+    },
+    "829": {
+      "name": "RiddleRavager",
+      "label": "Riddle Ravager"
+    },
+    "830": {
+      "name": "TheCoolKidsClub",
+      "label": "The Cool Kids Club"
+    },
+    "831": {
+      "name": "EpicWin",
+      "label": "Epic Win"
+    },
+    "832": {
+      "name": "EpicFail",
+      "label": "Epic Fail"
+    },
+    "833": {
+      "name": "AlwaysPickedFirst",
+      "label": "Always Picked First"
+    },
+    "834": {
+      "name": "AlwaysPickedLast",
+      "label": "Always Picked Last"
+    },
+    "835": {
+      "name": "ForeverAlone",
+      "label": "Forever Alone"
+    },
+    "836": {
+      "name": "NinetyNineProblemsOlthoiAte1",
+      "label": "Ninety Nine Problems Olthoi Ate1"
+    },
+    "837": {
+      "name": "HungryforMoar",
+      "label": "Hungryfor Moar"
+    },
+    "838": {
+      "name": "ICanHazTitleNao",
+      "label": "ICan Haz Title Nao"
+    },
+    "839": {
+      "name": "Snowbunny",
+      "label": "Snowbunny"
+    },
+    "840": {
+      "name": "ColdAsIce",
+      "label": "Cold As Ice"
+    },
+    "841": {
+      "name": "PenguinPlunge",
+      "label": "Penguin Plunge"
+    },
+    "842": {
+      "name": "FlowerSniffer",
+      "label": "Flower Sniffer"
+    },
+    "843": {
+      "name": "SpringsIntoAction",
+      "label": "Springs Into Action"
+    },
+    "844": {
+      "name": "HeatsThingsUp",
+      "label": "Heats Things Up"
+    },
+    "845": {
+      "name": "CruelSummer",
+      "label": "Cruel Summer"
+    },
+    "846": {
+      "name": "HotintheCity",
+      "label": "Hotinthe City"
+    },
+    "847": {
+      "name": "RunsThroughSprinklers",
+      "label": "Runs Through Sprinklers"
+    },
+    "848": {
+      "name": "TheKnowledgeable",
+      "label": "The Knowledgeable"
+    },
+    "849": {
+      "name": "WellTrained",
+      "label": "Well Trained"
+    },
+    "850": {
+      "name": "PumpkinLord",
+      "label": "Pumpkin Lord"
+    },
+    "851": {
+      "name": "Haunted",
+      "label": "Haunted"
+    },
+    "852": {
+      "name": "Possessed",
+      "label": "Possessed"
+    },
+    "853": {
+      "name": "Doomsayer",
+      "label": "Doomsayer"
+    },
+    "854": {
+      "name": "Accursed",
+      "label": "Accursed"
+    },
+    "855": {
+      "name": "ColdTurkey",
+      "label": "Cold Turkey"
+    },
+    "856": {
+      "name": "JiveTurkey",
+      "label": "Jive Turkey"
+    },
+    "857": {
+      "name": "PresentProtector",
+      "label": "Present Protector"
+    },
+    "858": {
+      "name": "HollyJollyHelper",
+      "label": "Holly Jolly Helper"
+    },
+    "859": {
+      "name": "LossPrevention",
+      "label": "Loss Prevention"
+    },
+    "860": {
+      "name": "ChristmasCourier",
+      "label": "Christmas Courier"
+    },
+    "861": {
+      "name": "HolidayHero",
+      "label": "Holiday Hero"
+    },
+    "862": {
+      "name": "CrownOfTheDeru",
+      "label": "Crown Of The Deru"
+    },
+    "863": {
+      "name": "ViridianDreamer",
+      "label": "Viridian Dreamer"
+    },
+    "864": {
+      "name": "ViridianLord",
+      "label": "Viridian Lord"
+    },
+    "865": {
+      "name": "ViridianKnight",
+      "label": "Viridian Knight"
+    },
+    "866": {
+      "name": "ViridianStalker",
+      "label": "Viridian Stalker"
+    },
+    "867": {
+      "name": "ViridianSlayer",
+      "label": "Viridian Slayer"
+    },
+    "868": {
+      "name": "ViridianPurifier",
+      "label": "Viridian Purifier"
+    },
+    "869": {
+      "name": "KnightOfThorns",
+      "label": "Knight Of Thorns"
+    },
+    "870": {
+      "name": "HunterOfThorns",
+      "label": "Hunter Of Thorns"
+    },
+    "871": {
+      "name": "MageOfThorns",
+      "label": "Mage Of Thorns"
+    },
+    "872": {
+      "name": "Thornstalker",
+      "label": "Thornstalker"
+    },
+    "873": {
+      "name": "ChampionOfTheViridianTree",
+      "label": "Champion Of The Viridian Tree"
+    },
+    "874": {
+      "name": "CorruptorOfTheRoot",
+      "label": "Corruptor Of The Root"
+    },
+    "875": {
+      "name": "KillerAmongShadows",
+      "label": "Killer Among Shadows"
+    },
+    "876": {
+      "name": "ServantOfTheVile",
+      "label": "Servant Of The Vile"
+    },
+    "877": {
+      "name": "KnightOfCorruptedAmber",
+      "label": "Knight Of Corrupted Amber"
+    },
+    "878": {
+      "name": "GauntletChampion",
+      "label": "Gauntlet Champion"
+    },
+    "879": {
+      "name": "Bloodthirsty",
+      "label": "Bloodthirsty"
+    },
+    "880": {
+      "name": "GauntletGladiator",
+      "label": "Gauntlet Gladiator"
+    },
+    "881": {
+      "name": "WilyWarrior",
+      "label": "Wily Warrior"
+    },
+    "882": {
+      "name": "SoldierOfFortune",
+      "label": "Soldier Of Fortune"
+    },
+    "883": {
+      "name": "SocietySavage",
+      "label": "Society Savage"
+    },
+    "884": {
+      "name": "CoinCollector",
+      "label": "Coin Collector"
+    },
+    "885": {
+      "name": "BrutalBarbarian",
+      "label": "Brutal Barbarian"
+    },
+    "886": {
+      "name": "Idolized",
+      "label": "Idolized"
+    },
+    "887": {
+      "name": "MasterOfPuppets",
+      "label": "Master Of Puppets"
+    },
+    "888": {
+      "name": "TitanSlayer",
+      "label": "Titan Slayer"
+    },
+    "889": {
+      "name": "Awakened",
+      "label": "Awakened"
+    },
+    "890": {
+      "name": "Enlightened",
+      "label": "Enlightened"
+    },
+    "891": {
+      "name": "Illuminated",
+      "label": "Illuminated"
+    },
+    "892": {
+      "name": "Transcended",
+      "label": "Transcended"
+    },
+    "893": {
+      "name": "CosmicConscious",
+      "label": "Cosmic Conscious"
+    },
+    "894": {
+      "name": "LastManStanding",
+      "label": "Last Man Standing"
+    }
+  },
+  "positionType": {
+    "0": {
+      "name": "Undef",
+      "label": "Undef"
+    },
+    "1": {
+      "name": "Location",
+      "label": "Location"
+    },
+    "2": {
+      "name": "Destination",
+      "label": "Destination"
+    },
+    "3": {
+      "name": "Instantiation",
+      "label": "Instantiation"
+    },
+    "4": {
+      "name": "Sanctuary",
+      "label": "Sanctuary"
+    },
+    "5": {
+      "name": "Home",
+      "label": "Home"
+    },
+    "6": {
+      "name": "ActivationMove",
+      "label": "Activation Move"
+    },
+    "7": {
+      "name": "Target",
+      "label": "Target"
+    },
+    "8": {
+      "name": "LinkedPortalOne",
+      "label": "Linked Portal One"
+    },
+    "9": {
+      "name": "LastPortal",
+      "label": "Last Portal"
+    },
+    "10": {
+      "name": "PortalStorm",
+      "label": "Portal Storm"
+    },
+    "11": {
+      "name": "CrashAndTurn",
+      "label": "Crash And Turn"
+    },
+    "12": {
+      "name": "PortalSummonLoc",
+      "label": "Portal Summon Loc"
+    },
+    "13": {
+      "name": "HouseBoot",
+      "label": "House Boot"
+    },
+    "14": {
+      "name": "LastOutsideDeath",
+      "label": "Last Outside Death"
+    },
+    "15": {
+      "name": "LinkedLifestone",
+      "label": "Linked Lifestone"
+    },
+    "16": {
+      "name": "LinkedPortalTwo",
+      "label": "Linked Portal Two"
+    },
+    "17": {
+      "name": "Save1",
+      "label": "Save1"
+    },
+    "18": {
+      "name": "Save2",
+      "label": "Save2"
+    },
+    "19": {
+      "name": "Save3",
+      "label": "Save3"
+    },
+    "20": {
+      "name": "Save4",
+      "label": "Save4"
+    },
+    "21": {
+      "name": "Save5",
+      "label": "Save5"
+    },
+    "22": {
+      "name": "Save6",
+      "label": "Save6"
+    },
+    "23": {
+      "name": "Save7",
+      "label": "Save7"
+    },
+    "24": {
+      "name": "Save8",
+      "label": "Save8"
+    },
+    "25": {
+      "name": "Save9",
+      "label": "Save9"
+    },
+    "26": {
+      "name": "RelativeDestination",
+      "label": "Relative Destination"
+    },
+    "27": {
+      "name": "TeleportedCharacter",
+      "label": "Teleported Character"
+    },
+    "8040": {
+      "name": "PCAPRecordedLocation",
+      "label": "PCAPRecorded Location"
+    }
+  },
+  "weenieType": {
+    "0": {
+      "name": "Undef",
+      "label": "Undef"
+    },
+    "1": {
+      "name": "Generic",
+      "label": "Generic"
+    },
+    "2": {
+      "name": "Clothing",
+      "label": "Clothing"
+    },
+    "3": {
+      "name": "MissileLauncher",
+      "label": "Missile Launcher"
+    },
+    "4": {
+      "name": "Missile",
+      "label": "Missile"
+    },
+    "5": {
+      "name": "Ammunition",
+      "label": "Ammunition"
+    },
+    "6": {
+      "name": "MeleeWeapon",
+      "label": "Melee Weapon"
+    },
+    "7": {
+      "name": "Portal",
+      "label": "Portal"
+    },
+    "8": {
+      "name": "Book",
+      "label": "Book"
+    },
+    "9": {
+      "name": "Coin",
+      "label": "Coin"
+    },
+    "10": {
+      "name": "Creature",
+      "label": "Creature"
+    },
+    "11": {
+      "name": "Admin",
+      "label": "Admin"
+    },
+    "12": {
+      "name": "Vendor",
+      "label": "Vendor"
+    },
+    "13": {
+      "name": "HotSpot",
+      "label": "Hot Spot"
+    },
+    "14": {
+      "name": "Corpse",
+      "label": "Corpse"
+    },
+    "15": {
+      "name": "Cow",
+      "label": "Cow"
+    },
+    "16": {
+      "name": "AI",
+      "label": "AI"
+    },
+    "17": {
+      "name": "Machine",
+      "label": "Machine"
+    },
+    "18": {
+      "name": "Food",
+      "label": "Food"
+    },
+    "19": {
+      "name": "Door",
+      "label": "Door"
+    },
+    "20": {
+      "name": "Chest",
+      "label": "Chest"
+    },
+    "21": {
+      "name": "Container",
+      "label": "Container"
+    },
+    "22": {
+      "name": "Key",
+      "label": "Key"
+    },
+    "23": {
+      "name": "Lockpick",
+      "label": "Lockpick"
+    },
+    "24": {
+      "name": "PressurePlate",
+      "label": "Pressure Plate"
+    },
+    "25": {
+      "name": "LifeStone",
+      "label": "Life Stone"
+    },
+    "26": {
+      "name": "Switch",
+      "label": "Switch"
+    },
+    "27": {
+      "name": "PKModifier",
+      "label": "PKModifier"
+    },
+    "28": {
+      "name": "Healer",
+      "label": "Healer"
+    },
+    "29": {
+      "name": "LightSource",
+      "label": "Light Source"
+    },
+    "30": {
+      "name": "Allegiance",
+      "label": "Allegiance"
+    },
+    "31": {
+      "name": "UNKNOWN__GUESSEDNAME32",
+      "label": "UNKNOWN__ GUESSEDNAME32"
+    },
+    "32": {
+      "name": "SpellComponent",
+      "label": "Spell Component"
+    },
+    "33": {
+      "name": "ProjectileSpell",
+      "label": "Projectile Spell"
+    },
+    "34": {
+      "name": "Scroll",
+      "label": "Scroll"
+    },
+    "35": {
+      "name": "Caster",
+      "label": "Caster"
+    },
+    "36": {
+      "name": "Channel",
+      "label": "Channel"
+    },
+    "37": {
+      "name": "ManaStone",
+      "label": "Mana Stone"
+    },
+    "38": {
+      "name": "Gem",
+      "label": "Gem"
+    },
+    "39": {
+      "name": "AdvocateFane",
+      "label": "Advocate Fane"
+    },
+    "40": {
+      "name": "AdvocateItem",
+      "label": "Advocate Item"
+    },
+    "41": {
+      "name": "Sentinel",
+      "label": "Sentinel"
+    },
+    "42": {
+      "name": "GSpellEconomy",
+      "label": "GSpell Economy"
+    },
+    "43": {
+      "name": "LSpellEconomy",
+      "label": "LSpell Economy"
+    },
+    "44": {
+      "name": "CraftTool",
+      "label": "Craft Tool"
+    },
+    "45": {
+      "name": "LScoreKeeper",
+      "label": "LScore Keeper"
+    },
+    "46": {
+      "name": "GScoreKeeper",
+      "label": "GScore Keeper"
+    },
+    "47": {
+      "name": "GScoreGatherer",
+      "label": "GScore Gatherer"
+    },
+    "48": {
+      "name": "ScoreBook",
+      "label": "Score Book"
+    },
+    "49": {
+      "name": "EventCoordinator",
+      "label": "Event Coordinator"
+    },
+    "50": {
+      "name": "Entity",
+      "label": "Entity"
+    },
+    "51": {
+      "name": "Stackable",
+      "label": "Stackable"
+    },
+    "52": {
+      "name": "HUD",
+      "label": "HUD"
+    },
+    "53": {
+      "name": "House",
+      "label": "House"
+    },
+    "54": {
+      "name": "Deed",
+      "label": "Deed"
+    },
+    "55": {
+      "name": "SlumLord",
+      "label": "Slum Lord"
+    },
+    "56": {
+      "name": "Hook",
+      "label": "Hook"
+    },
+    "57": {
+      "name": "Storage",
+      "label": "Storage"
+    },
+    "58": {
+      "name": "BootSpot",
+      "label": "Boot Spot"
+    },
+    "59": {
+      "name": "HousePortal",
+      "label": "House Portal"
+    },
+    "60": {
+      "name": "Game",
+      "label": "Game"
+    },
+    "61": {
+      "name": "GamePiece",
+      "label": "Game Piece"
+    },
+    "62": {
+      "name": "SkillAlterationDevice",
+      "label": "Skill Alteration Device"
+    },
+    "63": {
+      "name": "AttributeTransferDevice",
+      "label": "Attribute Transfer Device"
+    },
+    "64": {
+      "name": "Hooker",
+      "label": "Hooker"
+    },
+    "65": {
+      "name": "AllegianceBindstone",
+      "label": "Allegiance Bindstone"
+    },
+    "66": {
+      "name": "InGameStatKeeper",
+      "label": "In Game Stat Keeper"
+    },
+    "67": {
+      "name": "AugmentationDevice",
+      "label": "Augmentation Device"
+    },
+    "68": {
+      "name": "SocialManager",
+      "label": "Social Manager"
+    },
+    "69": {
+      "name": "Pet",
+      "label": "Pet"
+    },
+    "70": {
+      "name": "PetDevice",
+      "label": "Pet Device"
+    },
+    "71": {
+      "name": "CombatPet",
+      "label": "Combat Pet"
+    }
+  },
+  "equipMask": {
+    "0": {
+      "name": "None",
+      "label": "None"
+    },
+    "1": {
+      "name": "HeadWear",
+      "label": "Head Wear"
+    },
+    "2": {
+      "name": "ChestWear",
+      "label": "Chest Wear"
+    },
+    "4": {
+      "name": "AbdomenWear",
+      "label": "Abdomen Wear"
+    },
+    "8": {
+      "name": "UpperArmWear",
+      "label": "Upper Arm Wear"
+    },
+    "16": {
+      "name": "LowerArmWear",
+      "label": "Lower Arm Wear"
+    },
+    "32": {
+      "name": "HandWear",
+      "label": "Hand Wear"
+    },
+    "64": {
+      "name": "UpperLegWear",
+      "label": "Upper Leg Wear"
+    },
+    "128": {
+      "name": "LowerLegWear",
+      "label": "Lower Leg Wear"
+    },
+    "256": {
+      "name": "FootWear",
+      "label": "Foot Wear"
+    },
+    "289": {
+      "name": "Extremity",
+      "label": "Extremity"
+    },
+    "512": {
+      "name": "ChestArmor",
+      "label": "Chest Armor"
+    },
+    "1024": {
+      "name": "AbdomenArmor",
+      "label": "Abdomen Armor"
+    },
+    "2048": {
+      "name": "UpperArmArmor",
+      "label": "Upper Arm Armor"
+    },
+    "4096": {
+      "name": "LowerArmArmor",
+      "label": "Lower Arm Armor"
+    },
+    "8192": {
+      "name": "UpperLegArmor",
+      "label": "Upper Leg Armor"
+    },
+    "16384": {
+      "name": "LowerLegArmor",
+      "label": "Lower Leg Armor"
+    },
+    "32256": {
+      "name": "ArmorExclusive",
+      "label": "Armor Exclusive"
+    },
+    "32512": {
+      "name": "Armor",
+      "label": "Armor"
+    },
+    "32768": {
+      "name": "NeckWear",
+      "label": "Neck Wear"
+    },
+    "65536": {
+      "name": "WristWearLeft",
+      "label": "Wrist Wear Left"
+    },
+    "131072": {
+      "name": "WristWearRight",
+      "label": "Wrist Wear Right"
+    },
+    "196608": {
+      "name": "WristWear",
+      "label": "Wrist Wear"
+    },
+    "262144": {
+      "name": "FingerWearLeft",
+      "label": "Finger Wear Left"
+    },
+    "524288": {
+      "name": "FingerWearRight",
+      "label": "Finger Wear Right"
+    },
+    "786432": {
+      "name": "FingerWear",
+      "label": "Finger Wear"
+    },
+    "1048576": {
+      "name": "MeleeWeapon",
+      "label": "Melee Weapon"
+    },
+    "2097152": {
+      "name": "Shield",
+      "label": "Shield"
+    },
+    "4194304": {
+      "name": "MissileWeapon",
+      "label": "Missile Weapon"
+    },
+    "8388608": {
+      "name": "MissileAmmo",
+      "label": "Missile Ammo"
+    },
+    "16777216": {
+      "name": "Held",
+      "label": "Held"
+    },
+    "33554432": {
+      "name": "TwoHanded",
+      "label": "Two Handed"
+    },
+    "57671680": {
+      "name": "Selectable",
+      "label": "Selectable"
+    },
+    "66060288": {
+      "name": "SelectablePlusAmmo",
+      "label": "Selectable Plus Ammo"
+    },
+    "67108864": {
+      "name": "TrinketOne",
+      "label": "Trinket One"
+    },
+    "134217728": {
+      "name": "Cloak",
+      "label": "Cloak"
+    },
+    "268435456": {
+      "name": "SigilOne",
+      "label": "Sigil One"
+    },
+    "536870912": {
+      "name": "SigilTwo",
+      "label": "Sigil Two"
+    },
+    "620756992": {
+      "name": "Weapon",
+      "label": "Weapon"
+    },
+    "889192448": {
+      "name": "WeaponReadySlot",
+      "label": "Weapon Ready Slot"
+    },
+    "1056964608": {
+      "name": "ReadySlot",
+      "label": "Ready Slot"
+    },
+    "1073741824": {
+      "name": "SigilThree",
+      "label": "Sigil Three"
+    },
+    "1879048192": {
+      "name": "Sigil",
+      "label": "Sigil"
+    },
+    "2081390592": {
+      "name": "Jewelry",
+      "label": "Jewelry"
+    },
+    "2147483647": {
+      "name": "CanGoInReadySlot",
+      "label": "Can Go In Ready Slot"
+    },
+    "2147484159": {
+      "name": "Clothing",
+      "label": "Clothing"
+    }
+  }
+}
