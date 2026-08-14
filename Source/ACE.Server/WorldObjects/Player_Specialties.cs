@@ -197,7 +197,24 @@ namespace ACE.Server.WorldObjects
         /// sneak-attack damage from the front (Creature_Combat.cs), so they defend against the
         /// specialties hooked above.
         /// </summary>
-        public void AwardAssessUse(Skill assessSkill, uint targetDeception, WorldObject target = null)
+        /// <remarks>
+        /// Shadowgain 122: DELIBERATELY NOT PvP-GATED, having been gated in 119 and reverted within
+        /// the hour on LIVE.
+        ///
+        /// Assess Person's ONLY award path is appraising another Player - that is what the skill IS.
+        /// So gating "the other party is a Player" did not slow the skill down, it deleted it: the
+        /// skill became untrainable by any means except appraising yourself.
+        ///
+        /// 119 gated it because it showed the shard's most extreme difficulty/base ratio, 123x. That
+        /// observation was real but the gate was the wrong instrument, and redundant: the 119
+        /// difficulty bound ALREADY caps that exact case, since a low-skill alt appraising a
+        /// developed main now takes its difficulty at base x K rather than the main's full Deception.
+        ///
+        /// What remains is that appraisal can be repeated at will for a fresh award - which is not a
+        /// PvP problem at all. It is the SAME missing repeat-use cooldown that makes Arcane Lore
+        /// farmable (118 P2), and it belongs to that decision, once, for every appraisal skill.
+        /// </remarks>
+        public void AwardAssessUse(Skill assessSkill, uint targetDeception)
         {
             if (!PropertyManager.GetBool("specialty_gain_from_use").Item)
                 return;
@@ -210,12 +227,9 @@ namespace ACE.Server.WorldObjects
             // an undeceptive target still teaches something, so floor rather than skip
             var difficulty = System.Math.Max(1u, targetDeception);
 
-            // Shadowgain 119: the assessed object is passed for the PvP gate. Assess Person against a
-            // player was the single most extreme ratio measured on LIVE - 123x base, far above any
-            // combat skill - because a developed character's Deception dwarfs a fresh Assess Person,
-            // and appraising costs nothing and can be repeated at will. Assessing YOURSELF is not
-            // blocked (AllowsUsageGain exempts self), and is now bounded like everything else.
-            Proficiency.OnSuccessUse(this, skill, difficulty, opponent: target);
+            // No opponent passed - see the remarks above. The 119 difficulty bound is what protects
+            // this path; the PvP gate is not, and cost it its entire existence.
+            Proficiency.OnSuccessUse(this, skill, difficulty);
         }
 
         /// <summary>
