@@ -79,6 +79,17 @@ namespace ACE.Server.Managers
             "allstats",
             "sg-roster",            // polled by the admin console plugin to draw its roster panel
             "sg-dial-history",      // reading the trail is not an action on the server
+            // 124a: THE SAME TRAP THIS LIST WAS BUILT FOR, SPRUNG A SECOND TIME. `listplayers`
+            // is sg-roster's Developer-tier twin - identical output, identically read-only - and
+            // it was not here. Putting it on the 30-second status poll to feed the web character
+            // sheet's "online" dot flooded Discord #audit with 64 lines in half an hour and
+            // buried the staff actions the channel exists to surface.
+            //
+            // sitedata.sh now calls sg-roster instead, so this entry is not the live fix. The
+            // omission was still the real defect: two commands with the same output and the same
+            // effect on the world must not be audited differently, or the next person to poll
+            // one of them repeats this.
+            "listplayers",
         };
 
         /// <summary>

@@ -156,16 +156,28 @@ ONLINE=null; LANDBLOCKS=null; OBJECTS=null; CREATURES=null
 SERVING=false
 if [ "$UP" = true ]; then
   T0=$(date -u +%Y-%m-%dT%H:%M:%S)
-  # 124: `listplayers` rides along on the SAME attach as serverstatus, because the attach is the
-  # expensive part - a second one would double the console round-trips on a 30-second timer for
-  # one extra line of output. It names every online player ("<Name> : <accountId>", one per
-  # line), which is what my.shadowgain.com needs to put an "Online" dot next to the right
-  # character. Nothing else can supply it: PlayerManager's online list is in memory only, and
-  # the shard's login/logoff timestamps are NOT a substitute - ACE writes FUTURE values into
-  # LogoffTimestamp to drive the PK timer (Player.cs), so a character can look permanently
-  # online. This is still a console command on the existing binary, so no server code, no
-  # restart.
-  printf 'serverstatus\nlistplayers\n' | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
+  # 124: `sg-roster` rides along on the SAME attach as serverstatus - the attach is the expensive
+  # part, so a second one would double the console round-trips on a 30-second timer for one extra
+  # line. It names every online player, which is what my.shadowgain.com needs to put an "Online"
+  # dot next to the right character. Nothing passive can supply it: PlayerManager's online list
+  # lives in memory, ACE's `[LOGIN]` line is log.Debug against an INFO-capped appender so it
+  # never reaches the log at all, and the shard's login/logoff timestamps are NOT a substitute -
+  # ACE writes FUTURE values into LogoffTimestamp to drive the PK timer (Player.cs), so a
+  # character who fought recently looks permanently online.
+  #
+  # 124a: THIS WAS `listplayers` FOR ABOUT AN HOUR, AND THAT WAS A MISTAKE. Privileged commands
+  # are recorded by ShadowgainAudit and relayed to Discord #audit, so a 30-second timer posted
+  # "CONSOLE [Developer] ran @listplayers" to #audit twice a minute and buried the staff actions
+  # that channel exists to surface.
+  #
+  # `serverstatus` never did that only because it sits in ShadowgainAudit.ReadOnlyNoise. So does
+  # `sg-roster` - which is the SAME output as listplayers ("<Name> : <accountId>", one per line)
+  # at Advocate tier, and is explicitly documented there as "polled by the admin console plugin
+  # to draw its roster panel". Polling is what it is for.
+  #
+  # The lesson generalises: before putting ANY console command on a timer, check it against
+  # ReadOnlyNoise. If it is not in that set, a poll becomes a Discord flood.
+  printf 'serverstatus\nsg-roster\n' | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
   sleep 2
   SS=$(timeout -s KILL 10 docker logs --since "$T0" ace-server 2>&1 || true)
 
@@ -201,8 +213,13 @@ if [ "$UP" = true ]; then
   # run or a slow console reply lands both lists in the same slice - measured, 20 matching
   # lines for 10 players. Same class of trap as the stale `Exiting at` in DEPLOY.md: `--since`
   # bounds the read, it does not guarantee the read saw exactly one run.
+  # The leading space before the colon is load-bearing: it matches a roster row
+  # ("† Black Breath : 3") and NOT sg-roster's trailing "Total connected Players: 10", which has
+  # no space there. The explicit grep -v is belt and braces - a summary line silently parsed as a
+  # player called "Total connected Players" would be a very confusing bug to chase.
   NAMES_JSON=$(printf '%s' "$SS" \
     | grep -aE ' : [0-9]+[[:space:]]*$' \
+    | grep -avE 'Total connected Players' \
     | sed -E 's/^.*INFO : //' \
     | sed -E 's/ : [0-9]+[[:space:]]*$//' \
     | sed -E 's/^[^A-Za-z0-9]+//' \
