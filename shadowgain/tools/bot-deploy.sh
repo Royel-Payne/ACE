@@ -10,7 +10,25 @@
 # without a human, matching the standard the game server was brought up to in 025.
 set -euo pipefail
 
-SRC="C:/Games/Claude AC/Shadowgain/bot"
+# THE REPO IS THE SOURCE OF TRUTH, and this line is why that is now true.
+#
+# This used to point at "C:/Games/Claude AC/Shadowgain/bot", which is NOT a git repository - so
+# what shipped to the droplet was never what git held, and the two drifted in BOTH directions
+# without anything noticing:
+#
+#   - 113: the deploy copy of shadowgain_bot.py was ~58 lines AHEAD of the repo, carrying
+#          mask_account() and the 069 honour-roll filter. Reading the repo showed code that had
+#          not run for two entries.
+#   - 120: announce.py, readchat.py, whois_linked.py, make_audit_channel.py and
+#          screenshots_and_verified_color.py existed ONLY in the repo, so bot-deploy.sh could
+#          not ship them and they had to be scp'd by hand - which is how the announce.py guard
+#          reached the droplet.
+#   - README.md had drifted too: the droplet carried a stale 5,855-byte copy from 2026-08-07
+#          while the repo held the maintained 13,010-byte one.
+#
+# Pointing at the repo makes `git log` an honest record of what is running, and makes the
+# md5 check in 113 unnecessary rather than merely habitual.
+SRC="C:/Git Projects/Shadowgain/ACE/shadowgain/bot"
 KEY="C:/Users/Chris/.ssh/shadowgain_ed25519"
 HOST="root@137.184.1.44"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
@@ -63,7 +81,16 @@ echo "  OK"
 
 echo "==> shipping bot source"
 $SSH "$HOST" 'mkdir -p /opt/ACE/bot'
-tar -czf - shadowgain_bot.py requirements.txt README.md setup.sql | \
+
+# Every .py in the directory, not a hand-maintained list. The old list named four files and
+# silently omitted the five utility scripts, so they could only ever reach the droplet by hand -
+# which meant the deploy script was not actually deploying the bot, only most of it. A glob
+# cannot fall behind when a script is added.
+#
+# announcements/ carries the message bodies. announce.py reads wording from a FILE precisely so
+# it can be reviewed as a diff before players see it, which only works if the files are in git.
+tar -czf - *.py requirements.txt README.md setup.sql \
+    $([ -d announcements ] && echo announcements) | \
   $SSH "$HOST" 'tar -xzf - -C /opt/ACE/bot'
 
 echo "==> installing service unit"
