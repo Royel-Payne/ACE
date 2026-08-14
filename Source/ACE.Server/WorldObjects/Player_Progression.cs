@@ -9,7 +9,9 @@ namespace ACE.Server.WorldObjects
         /// Shadowgain 021: two opt-in progression lanes.
         ///
         /// The default (hard) lane is a deliberate multi-year climb; the fast lane trades that
-        /// calendar time for the `*` marker and the honour roll, permanently.
+        /// calendar time for the name mark and the honour roll, permanently.
+        /// (The mark is progression_marker_prefix - a dagger since 023, and live-configurable, so it
+        /// is named by role rather than by glyph here.)
         ///
         /// WHY BOTH SKILL GAIN *AND* KILL XP ARE SCALED TOGETHER
         ///
@@ -51,7 +53,7 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
-        /// TRUE only for a character that has NEVER touched the fast lane. Drives the `*` name
+        /// TRUE only for a character that has NEVER touched the fast lane. Drives the name-mark
         /// prefix and honour-roll eligibility. Note this is deliberately not "is currently on the
         /// hard lane" - see the ratchet above.
         /// </summary>
@@ -92,7 +94,7 @@ namespace ACE.Server.WorldObjects
 
             ChangesDetected = true;
 
-            // the `*` is part of the name, so everyone nearby needs to be told it changed
+            // the mark is part of the name, so everyone nearby needs to be told it changed
             EnqueueBroadcast(new Network.GameMessages.Messages.GameMessagePublicUpdatePropertyString(this, PropertyString.Name, Name));
 
             return true;

@@ -44,19 +44,25 @@ namespace ACE.Server.Command.Handlers
         /// <summary>
         /// Shadowgain 021: choose your progression lane.
         ///
-        /// Default is the hard lane. Switching to fast trips a permanent ratchet - the `*` marker
-        /// and honour-roll eligibility are forfeit the instant it is chosen, and coming back to the
+        /// Default is the hard lane. Switching to fast trips a permanent ratchet - the mark and
+        /// honour-roll eligibility are forfeit the instant it is chosen, and coming back to the
         /// hard lane restores neither. Without that, a player would race ahead on fast and toggle
         /// back to reclaim the marker, and the marker would mean nothing.
         ///
         /// Deliberately AccessLevel.Player: this is a gameplay choice, not an admin action.
+        ///
+        /// NO GLYPH IS NAMED IN THE HELP TEXT BELOW, deliberately. It is a compile-time attribute,
+        /// so it cannot call Mark() the way the runtime replies do - and 023 changed the prefix
+        /// from `*` to the dagger, which left this text telling players to look for a symbol that
+        /// had not existed for entries. progression_marker_prefix is live-configurable, so ANY
+        /// glyph written here is a snapshot that can go stale again; "the mark" cannot.
         /// </summary>
         [CommandHandler("masochist", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0,
             "Choose your progression lane. The hard lane is the default and carries the name mark.",
             "[ on | off ]\n"
-            + "  on   - the hard lane. A multi-year climb. Keeps the * if you have never left it.\n"
+            + "  on   - the hard lane. A multi-year climb. Keeps the mark if you have never left it.\n"
             + "  off  - the fast lane. Months instead of years.\n"
-            + "         PERMANENTLY forfeits the * marker and your place on the honour roll.\n"
+            + "         PERMANENTLY forfeits the mark and your place on the honour roll.\n"
             + "         Coming back to the hard lane does NOT restore either.\n"
             + "  (no argument shows your current lane)")]
         public static void HandleMasochist(Session session, params string[] parameters)
