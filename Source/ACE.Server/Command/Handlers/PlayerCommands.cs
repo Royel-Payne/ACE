@@ -210,8 +210,12 @@ namespace ACE.Server.Command.Handlers
 
         private static void ReportAttributes(Session session, Player player)
         {
+            // The old header said "real ranks out of 280", which primed every line below it to be
+            // read as a rank - including the value in the first column. Lead with the ceiling that
+            // matches the number actually being shown.
             session.Network.EnqueueSend(new GameMessageSystemChat(
-                $"Attributes - real ranks out of {Player.AttributeMaxRanks():N0}. Your panel's table stops at 190, so past that it cannot show these.",
+                $"Attributes - out of {PropertyManager.GetLong("attribute_max_value").Item:N0}, which every attribute can reach. "
+                + "Past rank 190 your panel can no longer work out what the next point costs - @mystats <name> can.",
                 ChatMessageType.Broadcast));
 
             foreach (var attr in new[] { PropertyAttribute.Strength, PropertyAttribute.Endurance, PropertyAttribute.Coordination,
@@ -246,16 +250,30 @@ namespace ACE.Server.Command.Handlers
 
             var rank = Player.CalcAttributeRank(ca.ExperienceSpent);
             var maxRanks = Player.AttributeMaxRanks();
+            var maxValue = PropertyManager.GetLong("attribute_max_value").Item;
 
-            var line = $"  {attribute,-13} {ca.Base,4:N0}   rank {rank:N0} / {maxRanks:N0}";
+            // Shadowgain 122: the SUMMARY quotes the value against the value ceiling, and nothing
+            // else. It used to read "247   rank 237 / 280", which put two different ceilings on one
+            // line with only one of them attached to a number - so the eye pairs "247" with "280"
+            // and concludes the attribute caps at 280. It does not: 280 is the RANK ceiling, 290 is
+            // the value ceiling (innate 10 + 280 earned ranks). Apex posted his in #general and the
+            // ambiguity was the first thing anyone asked about.
+            //
+            // Rank stays in the DETAILED view, where it is load-bearing because the next-rank cost
+            // is quoted right under it. Chris: *"everything else muddies the point."*
+            var line = $"  {attribute,-13} {ca.Base,4:N0} / {maxValue:N0}";
 
             if (rank > 190)
-                line += "  (past your panel's table)";
+                line += "   (past your panel's table)";
 
             session.Network.EnqueueSend(new GameMessageSystemChat(line, ChatMessageType.Broadcast));
 
             if (!detailed)
                 return;
+
+            session.Network.EnqueueSend(new GameMessageSystemChat(
+                $"    rank {rank:N0} / {maxRanks:N0} earned - you start at {ca.StartingValue:N0}, so the value ceiling is {maxValue:N0}",
+                ChatMessageType.Broadcast));
 
             session.Network.EnqueueSend(new GameMessageSystemChat(
                 $"    experience earned: {ca.ExperienceSpent:N0}", ChatMessageType.Broadcast));
