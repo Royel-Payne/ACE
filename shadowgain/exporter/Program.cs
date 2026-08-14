@@ -80,6 +80,22 @@ public static class Program
         ("self",         0x060002C7),
     };
 
+    /// <summary>
+    /// UI icons that belong to no table and no item.
+    ///
+    /// `mainpack` is the character's own inventory, which is not an object in the shard and so
+    /// has no IconId to read - every other pack in the side bar is a real item and carries its
+    /// own. The client draws a fixed backpack there, and it was identified by template-matching
+    /// the slot out of an in-game screenshot against every 32x32 texture in the dat: 0x0600127E
+    /// beat the runner-up by 4.7x, and matches by eye. Matched on the middle strip only, because
+    /// the client overlays a yellow collapse chevron on the left of that slot and a fullness bar
+    /// down the right.
+    /// </summary>
+    private static readonly (string Key, uint IconId)[] UiIcons =
+    {
+        ("mainpack", 0x0600127E),
+    };
+
     /// <summary>The three hearts, in the panel's own order: red, yellow, blue.</summary>
     private static readonly (string Key, uint IconId)[] VitalIcons =
     {
@@ -344,6 +360,7 @@ public static class Program
         // needing to know the dat ids at all.
         Write(Path.Combine(dataDir, "icon-map.json"), new
         {
+            ui = UiIcons.ToDictionary(u => u.Key, u => u.IconId),
             attribute = AttributeIcons.ToDictionary(a => a.Key, a => a.IconId),
             vital = VitalIcons.ToDictionary(v => v.Key, v => v.IconId),
             skill = portal.SkillTable.SkillBaseHash.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.IconId),
@@ -454,6 +471,12 @@ public static class Program
         Console.WriteLine($"    skill icons       {skillCount}/{portal.SkillTable.SkillBaseHash.Count}");
 
         // --- attribute + vital icons, from the dat, named by key ----------------------------
+        var uiDir = Path.Combine(assets, "ui");
+        Directory.CreateDirectory(uiDir);
+
+        var uiCount = UiIcons.Count(u => SaveTexture(portal, u.IconId, Path.Combine(uiDir, $"{u.Key}.png")));
+        Console.WriteLine($"    ui icons          {uiCount}/{UiIcons.Length}");
+
         var attrCount = AttributeIcons.Count(a => SaveTexture(portal, a.IconId, Path.Combine(attrDir, $"{a.Key}.png")));
         var vitalCount = VitalIcons.Count(v => SaveTexture(portal, v.IconId, Path.Combine(vitalDir, $"{v.Key}.png")));
 

@@ -539,7 +539,7 @@ function renderInventory(c){
   if(curCont>=conts.length) curCont=0;
   $('#sidepacks').innerHTML = conts.length>1
     ? `<span class="lbl">Packs (${conts.length})</span>` + conts.map((p,i)=>
-        `<div class="spk ${i===curCont?'sel':''}" data-cont="${i}" title="${p.name} (${(p.items||[]).length})">${i===0?'<span class="tag">BP</span>':''}${tile('util',p.name)}</div>`).join('')
+        `<div class="spk ${i===curCont?'sel':''}" data-cont="${i}" title="${p.name} (${(p.items||[]).length})">${icon(p)}</div>`).join('')
     : '';
   renderGrid(c);
 }

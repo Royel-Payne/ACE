@@ -639,8 +639,12 @@ def build_inventory(cur, character_id: int) -> dict:
 
         # WeenieType.Container == 21. A pack is both an item and a place items live, so it is
         # recorded on both sides: it appears in the character's own grid AND gets its own tab.
+        #
+        # Its icon comes along, because the side bar draws the ACTUAL pack - a green pack, a tan
+        # sack - and every one of them is a real object carrying its own IconId. Only the main
+        # pack has none, because it is the character's own inventory rather than a thing.
         if row["weenie_Type"] == 21 and row["container_id"] == character_id:
-            container_names[row["id"]] = item["name"]
+            container_names[row["id"]] = (item["name"], item["icon"])
 
         if row["wielder_id"] == character_id:
             equipped.append(
@@ -663,6 +667,9 @@ def build_inventory(cur, character_id: int) -> dict:
         {
             "id": character_id,
             "name": "Main Pack",
+            # The client draws a fixed backpack here; see UiIcons in the exporter for how that
+            # texture was identified.
+            "icon": icon_url("/assets/icons/ui/mainpack.png"),
             "items": sorted(by_container.get(character_id, []), key=lambda i: i["name"]),
         }
     ]
@@ -672,12 +679,12 @@ def build_inventory(cur, character_id: int) -> dict:
     # when a name actually repeats, so the common single-Sack case stays clean.
     name_counts: dict[str, int] = {}
 
-    for cname in container_names.values():
+    for cname, _ in container_names.values():
         name_counts[cname] = name_counts.get(cname, 0) + 1
 
     seen: dict[str, int] = {}
 
-    for cid, cname in sorted(container_names.items(), key=lambda kv: (kv[1], kv[0])):
+    for cid, (cname, cicon) in sorted(container_names.items(), key=lambda kv: (kv[1][0], kv[0])):
         label = cname
 
         if name_counts[cname] > 1:
@@ -688,6 +695,7 @@ def build_inventory(cur, character_id: int) -> dict:
             {
                 "id": cid,
                 "name": label,
+                "icon": cicon,
                 "items": sorted(by_container.get(cid, []), key=lambda i: i["name"]),
             }
         )
