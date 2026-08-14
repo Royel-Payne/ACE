@@ -121,20 +121,35 @@ Reads `ace_world` (read-only) and writes `api/data/landblocks.json` (1,742 block
 | --- | --- | --- |
 | Skills | the dat's own `SkillTable.IconId` — the real in-game icons | 38 of 48 |
 | Items | `Texture` records for every `IconId` the shard references | 663 |
-| Attributes / vitals | **generated tiles** — see below | 6 + 3 |
+| Attributes / vitals | the client's own 25×25 panel icons | 6 + 3 |
 | Placeholder | generated | 1 |
 
 The 10 missing skill icons are the retired weapon skills (Axe, Bow, Dagger, …), which
 `AddRetiredSkills` inserts with no `IconId` because they no longer exist as skills.
 
-**Attributes and vitals have no icons in the dat.** This was checked, not assumed: skills have
-icons because `SkillTable` carries an `IconId` per skill, there is no equivalent table for
-attributes, and the retail client's attribute panel labels its rows with *text*. A sweep of the
-`0x060011xx` UI band turned up window chrome and nothing resembling a Strength or Focus icon. So
-the exporter draws them, in the mockup's own visual language — a tinted rounded tile with the
-attribute's initial, which is exactly what `iconTile()` draws in
-`landing/character-sheet-mockup.html`. If the genuine icons ever turn up, `AttributeTiles`
-becomes a list of ids and the drawing goes away.
+**Attributes and vitals DO have icons in the dat**, at `0x060002C4`–`0x060002C9` (attributes) and
+`0x06004C3B`–`0x06004C3D` (the three hearts). The first search concluded otherwise and drew
+substitutes; it was wrong twice over, and either mistake alone would have hidden them:
+
+* **The sweep only looked at 32×32**, the size item and skill icons use. These are **25×25**. Run
+  `--sizes` for a census of the whole range before assuming a size — there are exactly nine
+  textures at 25×25, which is six attributes and three vitals.
+* **They are palettised**, and `Texture.GetBitmap` resolves a P8/INDEX16 palette through
+  `DatManager.PortalDat`. Opening `PortalDatDatabase` directly leaves that static null, so every
+  palettised texture throws and `SaveTexture` counts it as "skipped" — the export looks fine while
+  the whole palettised half of the dat goes missing. The exporter now goes through
+  `DatManager.Initialize`.
+
+**The texture order is not the enum order.** They run Endurance, Focus, Quickness, Self, Strength,
+Coordination across `02C4..02C9`, while `PropertyAttribute` runs Strength, Endurance, Quickness,
+Coordination, Focus, Self. Assigning them in id order gives every attribute the wrong picture and
+looks completely plausible — the pairings in `AttributeIcons` were each confirmed against an
+in-game screenshot of the panel.
+
+**Icon URLs carry `?v=<mtime of icon-map.json>`.** Caddy serves `/assets/*` as `immutable` with a
+week's max-age, which is right for item icons (the filename *is* the IconId) and wrong for the
+named ones — re-pointing `strength.png` at a different texture would otherwise leave every prior
+visitor holding the old picture for a week.
 
 ---
 
