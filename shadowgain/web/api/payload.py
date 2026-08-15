@@ -641,6 +641,7 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
     equipped: list[dict] = []
     by_container: dict[int, list[dict]] = {}
     container_names: dict[int, tuple[str, str]] = {}
+    foci: list[dict] = []
     total_burden = 0
 
     for row in rows:
@@ -684,6 +685,12 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
 
         if row["weenie_Type"] == 21 and row["container_id"] == character_id:
             container_names[oid] = (item["name"], item["icon"])
+
+        # A focus occupies a pack slot and holds nothing (AC wiki, Spell Components#Foci), so it
+        # belongs in the pack BAR rather than loose in the main grid where it looked like cargo.
+        elif items.is_focus(i) and row["container_id"] == character_id:
+            foci.append({**item, "focus": True})
+            continue
 
         if row["wielder_id"] == character_id:
             wielded = i.get(INT_CURRENT_WIELDED_LOCATION)
@@ -740,6 +747,22 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
         )
 
     burden = _burden(total_burden, strength, dials)
+
+    # Foci come after the packs. The game lets a player arrange their slots by hand and the shard
+    # stores no order for that, so any order here is our choice rather than theirs - packs first,
+    # then foci by name, is at least stable between refreshes.
+    for focus in sorted(foci, key=lambda f: f["name"]):
+        containers.append(
+            {
+                "id": focus["id"],
+                "name": focus["name"],
+                "icon": focus["icon"],
+                "focus": True,
+                # Empty by definition, not by accident.
+                "items": [],
+                "note": "A focus fills a pack slot and holds nothing.",
+            }
+        )
 
     return {
         "equipped": equipped,

@@ -161,6 +161,7 @@
   .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;padding:6px 16px 18px;max-height:300px;overflow-y:auto}
   .grid::-webkit-scrollbar{width:9px} .grid::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
   .cell{aspect-ratio:1;border-radius:8px;background:#0b1119;border:1px solid var(--line);position:relative;display:grid;place-items:center}
+  .focusnote{grid-column:1/-1;color:var(--muted);font-style:italic;font-size:13px;padding:10px 2px}
   .cell.empty{background:#0a0f16;border-style:dashed;opacity:.45}
 
   .questrow{display:flex;justify-content:space-between;gap:10px;padding:8px;border-radius:8px}
@@ -685,6 +686,16 @@ function renderInventory(c){
 function renderGrid(c){
   const conts=(c.inventory&&c.inventory.containers)||[];
   const cont=conts[curCont]||{name:'Pack',items:[]}; const items=cont.items||[];
+
+  // A focus fills a pack slot and holds nothing (AC wiki, Spell Components#Foci), so it gets its
+  // own line rather than "Contents of Foci of Strife — 0" over a grid of empty cells, which would
+  // read as a bag somebody forgot to fill.
+  if(cont.focus){
+    $('#contHdr').textContent = cont.name;
+    $('#packgrid').innerHTML = `<div class="focusnote">${cont.note||'A focus fills a pack slot and holds nothing.'}</div>`;
+    return;
+  }
+
   $('#contHdr').textContent = `Contents of ${cont.name} — ${items.length}`;
   let cells=items.map(it=>`<div class="cell" data-item="${reg(it)}">${icon(it)}${it.stack>1?`<span class="stack">${it.stack>=1000?(Math.round(it.stack/100)/10)+'k':it.stack}</span>`:''}</div>`).join('');
   const pad=Math.max(0,(Math.ceil(items.length/6)*6||6)-items.length);

@@ -21,6 +21,7 @@ INT_ENCUMBRANCE = 5
 INT_VALID_LOCATIONS = 9
 INT_CURRENT_WIELDED_LOCATION = 10
 INT_STACK_SIZE = 12
+INT_ITEM_USEABLE = 16
 INT_VALUE = 19
 INT_ARMOR_LEVEL = 28
 INT_MATERIAL_TYPE = 131
@@ -96,6 +97,31 @@ _COARSE = {
     "upperArms": "hands", "lowerArms": "hands", "hands": "hands",
     "upperLegs": "legs", "lowerLegs": "legs", "feet": "feet",
 }
+
+
+# --- foci ---------------------------------------------------------------------------------------
+#
+# ItemType.Misc + Usable.ContainedViewedRemote is the signature of a Focus, and it is EXACT: across
+# the entire world database those two properties together select five weenies and nothing else —
+# Artifice, Enchantment, Shadow, Strife and Verdancy, which is the complete set the AC wiki lists.
+#
+# Chris: "they legit use/occupy a slot", and the wiki agrees outright — *"A foci occupies an entire
+# pack slot and cannot hold anything else."* So they belong in the pack bar beside the packs, not
+# loose in the main grid.
+#
+# Chosen over the alternatives on purpose. The weenie ids (15268-15271, 43173) would have been a
+# hard-coded list that silently misses anything added later; `class_Name LIKE 'pack%'` would work
+# but leans on a naming convention and needs ace_world, which this service deliberately does not
+# grant. This rule reads what the item IS.
+ITEM_TYPE_MISC = 128
+USABLE_CONTAINED_VIEWED_REMOTE = 56  # Contained | Viewed | Remote
+
+
+def is_focus(ints: dict) -> bool:
+    return (
+        ints.get(INT_ITEM_TYPE) == ITEM_TYPE_MISC
+        and ints.get(INT_ITEM_USEABLE) == USABLE_CONTAINED_VIEWED_REMOTE
+    )
 
 
 def coverage(wielded_location: int | None) -> list[str]:
