@@ -174,7 +174,20 @@
   .loading{color:var(--muted);text-align:center;padding:60px 0;font-style:italic}
 
   /* --- tab panes scroll internally so the readout/status line stays put --- */
-  .tabpane{max-height:360px;overflow-y:auto}
+  /* 470px, and the SAME on every tab. Chris: "the Attribute panel could be stretched to allow
+     viewing all the vitals, that new length could be the same for all so we have a nice
+     consistent look."
+
+     Measured, not guessed: the Attributes pane needs 463px for six attributes, three vitals and
+     their two group headers, against a 360px cap - so Stamina and Mana sat below the fold on the
+     one tab short enough to fit entirely. 470 clears it with a little headroom.
+
+     Skills and Quests still scroll, and should: 23 trained skills will never fit any sane card.
+     The point is a card that does not change height as you move between tabs. */
+  /* HEIGHT, not max-height. A cap alone still lets a short tab collapse - Titles has two rows
+     and rendered 140px tall, so the whole card jumped every time you moved to it, which is the
+     opposite of the consistency asked for. Fixed height makes every tab occupy the same box. */
+  .tabpane{height:470px;overflow-y:auto}
   .tabpane::-webkit-scrollbar{width:9px} .tabpane::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
 
   /* --- item inspection: fast floating tooltip + a click/tap line for mobile --- */
@@ -226,7 +239,10 @@
     .navlinks{width:100%;flex-wrap:wrap;gap:14px 18px}
     .banner{gap:12px 22px;padding:16px 18px}
     .banner .cname{font-size:25px}
-    .tabpane{max-height:300px}
+    /* Same height on narrow screens: pane height is driven by ROW COUNT, not width, so a
+       shorter cap here would put the vitals back below the fold on exactly the devices with the
+       least room to scroll. */
+    .tabpane{height:470px}
   }
 </style>
 </head>
