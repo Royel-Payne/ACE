@@ -24,6 +24,7 @@
 using ACE.DatLoader;
 using ACE.DatLoader.Entity;
 using ACE.DatLoader.FileTypes;
+using System.Linq;
 
 namespace ACE.Shadowgain.DatExport;
 
@@ -107,11 +108,96 @@ public sealed class Appearance
             if (overlay?.Colors == null || overlay.Colors.Count == 0)
                 continue;
 
-            for (var i = 0; i < sub.NumColors && i < overlay.Colors.Count; i++)
-                overrides[(int)(sub.Offset + i)] = overlay.Colors[i];
+            // ABSOLUTE, not relative: a palette here is a full 2048-entry table that is
+            // meaningful only over the slice it applies to, so the source is read at the SAME
+            // index as the destination. Reading it from 0 pulls the wrong band - visibly, it dyed
+            // Black Breath's gold robe teal, because the colours at [0..n) are a different
+            // material's ramp entirely. Confirmed by dumping a skin palette: its non-black
+            // entries start at 38, not 0.
+            for (var i = 0; i < sub.NumColors; i++)
+            {
+                var index = (int)(sub.Offset + i);
+
+                if (index >= overlay.Colors.Count)
+                    break;
+
+                overrides[index] = overlay.Colors[index];
+            }
         }
 
         return overrides;
+    }
+
+    /// <summary>
+    /// Fold in one worn item, via its ClothingTable entry.
+    ///
+    /// Ported from ACE's Creature_Networking.CalculateObjDesc, which is the server's own
+    /// implementation of this calculation:
+    ///
+    ///   ClothingBaseEffects[setupId]  the CloObjectEffects: for each body PART this item covers,
+    ///                                 the GfxObj that REPLACES it, plus texture swaps on it. This
+    ///                                 is why a robe is not drawn over the legs - it becomes them.
+    ///   ClothingSubPalEffects[tmpl]   the dye: a PaletteSet per range, from which the item's
+    ///                                 SHADE selects the actual palette.
+    ///
+    /// `Ranges[].Offset` and `NumColors` are ABSOLUTE colour indices here. ACE divides them by 8
+    /// on the way out because the client works in eighths and multiplies them back; this code
+    /// works in absolute indices throughout, so they are used as-is. Dividing here would dye a
+    /// eighth of the intended band and leave the rest of the garment its base colour.
+    /// </summary>
+    public bool ApplyClothing(PortalDatDatabase portal, uint clothingBaseId, uint setupId,
+                              int paletteTemplate, double shade, Action<string> log)
+    {
+        var table = portal.ReadFromDat<ClothingTable>(clothingBaseId);
+
+        if (table == null || table.ClothingBaseEffects.Count == 0)
+            return false;
+
+        if (!table.ClothingBaseEffects.TryGetValue(setupId, out var baseEffect))
+        {
+            // An item with no entry for this body simply does not render on it - Gear Knights and
+            // Olthoi are the usual reason. Not an error, and not something to substitute around.
+            log($"      no ClothingBaseEffect for setup 0x{setupId:X8}");
+            return false;
+        }
+
+        foreach (var effect in baseEffect.CloObjectEffects)
+        {
+            PartSwaps[(int)effect.Index] = effect.ModelId;
+
+            foreach (var tex in effect.CloTextureEffects)
+            {
+                if (!TextureSwaps.TryGetValue((int)effect.Index, out var map))
+                    TextureSwaps[(int)effect.Index] = map = new Dictionary<uint, uint>();
+
+                map[tex.OldTexture] = tex.NewTexture;
+            }
+        }
+
+        if (table.ClothingSubPalEffects.Count == 0)
+            return true;
+
+        // The item's PaletteTemplate picks the dye set; ACE falls back to the first entry when the
+        // template has none, rather than leaving the garment untinted.
+        if (!table.ClothingSubPalEffects.TryGetValue((uint)paletteTemplate, out var subPal))
+            subPal = table.ClothingSubPalEffects.Values.First();
+
+        foreach (var cloSub in subPal.CloSubPalettes)
+        {
+            var set = portal.ReadFromDat<PaletteSet>(cloSub.PaletteSet);
+
+            if (set == null || set.PaletteList.Count == 0)
+                continue;
+
+            // Shade selects WHICH palette in the set - this is the difference between the same
+            // robe in pale yellow and in deep amber.
+            var paletteId = set.GetPaletteID(shade);
+
+            foreach (var range in cloSub.Ranges)
+                AddSubPalette(paletteId, range.Offset, range.NumColors);
+        }
+
+        return true;
     }
 
     public uint SwapTexture(int partIndex, uint textureId)

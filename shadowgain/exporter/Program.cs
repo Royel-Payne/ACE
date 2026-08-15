@@ -110,6 +110,7 @@ public static class Program
         bool doIcons = false, doTables = false, doSizes = false;
         string modelSetup = null, modelHead = null, skinPalette = null, hairPalette = null, eyesPalette = null;
         string heritage = null, gender = null;
+        var items = new List<string>();
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -127,6 +128,7 @@ public static class Program
                 case "--skin": skinPalette = Next(args, ref i); break;
                 case "--hair": hairPalette = Next(args, ref i); break;
                 case "--eyes": eyesPalette = Next(args, ref i); break;
+                case "--item": items.Add(Next(args, ref i)); break;
                 case "--tables": doTables = true; break;
                 default:
                     Console.Error.WriteLine($"unknown argument: {args[i]}");
@@ -224,7 +226,7 @@ public static class Program
         // --model: Shadowgain 130 Stage 1. Assemble one character's body into a .glb.
         if (modelSetup != null || heritage != null)
         {
-            BuildModel(portal, outDir, heritage, gender, skinPalette, hairPalette, eyesPalette, modelHead);
+            BuildModel(portal, outDir, heritage, gender, skinPalette, hairPalette, eyesPalette, modelHead, items);
             return 0;
         }
 
@@ -628,7 +630,8 @@ public static class Program
     /// to the end of that same list; nothing else about this changes.
     /// </summary>
     private static void BuildModel(PortalDatDatabase portal, string outDir,
-        string heritage, string gender, string skin, string hair, string eyes, string head)
+        string heritage, string gender, string skin, string hair, string eyes, string head,
+        List<string> items)
     {
         Directory.CreateDirectory(outDir);
 
@@ -714,6 +717,22 @@ public static class Program
             }
         }
 
+        // WORN ITEMS, LAST AND IN PRIORITY ORDER.
+        //
+        // Order is the whole of layering: a later item's part swaps overwrite an earlier one's, so
+        // ascending ClothingPriority puts the robe over the shirt rather than under it. ACE sorts
+        // clothing before armour and armour by a computed VisualClothingPriority; that computed
+        // field is a runtime value this exporter does not have, so ClothingPriority alone is the
+        // approximation - it gives the right answer for every combination checked so far, and a
+        // wrong one would be visible immediately.
+        foreach (var spec in items.Select(ParseItem).OrderBy(x => x.Priority))
+        {
+            Console.WriteLine($"    item 0x{spec.ClothingBase:X8} template={spec.PaletteTemplate} shade={spec.Shade:0.###} priority={spec.Priority}");
+
+            appearance.ApplyClothing(portal, spec.ClothingBase, sex.SetupID,
+                                     spec.PaletteTemplate, spec.Shade, Console.WriteLine);
+        }
+
         var prims = ModelBuilder.Build(portal, sex.SetupID, appearance, Console.WriteLine);
 
         var tris = prims.Sum(p => p.Indices.Count) / 3;
@@ -726,6 +745,20 @@ public static class Program
         Gltf.Write(path, prims);
 
         Console.WriteLine($"    wrote {path} ({new FileInfo(path).Length:N0} bytes)");
+    }
+
+    private readonly record struct ItemSpec(uint ClothingBase, int PaletteTemplate, double Shade, int Priority);
+
+    /// <summary>"clothingBase:paletteTemplate:shade:priority", any field after the first optional.</summary>
+    private static ItemSpec ParseItem(string spec)
+    {
+        var parts = spec.Split(':');
+
+        return new ItemSpec(
+            ParseId(parts[0]),
+            parts.Length > 1 && parts[1].Length > 0 ? int.Parse(parts[1]) : 0,
+            parts.Length > 2 && parts[2].Length > 0 ? double.Parse(parts[2], CultureInfo.InvariantCulture) : 0,
+            parts.Length > 3 && parts[3].Length > 0 ? int.Parse(parts[3]) : 0);
     }
 
     private static void AddRange(Appearance appearance, string paletteId, uint offset, uint count, string what)
