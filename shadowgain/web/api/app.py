@@ -37,10 +37,10 @@ import urllib.error
 import urllib.request
 
 from fastapi import Cookie, FastAPI, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import auth, cache, curves, db, payload
+from . import auth, cache, curves, db, model, payload
 
 app = FastAPI(
     title="Shadowgain character portal",
@@ -408,6 +408,55 @@ def character(character_id: int, sg_session: str | None = Cookie(default=None)):
     data["cacheSeconds"] = cache.private_characters.ttl
 
     return data
+
+
+@app.get("/api/character/{character_id}/model.glb")
+def character_model(character_id: int, sg_session: str | None = Cookie(default=None)):
+    """The character's 3D model, assembled from the dats on demand.
+
+    Behind the same ownership check as the sheet: a model shows what somebody is WEARING, which is
+    the same class of fact as their inventory, so it is not public.
+
+    Cached by APPEARANCE SIGNATURE rather than by clock. A character's numbers change constantly
+    and their appearance does not, so the file is rebuilt when they change gear and never
+    otherwise - which is also how "does it update when gear changes" is answered without anything
+    watching for it.
+    """
+    session = require_session(sg_session)
+
+    with db.shard() as cur:
+        row = db.fetch_one(
+            cur,
+            "SELECT account_Id FROM `character` "
+            "WHERE id = %s AND is_Deleted = 0 AND delete_Time = 0",
+            (character_id,),
+        )
+
+    # Same 404 an absent character gets - a distinct 403 would confirm the id exists.
+    if row is None or row["account_Id"] != session["id"]:
+        raise _http(404, "No such character.")
+
+    try:
+        built = model.model_path(character_id)
+    except Exception as ex:  # noqa: BLE001 - a model failure must not take the sheet down
+        print(f"[sg-web] model build failed for {character_id}: {ex}", flush=True)
+        raise _http(503, "The model could not be built right now.") from None
+
+    if built is None:
+        raise _http(404, "No model for this character.")
+
+    path, signature = built
+
+    return FileResponse(
+        path,
+        media_type="model/gltf-binary",
+        headers={
+            # The signature IS the version, so the browser can hold it indefinitely: a different
+            # appearance is a different URL's worth of content and arrives as a fresh ETag.
+            "ETag": f'"{signature}"',
+            "Cache-Control": "private, max-age=300",
+        },
+    )
 
 
 @app.get("/api/public/character/{name}")

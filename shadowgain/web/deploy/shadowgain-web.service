@@ -59,6 +59,17 @@ MemoryDenyWriteExecute=false
 # read-only, which is the point.
 RuntimeDirectory=shadowgain-web
 
+# THE ONE WRITABLE PATH, and it is worth being precise about what it does and does not weaken.
+#
+# 130 assembles a character's 3D model on demand and caches the .glb here, keyed by an appearance
+# signature. ProtectSystem=strict correctly made the whole install read-only, and the model build
+# failed with "Read-only file system" - which is the hardening working, not a bug in it.
+#
+# This grants exactly one directory. The service still cannot write to /opt/shadowgain-web itself,
+# cannot touch its own code or web.env, and - the rule that actually matters - still cannot write
+# to a game database, which is enforced by the MySQL grant rather than by the filesystem.
+ReadWritePaths=/opt/shadowgain-web/models
+
 # Only loopback and outbound HTTPS are needed: MySQL on 127.0.0.1, and the status feed fetch.
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 

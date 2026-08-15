@@ -161,6 +161,13 @@
   .grid::-webkit-scrollbar{width:9px} .grid::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
   .cell{aspect-ratio:1;border-radius:8px;background:#0b1119;border:1px solid var(--line);position:relative;display:grid;place-items:center}
   .focusnote{grid-column:1/-1;color:var(--muted);font-style:italic;font-size:13px;padding:10px 2px}
+  .model3d{position:absolute;inset:0;z-index:1}
+  .model3d canvas{display:block;width:100%;height:100%}
+  /* The 2D figure stays as the fallback and is hidden only once a model actually renders, so a
+     failed load leaves the panel looking deliberate rather than empty. */
+  .doll.has3d .figure{display:none}
+  .modelhint{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:10.5px;
+    color:var(--muted);z-index:2;pointer-events:none;letter-spacing:.4px}
   .cell.empty{background:#0a0f16;border-style:dashed;opacity:.45}
 
   .questrow{display:flex;justify-content:space-between;gap:10px;padding:8px;border-radius:8px}
@@ -245,6 +252,13 @@
     .tabpane{height:470px}
   }
 </style>
+  <!-- three.js addons (GLTFLoader, OrbitControls) import the BARE specifier "three", which a
+       browser cannot resolve on its own - it is a bundler convention. This map points it at the
+       vendored copy, which is why those files can be used verbatim rather than rewritten. It must
+       appear before the first module import; the viewer's import is dynamic, so <head> is ample. -->
+  <script type="importmap">
+  {"imports": {"three": "/assets/vendor/three.module.js"}}
+  </script>
 </head>
 <body>
 <div class="wrap">
@@ -406,6 +420,7 @@ function mountSheet(){
   const frag = $('#sheetTpl').content.cloneNode(true);
   $('#charArea').innerHTML=''; $('#charArea').appendChild(frag);
   renderBanner(CHAR); renderAttributes(CHAR); renderSkills(CHAR); renderTitles(CHAR); renderQuests(CHAR); renderInventory(CHAR);
+  mountModel(CHAR.id);
   defaultReadout();
   $('#charArea').querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
     $('#charArea').querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
@@ -699,7 +714,8 @@ function renderInventory(c){
   $('#equip').innerHTML = `
     <div class="eqcol"><span class="lbl">Wield</span>${gear}</div>
     <div class="doll">
-      <svg class="figure" viewBox="0 0 96 212" aria-label="character">
+      <div id="model3d" class="model3d"></div>
+      <svg class="figure" id="figure2d" viewBox="0 0 96 212" aria-label="character">
         <ellipse cx="48" cy="22" rx="15" ry="17" fill="#3a3324"/>
         <path d="M48 40 C26 47 22 82 24 150 L24 206 L72 206 L72 150 C74 82 70 47 48 40 Z" fill="#c9a24b"/>
         <path d="M48 46 L48 200" stroke="#8f6f2c" stroke-width="1.5"/>
@@ -744,6 +760,149 @@ function renderGrid(c){
   const pad=Math.max(0,(Math.ceil(items.length/6)*6||6)-items.length);
   cells+=Array(pad).fill('<div class="cell empty"></div>').join('');
   $('#packgrid').innerHTML=cells;
+}
+
+/* ---------- 3D character preview (130) --------------------------------------------------------
+ *
+ * The model is assembled server-side from the client dats and served as a .glb; all this does is
+ * render it. three.js is VENDORED under /assets/vendor rather than pulled from a CDN, so the page
+ * has no external dependency and cannot be broken by someone else's outage.
+ *
+ * Loaded lazily on first use: three.js is ~1.3MB, and a player who never opens a character sheet
+ * should never pay for it.
+ */
+let _three = null, _viewer = null, _modelToken = 0;
+
+async function three(){
+  if(_three) return _three;
+  const [THREE, {GLTFLoader}, {OrbitControls}] = await Promise.all([
+    import('three'),
+    import('/assets/vendor/GLTFLoader.js'),
+    import('/assets/vendor/OrbitControls.js'),
+  ]);
+  _three = {THREE, GLTFLoader, OrbitControls};
+  return _three;
+}
+
+/* ONE renderer for the life of the page, re-parented on character switch rather than rebuilt.
+ *
+ * The inventory panel is re-rendered from innerHTML whenever the character changes, so the host
+ * div is a NEW element every time. Building a renderer per host would leak a WebGL context per
+ * switch - browsers cap those at ~16 and then start killing the oldest - and, worse, would leave
+ * the previous requestAnimationFrame loop running forever against a dead canvas. Moving the one
+ * canvas across costs nothing and has neither problem. */
+function viewer(host){
+  if(_viewer){
+    if(_viewer.canvas.parentElement !== host){
+      host.appendChild(_viewer.canvas);
+      _viewer.observer.disconnect();
+      _viewer.observer.observe(host);
+      _viewer.host = host;
+      _viewer.resize();
+    }
+    return _viewer;
+  }
+
+  const {THREE, OrbitControls} = _three;
+
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  host.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x33384a, 2.4));
+  const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(2,4,4); scene.add(key);
+  const fill = new THREE.DirectionalLight(0xbfd4e6, 0.7); fill.position.set(-3,1,-2); scene.add(fill);
+
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
+
+  // Turn only: no pan, no zoom, and the vertical arc is clamped either side of level so the
+  // character cannot be dragged upside down or viewed from directly overhead.
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enablePan = false;
+  controls.enableZoom = false;
+  controls.minPolarAngle = Math.PI * 0.30;
+  controls.maxPolarAngle = Math.PI * 0.62;
+  controls.rotateSpeed = 0.8;
+
+  _viewer = {host, canvas: renderer.domElement, renderer, scene, camera, controls, model:null};
+
+  _viewer.resize = ()=>{
+    const h = _viewer.host;
+    const w = h.clientWidth || 1, ht = h.clientHeight || 1;
+    renderer.setSize(w, ht, false);
+    camera.aspect = w/ht;
+    camera.updateProjectionMatrix();
+  };
+
+  _viewer.observer = new ResizeObserver(()=>_viewer.resize());
+  _viewer.observer.observe(host);
+  _viewer.resize();
+
+  (function loop(){
+    requestAnimationFrame(loop);
+    controls.update();
+    renderer.render(scene, camera);
+  })();
+
+  return _viewer;
+}
+
+async function mountModel(charId){
+  const host = document.querySelector('#model3d');
+  if(!host) return;
+
+  // Switching characters faster than a model loads must not let the slower response win.
+  const token = ++_modelToken;
+
+  // A character with no model is not an error - the panel simply keeps its 2D figure.
+  let buf;
+  try{
+    const r = await api(`/character/${charId}/model.glb`);
+    if(!r.ok) return;
+    buf = await r.arrayBuffer();
+  }catch(e){ return; }
+
+  const {THREE, GLTFLoader} = await three();
+  if(token !== _modelToken) return;
+
+  const gltf = await new Promise((res,rej)=> new GLTFLoader().parse(buf, '', res, rej));
+  if(token !== _modelToken) return;
+
+  const v = viewer(host);
+
+  if(v.model){
+    v.scene.remove(v.model);
+    // GPU memory is not reclaimed by removing the node; the geometry, material and texture each
+    // hold buffers that must be released by hand.
+    v.model.traverse(o=>{
+      o.geometry?.dispose();
+      const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+      for(const m of mats){ m.map?.dispose(); m.dispose(); }
+    });
+  }
+
+  v.model = gltf.scene;
+  v.scene.add(v.model);
+
+  // Frame the character: face the camera, then fit its height with a little headroom.
+  v.model.rotation.y = Math.PI;
+  const box = new THREE.Box3().setFromObject(v.model);
+  const size = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3());
+  const dist = (size.y * 1.15) / (2 * Math.tan(v.camera.fov * Math.PI/360));
+  v.controls.target.copy(ctr);
+  v.camera.position.set(ctr.x, ctr.y, ctr.z + dist);
+  v.controls.update();
+  v.resize();
+
+  document.querySelector('.doll')?.classList.add('has3d');
+
+  if(!host.parentElement.querySelector('.modelhint')){
+    const hint = document.createElement('div');
+    hint.className = 'modelhint';
+    hint.textContent = 'drag to turn';
+    host.parentElement.appendChild(hint);
+  }
 }
 
 boot();

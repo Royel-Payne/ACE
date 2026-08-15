@@ -31,8 +31,11 @@ public sealed class GltfPrimitive
     public List<Vector2> UVs { get; } = new();
     public List<int> Indices { get; } = new();
 
-    /// <summary>PNG bytes for this primitive's texture, or null for an untextured material.</summary>
+    /// <summary>Encoded image bytes for this primitive's texture, or null for no texture.</summary>
     public byte[] TexturePng { get; set; }
+
+    /// <summary>image/png, or image/jpeg where the dat already held a JPEG - glTF accepts both.</summary>
+    public string TextureMime { get; set; } = "image/png";
 
     /// <summary>Used only to name the material readably in a debugger / model viewer.</summary>
     public string Name { get; set; } = "part";
@@ -171,7 +174,7 @@ public static class Gltf
                 images.Add(new Dictionary<string, object>
                 {
                     ["bufferView"] = imgView,
-                    ["mimeType"] = "image/png",
+                    ["mimeType"] = prim.TextureMime ?? "image/png",
                 });
 
                 textures.Add(new Dictionary<string, object> { ["source"] = images.Count - 1 });

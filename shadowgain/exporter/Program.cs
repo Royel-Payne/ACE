@@ -741,6 +741,9 @@ public static class Program
 
         Console.WriteLine($"    {prims.Count} primitives, {verts:N0} vertices, {tris:N0} triangles, {textured} textured");
 
+        if (TextureDecoder.Unsupported.Count > 0)
+            Console.Error.WriteLine("!! unsupported texture formats seen: " + string.Join(", ", TextureDecoder.Unsupported));
+
         var path = Path.Combine(outDir, "character.glb");
         Gltf.Write(path, prims);
 

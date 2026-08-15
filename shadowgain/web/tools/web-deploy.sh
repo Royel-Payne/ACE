@@ -23,6 +23,7 @@ KEY="C:/Users/Chris/.ssh/shadowgain_ed25519"
 HOST="root@137.184.1.44"
 SETUP=0
 ASSETS_ONLY=0
+SKIP_EXPORTER=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -30,6 +31,7 @@ while [ $# -gt 0 ]; do
     --key)         KEY="$2";  shift 2 ;;
     --setup)       SETUP=1;   shift ;;
     --assets-only) ASSETS_ONLY=1; shift ;;
+    --skip-exporter) SKIP_EXPORTER=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -196,6 +198,16 @@ if docker exec ace-db mysql -usgweb -p"$DBPW" -e \
 fi
 echo "    verified: sgweb can read, and cannot write"
 REMOTE
+fi
+
+# The model assembler: a self-contained linux-x64 binary built from shadowgain/exporter. Shipped
+# separately from the API because it is ~76MB and changes far less often - `--skip-exporter` skips
+# it on the common deploy where only Python changed.
+if [ "$SKIP_EXPORTER" = 0 ] && [ -f "$WEB/../exporter/publish/sg-datexport" ]; then
+  echo "==> shipping the model exporter"
+  $SSH "$HOST" "mkdir -p $APP_DIR/bin $APP_DIR/models && chown sgweb:sgweb $APP_DIR/models"
+  scp -q -i "$KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR     "$WEB/../exporter/publish/sg-datexport" "$HOST:$APP_DIR/bin/sg-datexport"
+  $SSH "$HOST" "chmod +x $APP_DIR/bin/sg-datexport && chown -R sgweb:sgweb $APP_DIR/bin"
 fi
 
 echo "==> installing dependencies"

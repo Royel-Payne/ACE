@@ -125,7 +125,8 @@ public static class ModelBuilder
                 if (surfaceIdx >= 0 && surfaceIdx < obj.Surfaces.Count)
                 {
                     prim.TexturePng = SurfacePng(portal, obj.Surfaces[surfaceIdx],
-                                                 appearance, palette, partIndex, log);
+                                                 appearance, palette, partIndex, log, out var mime);
+                    prim.TextureMime = mime;
                 }
 
                 bySurface[surfaceIdx] = prim;
@@ -171,8 +172,11 @@ public static class ModelBuilder
         Appearance appearance,
         Dictionary<int, uint> palette,
         int partIndex,
-        Action<string> log)
+        Action<string> log,
+        out string mime)
     {
+        mime = "image/png";
+
         try
         {
             var surface = portal.ReadFromDat<Surface>(surfaceId);
@@ -195,33 +199,24 @@ public static class ModelBuilder
             if (texture == null || texture.Length == 0)
                 return null;
 
-            // DECODE PALETTISED TEXTURES OURSELVES. DO NOT USE Texture.CustomPaletteColors.
+            // Decoded here rather than through Texture.GetBitmap, for two reasons:
             //
-            // ACE's own P8/INDEX16 path does this:
-            //
-            //     Palette pal = DatManager.PortalDat.ReadFromDat<Palette>(DefaultPaletteId);
-            //     foreach (entry in CustomPaletteColors) pal.Colors[entry.Key] = entry.Value;
-            //
-            // `ReadFromDat` returns the CACHED Palette instance, and that loop MUTATES it. So
-            // applying a custom palette to one texture permanently corrupts the shared palette
-            // for every later texture that references it. Clearing CustomPaletteColors afterwards
-            // does not help - the damage is to the cached Palette, not to the texture.
-            //
-            // Symptom, which is why this is worth the extra thirty lines: the first part comes
-            // out roughly right and everything after it goes black, so it reads as a lighting or
-            // normals problem rather than a palette one. Decoding against a LOCAL copy is both a
-            // fix and a guarantee that this exporter never leaves state behind in the dat cache.
-            var png = DecodePalettised(portal, texture, palette);
+            //   1. CROSS-PLATFORM. GetBitmap is System.Drawing, which is Windows-only from .NET 7
+            //      on, and this assembly has to run on the Linux droplet - the model is built per
+            //      character on demand because gear combinations cannot be pre-baked.
+            //   2. ACE's own P8 path MUTATES the CACHED Palette instance
+            //      (`pal.Colors[key] = value` on what ReadFromDat returned), so dyeing one
+            //      texture corrupts that palette for every later texture sharing it. The symptom
+            //      is the first part looking right and everything after going black, which reads
+            //      as a lighting bug. TextureDecoder copies the palette instead.
+            var decoded = TextureDecoder.Decode(portal, texture, palette);
 
-            if (png != null)
-                return png;
+            if (decoded == null)
+                return null;
 
-            using (var bmp = texture.GetBitmap())
-            using (var ms = new MemoryStream())
-            {
-                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                return ms.ToArray();
-            }
+            mime = decoded.MimeType;
+
+            return decoded.Bytes;
         }
         catch (Exception ex)
         {
@@ -230,74 +225,4 @@ public static class ModelBuilder
         }
     }
 
-    /// <summary>
-    /// P8 / INDEX16 -> PNG, against a LOCAL palette copy with the character's overrides applied.
-    /// Returns null for any format that is not palettised, so the caller falls back to GetBitmap.
-    /// </summary>
-    private static byte[] DecodePalettised(
-        PortalDatDatabase portal, Texture texture, Dictionary<int, uint> overrides)
-    {
-        if (!texture.DefaultPaletteId.HasValue)
-            return null;
-
-        var isP8 = texture.Format == SurfacePixelFormat.PFID_P8;
-        var isIndex16 = texture.Format == SurfacePixelFormat.PFID_INDEX16;
-
-        if (!isP8 && !isIndex16)
-            return null;
-
-        var source = portal.ReadFromDat<Palette>(texture.DefaultPaletteId.Value);
-
-        if (System.Environment.GetEnvironmentVariable("SG_PAL_DEBUG") == "1" && source != null)
-        {
-            var idxs = new List<int>();
-            using (var r = new BinaryReader(new MemoryStream(texture.SourceData)))
-                for (var k = 0; k < texture.Width * texture.Height; k++)
-                    idxs.Add(isP8 ? r.ReadByte() : r.ReadInt16());
-
-            Console.WriteLine($"      PAL tex {texture.Width}x{texture.Height} fmt={texture.Format} defPal=0x{texture.DefaultPaletteId:X8} palColors={source.Colors.Count} idxRange={idxs.Min()}..{idxs.Max()}");
-        }
-
-        if (source?.Colors == null || source.Colors.Count == 0)
-            return null;
-
-        // The copy is the whole point - see the note at the call site.
-        var colors = new List<uint>(source.Colors);
-
-        if (overrides != null)
-        {
-            foreach (var (index, colour) in overrides)
-            {
-                if (index >= 0 && index < colors.Count)
-                    colors[index] = colour;
-            }
-        }
-
-        using var bmp = new System.Drawing.Bitmap(texture.Width, texture.Height);
-        using var reader = new BinaryReader(new MemoryStream(texture.SourceData));
-
-        for (var y = 0; y < texture.Height; y++)
-        {
-            for (var x = 0; x < texture.Width; x++)
-            {
-                int index = isP8 ? reader.ReadByte() : reader.ReadInt16();
-
-                if (index < 0 || index >= colors.Count)
-                    index = 0;
-
-                var argb = colors[index];
-
-                bmp.SetPixel(x, y, System.Drawing.Color.FromArgb(
-                    (int)((argb & 0xFF000000) >> 24),
-                    (int)((argb & 0x00FF0000) >> 16),
-                    (int)((argb & 0x0000FF00) >> 8),
-                    (int)(argb & 0x000000FF)));
-            }
-        }
-
-        using var ms = new MemoryStream();
-        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-
-        return ms.ToArray();
-    }
 }
