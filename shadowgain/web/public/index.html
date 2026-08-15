@@ -489,7 +489,12 @@ function renderBanner(c){
 function statRow(o,kind){
   const badge = o.group==='specialized' ? '<span class="sb">SPEC</span>' : '';
   const vlcls = kind==='attr' ? 'trained' : o.group;
-  const shown = kind==='attr' ? (o.base??o.trueRank??0) : (o.trueRank??o.base??0);
+  // SKILLS SHOW THEIR VALUE TOO, not their rank. Chris, 2026-08-15: Two Handed Combat should
+  // read 332 - "that applies the str/coord value into the panel figure". `base` already carries
+  // it (init + rank + the dat's attribute formula), and 332 is the number on the in-game panel
+  // and the one `@myskills` leads with ("base 332", then rank underneath). Rank moves to the
+  // readout, exactly as it did for attributes in 126a - same rule, both halves of the sheet.
+  const shown = o.base ?? o.trueRank ?? 0;
   return `<div class="row" data-key="${o.key}" data-kind="${kind}">${icon(o)}<span class="nm">${o.label}${badge}</span><span class="vl ${vlcls}">${shown}</span></div>`;
 }
 function renderAttributes(c){
@@ -502,7 +507,10 @@ function renderSkills(c){
   const groups=[['specialized','Specialized'],['trained','Trained'],['untrained','Untrained (pruned)'],['unusable','Unusable']];
   const skills=c.skills||[]; let h='';
   for(const [g,label] of groups){
-    const items=skills.filter(s=>s.group===g).sort((a,b)=>(b.trueRank||0)-(a.trueRank||0));
+    // Sorted by the number ON SCREEN. It used to sort by trueRank while displaying base, so
+    // Melee Defense (rank 191, base 319) sat above Two Handed Combat (rank 183, base 332) and
+    // the list read as unsorted to anyone actually looking at it.
+    const items=skills.filter(s=>s.group===g).sort((a,b)=>(b.base??b.trueRank??0)-(a.base??a.trueRank??0));
     h+=`<div class="grouphdr">${label}<span class="ct">${items.length}</span></div>`;
     h+= items.length ? items.map(s=>statRow(s,'skill')).join('') : `<div class="emptygrp">None</div>`;
   }
@@ -570,10 +578,8 @@ function showReadout(o, kind){
   }
 
   /* --- headline: an attribute leads with its VALUE, a skill with its true rank ------------ */
-  const headline = isSkill ? (o.trueRank??o.base??0) : (o.base??o.trueRank??0);
-  // The badge earns its place only when there is a rank to be true ABOUT. On a skill sitting at
-  // 0 it labelled a zero as a hard-won number.
-  const badge = (isSkill && (o.trueRank||0)>0) ? '<span class="truebadge">true rank</span>' : '';
+  const headline = o.base ?? o.trueRank ?? 0;
+  const badge = '';
   // The ceiling quoted beside an attribute is the VALUE ceiling (start + max ranks), never the
   // rank cap - putting a value next to a rank cap is the exact ambiguity 122 removed in game.
   const ceiling = (!isSkill && o.maxRank!=null && o.startingValue!=null)
@@ -581,6 +587,12 @@ function showReadout(o, kind){
   const maxed = !isSkill && o.maxRank!=null && o.trueRank>=o.maxRank;
 
   const head = `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>`;
+
+  // The one place rank still belongs. It is not bookkeeping here - it is the number the retail
+  // client physically cannot display past its table, which is the reason this site exists (123).
+  // Only for skills: an attribute's rank really is bookkeeping, and 126c removed it.
+  const trueRankLine = (isSkill && (o.trueRank||0)>0)
+    ? `<div class="hint" style="margin-top:6px">true rank <b style="color:var(--gold)">${fmt(o.trueRank)}</b></div>` : '';
 
   // NO RANK LINE. Chris, 2026-08-14: rank is bookkeeping and bookkeeping is only confusing.
   //
@@ -595,7 +607,7 @@ function showReadout(o, kind){
   let body;
 
   if(total>0){
-    body = `${head}
+    body = `${head}${trueRankLine}
        <div class="bar"><i style="width:${pct}%"></i></div>
        ${goal}`;
   } else if(maxed){
@@ -603,9 +615,10 @@ function showReadout(o, kind){
   } else if(!isSkill){
     body = head + earnedLine;
   } else if(o.group==='untrained' && (o.xpSpent||0)>0){
+    // fall through with the frozen rank shown
     // 093: pruning FREEZES a skill, it does not destroy it. Saying so is the difference between
     // a player thinking they set a skill aside and thinking they threw it away.
-    body = `${head}<div class="hint" style="margin-top:6px">Set aside. <b>${fmt(o.xpSpent)}</b> experience is held for it &mdash; re-train it, free, and it returns exactly as it was.</div>`;
+    body = `${head}${trueRankLine}<div class="hint" style="margin-top:6px">Set aside. <b>${fmt(o.xpSpent)}</b> experience is held for it &mdash; re-train it, free, and it returns exactly as it was.</div>`;
   } else if(o.group==='unusable'){
     body = `${head}<div class="hint" style="margin-top:6px">Cannot be used until it is trained, and it has earned no experience.</div>`;
   } else {

@@ -454,8 +454,11 @@ def build_skills(raw: dict) -> list[dict]:
             }
         )
 
-    # Highest rank first, then name — the same ordering @myskills uses, so the two agree on sight.
-    out.sort(key=lambda s: (-s["trueRank"], s["label"]))
+    # Highest VALUE first, then name — matching what the page displays. The page shows `base`
+    # (the figure the in-game panel shows, attribute formula included), so ordering by rank made
+    # the list look unsorted: Melee Defense is rank 191 / base 319, Two Handed Combat rank 183 /
+    # base 332.
+    out.sort(key=lambda s: (-s["base"], s["label"]))
 
     return out
 
