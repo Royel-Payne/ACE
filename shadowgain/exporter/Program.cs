@@ -108,6 +108,8 @@ public static class Program
     {
         string datDir = null, outDir = null, itemIdFile = null;
         bool doIcons = false, doTables = false, doSizes = false;
+        string modelSetup = null, modelHead = null, skinPalette = null, hairPalette = null, eyesPalette = null;
+        string heritage = null, gender = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -118,6 +120,13 @@ public static class Program
                 case "--item-ids": itemIdFile = Next(args, ref i); break;
                 case "--icons": doIcons = true; break;
                 case "--sizes": doSizes = true; break;
+                case "--model": modelSetup = Next(args, ref i); break;
+                case "--heritage": heritage = Next(args, ref i); break;
+                case "--gender": gender = Next(args, ref i); break;
+                case "--head": modelHead = Next(args, ref i); break;
+                case "--skin": skinPalette = Next(args, ref i); break;
+                case "--hair": hairPalette = Next(args, ref i); break;
+                case "--eyes": eyesPalette = Next(args, ref i); break;
                 case "--tables": doTables = true; break;
                 default:
                     Console.Error.WriteLine($"unknown argument: {args[i]}");
@@ -129,7 +138,7 @@ public static class Program
             return Usage();
 
         // Neither flag means both - the common case is a full refresh.
-        if (!doIcons && !doTables && !doSizes)
+        if (!doIcons && !doTables && !doSizes && modelSetup == null && heritage == null)
             doIcons = doTables = true;
 
         // The dat stores strings in codepage 1252, which .NET Framework had built in and .NET
@@ -209,6 +218,14 @@ public static class Program
         if (doSizes)
         {
             ReportSizes(portal, outDir);
+            return 0;
+        }
+
+        // --model: Shadowgain 130 Stage 1. Assemble one character's body into a .glb.
+        if (modelSetup != null || heritage != null)
+        {
+            BuildModel(portal, outDir, modelSetup, modelHead, skinPalette, hairPalette, eyesPalette,
+                       heritage, gender);
             return 0;
         }
 
@@ -587,6 +604,112 @@ public static class Program
             ids.Sort();
             File.WriteAllLines(Path.Combine(outDir, $"ids-{size.W}x{size.H}.txt"), ids.Select(i => i.ToString()));
         }
+    }
+
+    private static uint ParseId(string s) =>
+        s == null ? 0
+        : s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            ? Convert.ToUInt32(s[2..], 16)
+            : uint.Parse(s);
+
+    /// <summary>
+    /// 130 Stage 1: a character's body, head and chosen palettes, out as one .glb.
+    ///
+    /// The palette map is keyed by the palette a SURFACE names, so an override only fires where
+    /// the body actually uses that palette. That is why skin/hair/eyes are passed as the values
+    /// the character picked rather than being applied blindly to every texture - applying a hair
+    /// palette to skin is precisely the kind of mistake that looks plausible in code and
+    /// grotesque on screen.
+    /// </summary>
+    private static void BuildModel(PortalDatDatabase portal, string outDir, string setup,
+        string head, string skin, string hair, string eyes, string heritage, string gender)
+    {
+        Directory.CreateDirectory(outDir);
+
+        var setupId = ParseId(setup);
+
+        // THE BODY SETUP COMES FROM CHARGEN, NOT FROM THE CHARACTER'S Setup DID.
+        //
+        // Black Breath's `PropertyDataId.Setup` is 0x0200106D, which sounded authoritative and is
+        // not the body: it unpacks to THREE parts. A player body is ~20 (torso, head, upper and
+        // lower arms, hands, upper and lower legs, feet). The real one is keyed by heritage and
+        // gender in CharGen, alongside the base and skin palette SETS that go with it - which is
+        // also where the palettes a character picks are meant to be resolved against.
+        if (heritage != null)
+        {
+            var hg = (uint)ParseId(heritage);
+            var sx = (int)ParseId(gender ?? "1");
+
+            if (portal.CharGen.HeritageGroups.TryGetValue(hg, out var group)
+                && group.Genders.TryGetValue(sx, out var sex))
+            {
+                Console.WriteLine($"    chargen: {group.Name} / {sex.Name}");
+                Console.WriteLine($"      setup 0x{sex.SetupID:X8}  basePalette 0x{sex.BasePalette:X8}  skinPalSet 0x{sex.SkinPalSet:X8}");
+                setupId = sex.SetupID;
+            }
+            else
+            {
+                Console.Error.WriteLine($"!! no chargen entry for heritage {hg} gender {sx}");
+                return;
+            }
+        }
+
+        // Stage 1 applies the character's palettes to whatever the body's surfaces reference. The
+        // real mapping (which base palette each override replaces) lives in the ClothingTable
+        // sub-palette effects and lands in Stage 2; here the overrides are offered for every
+        // palette the surfaces name, which is enough to prove the pipeline end to end.
+        var overrides = new Dictionary<uint, uint>();
+
+        void Offer(string value)
+        {
+            if (value == null) return;
+            var id = ParseId(value);
+            if (id != 0) overrides[id] = id;   // placeholder identity; replaced per-surface below
+        }
+
+        Offer(skin); Offer(hair); Offer(eyes);
+
+        Console.WriteLine($"==> building model from setup {setup}");
+
+        // One-off diagnostics: are the surface files even present, and how big?
+        if (System.Environment.GetEnvironmentVariable("SG_MODEL_DEBUG") == "1")
+        {
+            var sm = portal.ReadFromDat<SetupModel>(setupId);
+            Console.WriteLine($"    DEBUG parts={sm.Parts.Count} placementFrames={sm.PlacementFrames.Count} scales={sm.DefaultScale.Count}");
+
+            foreach (var pid in sm.Parts.Take(4))
+            {
+                var g = portal.ReadFromDat<GfxObj>(pid);
+                Console.WriteLine($"    DEBUG part 0x{pid:X8}: polys={g?.Polygons.Count} verts={g?.VertexArray.Vertices.Count} surfaces={g?.Surfaces.Count}");
+
+                foreach (var sid in (g?.Surfaces ?? new List<uint>()).Take(3))
+                {
+                    var present = portal.AllFiles.ContainsKey(sid);
+                    var size = present ? portal.AllFiles[sid].FileSize : 0;
+                    Console.WriteLine($"      surface 0x{sid:X8} present={present} size={size}");
+                }
+            }
+        }
+
+        var prims = ModelBuilder.BuildSetup(portal, setupId, overrides, Console.WriteLine);
+
+        if (head != null)
+        {
+            Console.WriteLine($"    head object {head}");
+            ModelBuilder.AddGfxObj(portal, ParseId(head), System.Numerics.Matrix4x4.Identity,
+                overrides, prims, Console.WriteLine, "head");
+        }
+
+        var tris = prims.Sum(p => p.Indices.Count) / 3;
+        var verts = prims.Sum(p => p.Positions.Count);
+        var textured = prims.Count(p => p.TexturePng != null);
+
+        Console.WriteLine($"    {prims.Count} primitives, {verts:N0} vertices, {tris:N0} triangles, {textured} textured");
+
+        var path = Path.Combine(outDir, "character.glb");
+        Gltf.Write(path, prims);
+
+        Console.WriteLine($"    wrote {path} ({new FileInfo(path).Length:N0} bytes)");
     }
 
     private static List<uint> ReadIdFile(string path)
