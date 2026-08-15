@@ -105,6 +105,48 @@ namespace ACE.Server.Command.Handlers
         /// usage-progression idea holds up at high level. Guessing at it is how estimates become
         /// fiction.
         /// </summary>
+        /// <summary>
+        /// Shadowgain 147: dump every skill's dat attribute formula - which attribute it trains as
+        /// PRIMARY and which as secondary.
+        ///
+        /// Written because inferring this from the live log is unreliable and I got it wrong doing
+        /// exactly that: 010's exertion path fires Endurance awards continuously and interleaves
+        /// with everything, so a context-window parse attributes them to whatever skill happened to
+        /// log just before. That produced a table claiming Run, Jump, Salvaging and sixteen others
+        /// all trained Endurance. The formulas live in client_portal.dat on the server host and are
+        /// unobtainable from anywhere else, so the only honest way to read them is to ask the
+        /// server that has them loaded.
+        /// </summary>
+        [CommandHandler("sg-skillattrs", AccessLevel.Developer, CommandHandlerFlag.None, 0,
+            "(Shadowgain) Dump every skill's dat attribute formula (primary / secondary) to the server log.")]
+        public static void HandleShadowgainSkillAttrs(Session session, params string[] parameters)
+        {
+            log.Info("[SG-SKILLATTRS] skill | primary | secondary");
+
+            foreach (var skill in SkillHelper.ValidSkills)
+            {
+                if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var sb))
+                    continue;
+
+                var datPrimary = (PropertyAttribute)sb.Formula.Attr1;
+                var datSecondary = (PropertyAttribute)sb.Formula.Attr2;
+
+                // The EFFECTIVE formula, resolved through the same method the award path uses, so
+                // this cannot drift from what the server actually does. Reading the dat directly
+                // here would have reported Mana Conversion as Focus-primary while 147 awarded Self -
+                // a diagnostic contradicting the code it exists to explain.
+                var (primary, secondary) = Player.GetSkillAttributeFormula(skill);
+
+                var note = (primary != datPrimary || secondary != datSecondary)
+                    ? $"   <- OVERRIDDEN (dat: {datPrimary} / {datSecondary})"
+                    : "";
+
+                log.Info($"[SG-SKILLATTRS] {skill} | {primary} | {(secondary == primary ? "(same as primary - not awarded twice)" : secondary.ToString())}{note}");
+            }
+
+            CommandHandlerHelper.WriteOutputInfo(session, "Dumped skill attribute formulas to the server log.", ChatMessageType.Broadcast);
+        }
+
         [CommandHandler("sg-xptable", AccessLevel.Developer, CommandHandlerFlag.None, 0,
             "(Shadowgain) Dump the trained/specialized skill XP cost curve to the server log.",
             "[rankInterval]")]

@@ -599,14 +599,7 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public void AwardAttributesForSkill(Skill skill, uint difficulty)
         {
-            if (skill == Skill.None)
-                return;
-
-            if (!DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var skillBase))
-                return;
-
-            var primary = (PropertyAttribute)skillBase.Formula.Attr1;
-            var secondary = (PropertyAttribute)skillBase.Formula.Attr2;
+            var (primary, secondary) = GetSkillAttributeFormula(skill);
 
             if (primary == PropertyAttribute.Undef)
                 return;
@@ -618,6 +611,49 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 147: THE one place a skill's attribute formula is decided - dat first, then this
+        /// project's single deliberate override on top. Extracted so the award path and the
+        /// sg-skillattrs diagnostic cannot disagree: before this the diagnostic read the dat
+        /// directly and would have reported Mana Conversion as Focus-primary while the server
+        /// awarded Self - a tool contradicting the code it explains, which is precisely how 019's
+        /// stale warning survived three entries.
+        /// </summary>
+        public static (PropertyAttribute Primary, PropertyAttribute Secondary) GetSkillAttributeFormula(Skill skill)
+        {
+            if (skill == Skill.None || !DatManager.PortalDat.SkillTable.SkillBaseHash.TryGetValue((uint)skill, out var skillBase))
+                return (PropertyAttribute.Undef, PropertyAttribute.Undef);
+
+            var primary = (PropertyAttribute)skillBase.Formula.Attr1;
+            var secondary = (PropertyAttribute)skillBase.Formula.Attr2;
+
+                // Shadowgain 147: THE ONE DELIBERATE DEPARTURE FROM THE DAT, and it restores something
+                // 022 removed by accident.
+                //
+                // The dat makes every magic school Focus primary + Self secondary, so once 022 made this
+                // mapping data-driven, Self became the primary of NOTHING a caster chooses to do - its
+                // only primary is Magic Defense, which is something done TO you. 019 had routed Life
+                // Magic and Mana Conversion to Self precisely to avoid that, and left a comment saying
+                // "do not correct it to match the dat without first checking what happens to Self". 022
+                // corrected it to match the dat. The warning was still in the file, describing behaviour
+                // that no longer existed.
+                //
+                // MEASURED on LIVE 2026-08-15 before changing anything: Self averaged rank 104 against
+                // Focus at 121, on 10.4M xp against 28.7M - weighted award units 35,816 to Focus's
+                // 81,603, a 2.28x gap. Chris: *"Self feels like it should gain with magic use the same
+                // as focus."*
+                //
+                // Mana Conversion ALONE, not Life Magic as well: it is 41% of all magic award events on
+                // the server (38,700 of ~94,000 in six hours), so flipping it moves the ratio to 0.81x
+                // while flipping both overshoots to 0.69x and simply makes Focus the new laggard.
+                // Thematically it is also the cleanest of the two - Self governs Mana, and Mana
+                // Conversion is drawing on your own reserves.
+                if (skill == Skill.ManaConversion && PropertyManager.GetBool("mana_conversion_trains_self").Item)
+                    (primary, secondary) = (secondary, primary);
+
+            return (primary, secondary);
+        }
+
+        /// <summary>
         /// Shadowgain 004: maps a magic school (or Healing) to Focus or Self.
         /// Difficulty comes from the caller - target MagicDefense or heal difficulty - never from the
         /// attribute being raised.
@@ -626,14 +662,23 @@ namespace ACE.Server.WorldObjects
         /// Shadowgain 004: overload for the spell paths, which carry MagicSchool rather than Skill.
         /// War/void/enchantment are Focus; life magic is Self.
         ///
-        /// NOTE (019): this deliberately does NOT follow the dat formula, unlike the weapon mapping
-        /// beside it. The dat makes every magic school Focus primary + Self secondary, which would
-        /// leave Self as nothing but a 0.25-weight passenger on every cast - it is the primary
-        /// attribute of no school at all. Routing Life Magic to Self instead gives it a real path,
-        /// and measures healthy in play (714 awards / 11,942 xp on a live character).
+        /// ~~NOTE (019): this deliberately does NOT follow the dat formula ... Routing Life Magic to
+        /// Self instead gives it a real path ... Do not "correct" it to match the dat without first
+        /// checking what happens to Self.~~
         ///
-        /// So this divergence is intentional and load-bearing. Do not "correct" it to match the dat
-        /// without first checking what happens to Self.
+        /// **SUPERSEDED, and left struck through because the warning came true.** 022 made this
+        /// mapping data-driven and did exactly what 019 said not to: it corrected to the dat, which
+        /// made every school Focus primary + Self secondary and reduced Self to a 0.25-weight
+        /// passenger with no primary of its own except Magic Defense. The warning stayed in the file
+        /// for three entries, describing a routing that no longer existed - so it read as
+        /// reassurance that the problem was handled.
+        ///
+        /// 147 restores the intent for Mana Conversion only (see AwardAttributesForSkill), measured
+        /// rather than assumed. Life Magic is deliberately NOT restored: flipping both overshoots.
+        ///
+        /// The lesson is not "022 was wrong" - data-driven was the right call and fixed four broken
+        /// weapon mappings. It is that a general rule silently swallowed a deliberate exception, and
+        /// the comment recording the exception was not enough to stop it.
         /// </summary>
         public void AwardAttributesForMagicSkill(MagicSchool school, uint difficulty)
         {
