@@ -135,16 +135,47 @@
   .bbar i{display:block;height:100%;background:linear-gradient(90deg,var(--arcane-dim),var(--green))}
   .viewbtn{font-size:11px;color:#cdd7e2;border:1px solid var(--line);border-radius:6px;padding:3px 11px;cursor:pointer;background:var(--panel)}
   .viewbtn:hover{border-color:var(--arcane-dim);color:#fff} .viewbtn.active{color:var(--gold);border-color:rgba(216,172,82,.45)}
-  .equip{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:16px 14px 6px;align-items:start}
-  .eqcol{display:flex;flex-direction:column;gap:7px}
-  .eqcol .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
-  .doll{position:relative;height:288px;border-radius:12px;border:1px solid var(--line);
+  /* 131 - the equipment frame, laid out like the client's own inventory panel: one column of
+     worn slots down the left, two down the right, the character between them, and the held gear
+     along the bottom. The empty cells at top-right are in the game too; leaving them empty keeps
+     the pairing (bracelet beside bracelet, ring beside ring) reading correctly. */
+  .equip{display:grid;grid-template-columns:52px 1fr 52px 52px;grid-template-rows:repeat(5,58px);
+    gap:6px;padding:14px 14px 8px;align-items:stretch}
+  .eslot{border-radius:8px;background:#0b1119;border:1px solid var(--line);
+    display:grid;place-items:center;position:relative;overflow:hidden}
+  .eslot.fill{border-color:rgba(79,214,198,.42);box-shadow:0 0 0 1px rgba(79,214,198,.12)}
+  /* An empty slot must still read as a SLOT. The first pass used opacity:.45 on a dashed border
+     over a near-black panel, which made the box vanish and left its caption floating in space. */
+  .eslot.empty{border-style:dashed;border-color:rgba(126,148,173,.34);background:rgba(15,21,31,.55)}
+  .eslot.empty .ico{opacity:.5}
+  /* An empty dashed box says nothing about WHICH slot it is - the client uses distinct placeholder
+     art for that, which we do not have. A small caption is the honest web equivalent, and it is
+     shown only when the slot is empty so a real icon is never covered up. */
+  .eslot .tag{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:7px;
+    letter-spacing:.2px;text-transform:uppercase;color:#7e93a8;pointer-events:none;line-height:1}
+  .doll{grid-column:2;grid-row:1 / 6;position:relative;border-radius:12px;border:1px solid var(--line);
     background:radial-gradient(130px 220px at 50% 30%, rgba(143,123,214,.14), transparent 70%), #0b111a}
   .doll .figure{position:absolute;left:50%;top:32px;transform:translateX(-50%);width:96px;height:212px;opacity:.92}
-  .aslot{position:absolute;width:38px;height:38px;border-radius:8px;background:rgba(9,13,20,.72);
-    border:1px solid var(--line);display:grid;place-items:center}
+
+  /* The armour coverage grid, revealed by the Slots toggle exactly as the client does it: the
+     paperdoll gives way to the body-area slots rather than sharing the space with them. */
+  .agrid{position:absolute;inset:10px 8px 26px;display:none;grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(5,1fr);gap:5px;justify-items:center;align-items:center;z-index:3}
+  .doll.slots .agrid{display:grid}
+  .doll.slots .model3d,.doll.slots .figure,.doll.slots .modelhint{display:none}
+  .aslot{width:100%;max-width:44px;aspect-ratio:1;border-radius:8px;background:rgba(9,13,20,.85);
+    border:1px solid var(--line);display:grid;place-items:center;position:relative;overflow:hidden}
   .aslot.fill{border-color:rgba(79,214,198,.45);box-shadow:0 0 0 1px rgba(79,214,198,.14)}
-  .aslot.empty{border-style:dashed;opacity:.5}
+  .aslot.empty{border-style:dashed;border-color:rgba(126,148,173,.32);background:rgba(15,21,31,.6)}
+  .aslot .tag{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:6.5px;
+    letter-spacing:.1px;text-transform:uppercase;color:var(--muted);pointer-events:none;line-height:1}
+
+  .slotsbtn{position:absolute;left:9px;bottom:6px;z-index:4;display:flex;align-items:center;gap:6px;
+    font-size:11px;color:#cdd7e2;cursor:pointer;user-select:none;letter-spacing:.3px}
+  .slotsbtn:hover{color:#fff}
+  .slotsdot{width:9px;height:9px;border-radius:50%;background:#39424f;border:1px solid #58626f}
+  .doll.slots .slotsdot{background:var(--arcane);border-color:var(--arcane);
+    box-shadow:0 0 6px rgba(79,214,198,.75)}
   .islot{width:40px;height:40px;border-radius:8px;background:#0b1119;border:1px solid var(--line);
     display:grid;place-items:center;position:relative}
   .islot.empty{border-style:dashed;opacity:.4}
@@ -166,7 +197,7 @@
   /* The 2D figure stays as the fallback and is hidden only once a model actually renders, so a
      failed load leaves the panel looking deliberate rather than empty. */
   .doll.has3d .figure{display:none}
-  .modelhint{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:10.5px;
+  .modelhint{position:absolute;left:0;right:0;bottom:7px;text-align:center;font-size:10.5px;
     color:var(--muted);z-index:2;pointer-events:none;letter-spacing:.4px}
   .cell.empty{background:#0a0f16;border-style:dashed;opacity:.45}
 
@@ -198,7 +229,7 @@
   .tabpane::-webkit-scrollbar{width:9px} .tabpane::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
 
   /* --- item inspection: fast floating tooltip + a click/tap line for mobile --- */
-  .aslot,.islot,.cell{cursor:pointer}
+  .aslot,.islot,.eslot,.cell{cursor:pointer}
   .selitem{border-color:var(--gold) !important;box-shadow:0 0 0 1px rgba(216,172,82,.4) !important}
   .itemsel{border-top:1px solid var(--line);padding:11px 16px;color:#cdd7e2;font-size:13.5px;min-height:16px}
   .itemsel .m{color:var(--muted)} .itemsel b{color:#eaf3f2}
@@ -235,6 +266,8 @@
   .agroup{align-items:flex-end}
   .jrow{display:flex;gap:7px;flex-wrap:wrap;max-width:220px} .arow{display:flex;gap:9px}
   .aeth{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:#0b1119;display:grid;place-items:center;font-size:8px;color:var(--muted)}
+  .aeth.set{background:#0b1119;overflow:hidden}
+  .aeth.set .ico{width:26px;height:26px}
   .aeth.red{border-color:#c0504d} .aeth.blue{border-color:#5b7fc0} .aeth.yellow{border-color:#c9a24b}
 
   /* --- PK vs NPK colouring --- */
@@ -443,6 +476,13 @@ function wireOnce(){
       const k=row.dataset.kind, arr = k==='attr'?CHAR.attributes : k==='vital'?CHAR.vitals : CHAR.skills;
       const o=(arr||[]).find(x=>x.key===row.dataset.key); if(o) showReadout(o,k); return; }
     const spc=e.target.closest('.spk[data-cont]'); if(spc){ curCont=+spc.dataset.cont; renderInventory(CHAR); return; }
+    // The Slots toggle flips a class rather than re-rendering: a re-render would replace the doll
+    // element, detaching the live WebGL canvas and losing the loaded model until the next fetch.
+    if(e.target.closest('#slotsBtn')){
+      slotsOn=!slotsOn;
+      document.querySelector('.doll')?.classList.toggle('slots', slotsOn);
+      return;
+    }
     if(e.target.closest('#xclose')){ closeExamine(); return; }
     const tile=e.target.closest('[data-item]');
     if(tile){ const it=SEL[+tile.dataset.item]; if(it){ area.querySelectorAll('.selitem').forEach(x=>x.classList.remove('selitem')); tile.classList.add('selitem'); openExamine(it); } }
@@ -677,60 +717,100 @@ function showReadout(o, kind){
 // 10 armor coverage slots down the two EDGES of the avatar (Chris's order, 2026-08-14). The API
 // fills head/chest/hands/feet/legs today; the rest fill once item `coverage` ships (127) — e.g. a
 // robe covers Chest, Abdomen, Upper/Lower Arms, Upper/Lower Legs, Feet.
-const ARMOR_LEFT  = [['head','Head'],['chest','Chest'],['upperArms','Upper Arms'],['lowerArms','Lower Arms'],['hands','Hands']];
-const ARMOR_RIGHT = [['cloak','Cloak'],['abdomen','Abdomen'],['upperLegs','Upper Legs'],['lowerLegs','Lower Legs'],['feet','Feet']];
-const EDGE_TOPS = [8,64,120,176,232];
-const GEAR_SLOTS = [['weapon','Weapon'],['wand','Wand / Caster'],['shield','Shield']];
-const CLOAK_RE = /cloak|shroud|cape|mantle/i;
+/* 131 - the worn-slot frame, in the client's arrangement.
+ *
+ * `cell` is grid position "column/row"; `n` picks which of several items in the same slot, which
+ * is what makes two bracelets and two rings work - the shard reports both as `wrist`/`finger` and
+ * distinguishes them only by a Left/Right bit. Filling in the order found matches what a player
+ * sees in game, where the side bit does NOT decide which box an item appears in.
+ */
+const WORN_SLOTS = [
+  ['neck',    'Neck',     '1/1', 0],
+  ['trinket', 'Trinket',  '1/2', 0],
+  ['wrist',   'Bracelet', '1/3', 0],
+  ['finger',  'Ring',     '1/4', 0],
+  ['shield',  'Shield',   '1/5', 0],
+
+  ['ammo',    'Ammo',     '3/1', 0],
+  ['wrist',   'Bracelet', '3/3', 1],
+  ['finger',  'Ring',     '3/4', 1],
+  ['weapon',  'Weapon',   '3/5', 0],
+
+  ['cloak',   'Cloak',    '4/2', 0],
+  ['shirt',   'Shirt',    '4/3', 0],
+  ['pants',   'Pants',    '4/4', 0],
+  ['wand',    'Caster',   '4/5', 0],
+];
+
+/* The armour coverage grid behind the Slots toggle, arranged anatomically. */
+const ARMOUR_GRID = [
+  ['head',      'Head',   '2/1'],
+  ['upperArms', 'Up Arm', '1/2'], ['chest',   'Chest', '2/2'], ['hands', 'Hands', '3/2'],
+  ['lowerArms', 'Lo Arm', '1/3'], ['abdomen', 'Abdmn', '2/3'],
+  ['upperLegs', 'Up Leg', '2/4'],
+  ['lowerLegs', 'Lo Leg', '2/5'], ['feet',    'Feet',  '3/5'],
+];
+
+let slotsOn = false;
 
 function reg(it){ if(!it) return -1; SEL.push(it); return SEL.length-1; }
-function armorSlot(label,side,top,item){
-  const edge = side==='L' ? 'left:6px' : 'left:calc(100% - 44px)';
-  const di = item ? ` data-item="${reg(item)}"` : '';
-  return `<div class="aslot ${item?'fill':'empty'}"${di} style="top:${top}px;${edge}" title="${label}${item?' — '+item.name:''}">${item?icon(item):''}</div>`;
+
+function slotBox(cls, label, cell, item){
+  const at = `style="grid-area:${cell.split('/')[1]}/${cell.split('/')[0]}"`;
+  if(!item) return `<div class="${cls} empty" ${at} title="${label} (empty)"><span class="tag">${label}</span></div>`;
+  return `<div class="${cls} fill" ${at} data-item="${reg(item)}" title="${label} — ${item.name}">${icon(item)}</div>`;
 }
 function renderInventory(c){
   SEL=[];
   const inv=c.inventory||{equipped:[],containers:[]};
-  const eq={}; (inv.equipped||[]).forEach(it=>{ if(it.slot==='other'){(eq.other=eq.other||[]).push(it);} else if(!eq[it.slot]) eq[it.slot]=it; });
+  const worn=inv.equipped||[];
+
+  // Grouped, not flattened to one-per-slot: two bracelets and two rings both report `wrist` /
+  // `finger`, so keeping only the first silently dropped one of each.
+  const bySlot={}; worn.forEach(it=>{ (bySlot[it.slot]=bySlot[it.slot]||[]).push(it); });
+
   $('#invName').textContent='Inventory of '+c.name;
   const burden = c.burden ?? inv.burden;
   if(burden==null){ $('#burdenWrap').style.display='none'; }
   else { $('#burdenWrap').style.display=''; $('#burdenPct').textContent=burden+'%'; $('#burdenBar').style.width=Math.min(100,burden)+'%'; }
 
-  // cloak gets its own right-column slot; pull it out of 'other' by name until the backend gives it
-  // a real slot (127). Whatever remains in 'other' is jewelry.
-  const others=(eq.other||[]).slice();
-  let cloak=null; const ci=others.findIndex(o=>CLOAK_RE.test(o.name||'')); if(ci>=0) cloak=others.splice(ci,1)[0];
+  const frame = WORN_SLOTS.map(([k,label,cell,n])=>slotBox('eslot',label,cell,(bySlot[k]||[])[n])).join('');
 
-  const A={ head:eq.head, chest:eq.chest, hands:eq.hands, feet:eq.feet, upperLegs:eq.legs, cloak };
-  // once the backend ships per-item `coverage` (127), a robe fills all its covered slots at once
-  (inv.equipped||[]).forEach(it=>{ (it.coverage||[]).forEach(k=>{ if(!A[k]) A[k]=it; }); });
-  const left  = ARMOR_LEFT.map(([k,l],i)=>armorSlot(l,'L',EDGE_TOPS[i],A[k])).join('');
-  const right = ARMOR_RIGHT.map(([k,l],i)=>armorSlot(l,'R',EDGE_TOPS[i],A[k])).join('');
-  const gear = GEAR_SLOTS.map(([k,lbl])=>{ const it=eq[k];
-    return it?`<div class="islot" data-item="${reg(it)}" title="${lbl}: ${it.name}">${icon(it)}</div>`:`<div class="islot empty" title="${lbl} (empty)"></div>`; }).join('');
+  // The armour grid takes the first item covering each area, but SKIPS the clothing layer - a
+  // shirt has its own box, and letting it claim `chest` would hide the armour worn over it.
+  const A={};
+  worn.forEach(it=>{ if(it.slot==='shirt'||it.slot==='pants') return;
+                     (it.coverage||[]).forEach(k=>{ if(!A[k]) A[k]=it; }); });
+  const armour = ARMOUR_GRID.map(([k,label,cell])=>slotBox('aslot',label,cell,A[k])).join('');
 
   $('#equip').innerHTML = `
-    <div class="eqcol"><span class="lbl">Wield</span>${gear}</div>
-    <div class="doll">
+    ${frame}
+    <div class="doll${slotsOn?' slots':''}">
       <div id="model3d" class="model3d"></div>
       <svg class="figure" id="figure2d" viewBox="0 0 96 212" aria-label="character">
         <ellipse cx="48" cy="22" rx="15" ry="17" fill="#3a3324"/>
         <path d="M48 40 C26 47 22 82 24 150 L24 206 L72 206 L72 150 C74 82 70 47 48 40 Z" fill="#c9a24b"/>
         <path d="M48 46 L48 200" stroke="#8f6f2c" stroke-width="1.5"/>
         <rect x="30" y="96" width="36" height="7" rx="2" fill="#6d3f86"/>
-      </svg>${left}${right}
+      </svg>
+      <div class="agrid">${armour}</div>
+      <div class="slotsbtn" id="slotsBtn" title="Show the armour slots"><span class="slotsdot"></span>Slots</div>
     </div>`;
 
-  // jewelry (left) + Aetheria (3 slots, right-aligned; not enabled on this character — 127 fills)
-  const jewel = others.length
-    ? others.map(o=>`<div class="islot" data-item="${reg(o)}" title="${o.name}">${icon(o)}</div>`).join('')
-    : '<span style="color:var(--muted);font-size:12px">none</span>';
-  const aeth = ['red','blue','yellow'].map(cc=>`<div class="aeth ${cc}" title="Aetheria (${cc}) — not set">&nbsp;</div>`).join('');
+  // Anything the frame has no box for. Should normally be empty - it exists so a slot we have not
+  // accounted for surfaces instead of vanishing.
+  const placed = new Set(WORN_SLOTS.map(w=>w[0]));
+  const spare = worn.filter(it=>!placed.has(it.slot) && !(it.coverage||[]).length && it.slot!=='shirt' && it.slot!=='pants');
+  const aeth = ['red','blue','yellow'].map((cc,i)=>{
+    const it=(bySlot['aetheria'+(i+1)]||[])[0];
+    return it ? `<div class="aeth ${cc} set" data-item="${reg(it)}" title="Aetheria — ${it.name}">${icon(it)}</div>`
+              : `<div class="aeth ${cc}" title="Aetheria (${cc}) — not set">&nbsp;</div>`;
+  }).join('');
   $('#otherbar').innerHTML = `
     <div class="jewline">
-      <div class="jgroup"><span class="lbl">Jewelry</span><div class="jrow">${jewel}</div></div>
+      <div class="jgroup">${spare.length
+        ? `<span class="lbl">Other</span><div class="jrow">${spare.map(o=>`<div class="islot" data-item="${reg(o)}" title="${o.name}">${icon(o)}</div>`).join('')}</div>`
+        : ''}</div>
       <div class="agroup"><span class="lbl">Aetheria</span><div class="arow">${aeth}</div></div>
     </div>`;
 

@@ -90,6 +90,26 @@ DISCRETE_MASKS = [
     ("trinket",   0x04000000),
 ]
 
+# --- the clothing layer, which the client gives its own two boxes ------------------------------
+#
+# 131. AC's inventory panel shows a shirt and a pants slot beside the paperdoll, separate from the
+# armour it goes under. There is no EquipMask bit for "shirt" — the distinction is which LAYER an
+# item occupies, and it is readable from two things the shard already stores:
+#
+#   * armour sets the *Armor* bits (0x7E00); the clothing layer sets only the *Wear* bits (0x1FF)
+#   * ItemType says whether the piece is Armor or Clothing
+#
+# Measured on Black Breath: Poet's Shirt is type 4 (Clothing) at 0x0000001E — Chest|Abdomen|
+# UpperArm|LowerArmWear, no armour bits. The Pathwarden Robe is ALSO type 4, but at 0x00007F01 it
+# sets the whole armour block, so the ItemType test alone would wrongly file the robe as a shirt.
+# Both conditions are needed.
+ITEM_TYPE_CLOTHING = 4
+
+ARMOR_BITS = 0x00007E00
+
+CLOTHING_UPPER = 0x00000002 | 0x00000008 | 0x00000010   # ChestWear | UpperArmWear | LowerArmWear
+CLOTHING_LOWER = 0x00000040 | 0x00000080                # UpperLegWear | LowerLegWear
+
 # The coarse tile the eight-slot doll used before coverage existed. Kept so `slot` keeps meaning
 # what it meant — the front-end still uses it as a fallback — with coverage carrying the detail.
 _COARSE = {
@@ -132,12 +152,15 @@ def coverage(wielded_location: int | None) -> list[str]:
     return [key for key, mask in COVERAGE_MASKS if wielded_location & mask]
 
 
-def slot_name(wielded_location: int | None) -> str:
+def slot_name(wielded_location: int | None, item_type: int | None = None) -> str:
     """The single coarse slot, for the eight-tile doll and for non-armour.
 
     Discrete slots win over coverage: a cloak sets Cloak and nothing else, but a robe sets head
     AND chest AND legs, so asking "is this a cloak/weapon/ring" first avoids a garment landing in
     a jewellery slot on a stray bit.
+
+    `item_type` is optional only so existing callers and tests keep working; without it a shirt
+    reports as `chest` exactly as it did before, which is a coarser answer rather than a wrong one.
     """
     if not wielded_location:
         return "other"
@@ -145,6 +168,14 @@ def slot_name(wielded_location: int | None) -> str:
     for key, mask in DISCRETE_MASKS:
         if wielded_location & mask:
             return key
+
+    # The clothing layer, before coverage collapses it into a body area — see ARMOR_BITS above.
+    if item_type == ITEM_TYPE_CLOTHING and not wielded_location & ARMOR_BITS:
+        if wielded_location & CLOTHING_UPPER:
+            return "shirt"
+
+        if wielded_location & CLOTHING_LOWER:
+            return "pants"
 
     areas = coverage(wielded_location)
 

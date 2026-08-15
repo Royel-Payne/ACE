@@ -51,14 +51,24 @@ def _icon_version() -> str:
     a week. That is exactly what happened when the drawn placeholders were replaced with the real
     dat icons — the deploy was correct and the page still showed the old tiles.
 
-    So the URL carries the version instead of the header being weakened. The stamp is the mtime
-    of data/icon-map.json, which the exporter rewrites on every run, so it moves when and only
-    when the icons might have.
+    So the URL carries the version instead of the header being weakened.
+
+    THE STAMP IS THE NEWEST OF TWO FILES, and the second one was added after this went wrong a
+    second time (131). It used to read icon-map.json alone — but icon-map.json is written by the
+    exporter's TABLES pass, not its ICONS pass. An icons-only run therefore added ~12,000 files and
+    moved nothing, so any browser that had already cached a 404 for a previously-missing icon went
+    on showing the fallback tile. `icon-set.json` is written by the icons pass for exactly this
+    reason, so either kind of export now moves the stamp.
     """
-    try:
-        return str(int((DATA_DIR / "icon-map.json").stat().st_mtime))
-    except OSError:
-        return "0"
+    newest = 0
+
+    for name in ("icon-map.json", "icon-set.json"):
+        try:
+            newest = max(newest, (DATA_DIR / name).stat().st_mtime)
+        except OSError:
+            continue
+
+    return str(int(newest))
 
 
 def icon_url(path: str) -> str:
@@ -702,7 +712,9 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
             equipped.append(
                 {
                     **item,
-                    "slot": items.slot_name(wielded),
+                    # ItemType goes in so the clothing layer (shirt/pants) separates from the
+                    # armour it sits under - 131. Without it a shirt just reports `chest`.
+                    "slot": items.slot_name(wielded, i.get(INT_ITEM_TYPE)),
                     # 127 #2: EVERY area this covers, not just one. A robe reports eight.
                     "coverage": items.coverage(wielded),
                     "wieldedLocation": wielded,

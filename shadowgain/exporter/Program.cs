@@ -559,12 +559,54 @@ public static class Program
 
         Console.WriteLine($"    item icons        {itemCount:N0} written, {failed:N0} skipped");
 
+        // A format we cannot decode is reported BY NAME rather than folded into the skip count,
+        // so a systematic gap (every DXT icon, say) is distinguishable from scattered bad records.
+        if (TextureDecoder.Unsupported.Count > 0)
+            Console.WriteLine("    unsupported       "
+                              + string.Join(", ", TextureDecoder.Unsupported));
+
+        // --- icon-set.json: the CACHE STAMP for the icon export ------------------------------
+        //
+        // The API versions every icon URL with `?v=<mtime>` so Caddy can serve them immutable
+        // (see payload._icon_version). That stamp was taken from icon-map.json - which is written
+        // by the TABLES export, not this one. So an icons-only run added thousands of files and
+        // moved nothing: browsers that had already cached a 404 for a previously-missing icon kept
+        // showing the fallback tile. Exactly the staleness the version stamp exists to prevent,
+        // reintroduced through the back door.
+        //
+        // Writing a manifest here gives the icon export its own stamp. The contents are useful on
+        // their own, but the mtime is the point.
+        var dataDir = Path.Combine(outDir, "data");
+        Directory.CreateDirectory(dataDir);
+
+        Write(Path.Combine(dataDir, "icon-set.json"), new
+        {
+            items = itemCount,
+            skipped = failed,
+            source = itemIdFile != null ? "shard id list" : $"all {IconSize}x{IconSize} in range",
+            unsupported = TextureDecoder.Unsupported.Select(u => u.ToString()).ToArray(),
+        });
+
+        Console.WriteLine("    icon-set.json     written (cache stamp for the icon export)");
+
         // --- placeholder ---------------------------------------------------------------------
         // Contract 2 names /assets/icons/placeholder.png as the fallback for anything missing.
-        // Generating it here rather than committing a binary means the fallback can never drift
-        // out of size with the real icons.
-        WritePlaceholder(Path.Combine(assets, "placeholder.png"));
-        Console.WriteLine("    placeholder.png   written");
+        //
+        // WINDOWS ONLY, and deliberately left that way. It is drawn with System.Drawing, which is
+        // the dependency the rest of this file has just been freed from - but unlike the icons it
+        // is a single static design asset that has not changed since it was written and is already
+        // deployed. Porting the dashed rounded outline to the hand-rolled PNG writer would be real
+        // rasterisation work in exchange for nothing. Skipping it lets the icon sweep - the part
+        // that genuinely needs to be repeatable - run on the droplet.
+        if (OperatingSystem.IsWindows())
+        {
+            WritePlaceholder(Path.Combine(assets, "placeholder.png"));
+            Console.WriteLine("    placeholder.png   written");
+        }
+        else
+        {
+            Console.WriteLine("    placeholder.png   skipped (needs Windows; already deployed)");
+        }
     }
 
     /// <summary>
@@ -855,9 +897,25 @@ public static class Program
             if (tex == null || tex.Length == 0)
                 return false;
 
-            using var bmp = tex.GetBitmap();
+            // Decoded with our own TextureDecoder rather than Texture.GetBitmap(), which goes via
+            // System.Drawing -> GDI+ and therefore only runs on Windows. That is precisely what
+            // made the icon set a Windows-only SNAPSHOT: it had to be exported on Chris's machine
+            // and rsynced up, so anything looted afterwards had no icon until someone remembered
+            // to re-run it. Hyssop - created the same day it was reported missing - is the case
+            // that exposed it. Decoding here runs on the droplet, so the sweep is repeatable in
+            // place and the icon set can simply cover the whole range once.
+            var decoded = TextureDecoder.Decode(portal, tex, null);
 
-            bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+            if (decoded == null)
+                return false;
+
+            // Decode hands back the dat's own bytes untouched for formats that are already
+            // complete image files, so honour the extension it actually produced.
+            var target = decoded.MimeType == "image/jpeg"
+                ? Path.ChangeExtension(path, ".jpg")
+                : path;
+
+            File.WriteAllBytes(target, decoded.Bytes);
 
             return true;
         }
