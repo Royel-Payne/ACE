@@ -1,31 +1,33 @@
 /*
- * Shadowgain 130 Stage 1 — assemble a character's body from the dat into glTF primitives.
+ * Shadowgain 130 — assemble a character from the dat into glTF primitives.
  *
- * WHAT A CHARACTER ACTUALLY IS, in dat terms:
+ * WHAT A CHARACTER IS, in dat terms:
  *
  *   Setup (0x02......)      a SetupModel: an ordered list of PART ids, each a GfxObj, plus a
  *                           PlacementFrame per part giving its position and orientation.
  *   GfxObj (0x01......)     the geometry: a vertex array (position, normal, UVs) and polygons
  *                           that index into it. Each polygon names a SURFACE by index into the
  *                           GfxObj's own Surfaces list.
- *   Surface (0x08......)    either a solid colour or a texture reference + palette.
+ *   Surface (0x08......)    a texture reference + palette, or a solid colour.
+ *   SurfaceTexture(0x05...) a LIST of Texture ids at descending detail - NOT a texture.
  *   Texture (0x06......)    the image. Palettised ones resolve through a Palette (0x04......).
  *
- * So building a body is: walk the parts, transform each by its placement frame, convert polygons
- * to triangles, and resolve each polygon's surface to a texture.
+ * ...plus an Appearance (see Appearance.cs) accumulated from the body's ObjDesc, the character's
+ * chosen palettes and every worn item, which can swap a part's geometry, swap its textures, or
+ * recolour ranges of the palette.
  *
- * TWO THINGS THAT ARE EASY TO GET WRONG AND ARE VISIBLE IMMEDIATELY:
+ * THREE THINGS THAT WERE WRONG FIRST TIME AND ARE INVISIBLE IN CODE:
  *
- *   1. UV INDICES ARE PER-POLYGON, NOT PER-VERTEX. A vertex carries a LIST of UVs and each
- *      polygon says which entry to use for each of its corners. A vertex shared between two
- *      polygons with different UV indices must be DUPLICATED, or the texture tears. This is why
- *      vertices are emitted per-corner below rather than reused.
- *   2. Polygons are convex fans, not triangles - NumPts is commonly 3 or 4 but not always.
+ *   1. The character's `Setup` DID is NOT the body - that comes from CharGen by heritage/gender.
+ *   2. `Surface.OrigTextureId` names a SURFACETEXTURE, not a Texture. Two hops.
+ *   3. UV INDICES ARE PER-POLYGON, NOT PER-VERTEX. A vertex carries a LIST of UVs and each
+ *      polygon says which entry each of its corners uses, so a vertex shared between polygons
+ *      with different UV indices must be DUPLICATED or the texture tears. Hence per-corner
+ *      emission below.
  */
 
 using System.Numerics;
 using ACE.DatLoader;
-using ACE.DatLoader.Entity;
 using ACE.DatLoader.FileTypes;
 using ACE.Entity.Enum;
 
@@ -33,17 +35,10 @@ namespace ACE.Shadowgain.DatExport;
 
 public static class ModelBuilder
 {
-    /// <summary>
-    /// Build the primitives for one SetupModel.
-    ///
-    /// `paletteOverrides` maps a source palette id to the replacement the character has chosen -
-    /// skin, hair and eyes. Empty means "use whatever the surface says", which is the default
-    /// appearance for that body.
-    /// </summary>
-    public static List<GltfPrimitive> BuildSetup(
+    public static List<GltfPrimitive> Build(
         PortalDatDatabase portal,
         uint setupId,
-        IReadOnlyDictionary<uint, uint> paletteOverrides,
+        Appearance appearance,
         Action<string> log)
     {
         var primitives = new List<GltfPrimitive>();
@@ -56,14 +51,19 @@ public static class ModelBuilder
             return primitives;
         }
 
-        log($"    setup 0x{setupId:X8}: {setup.Parts.Count} parts");
+        // Composed once: every palettised texture on the body indexes the same colour table.
+        var palette = appearance.HasPaletteWork ? appearance.ComposePalette(portal) : null;
+
+        log($"    setup 0x{setupId:X8}: {setup.Parts.Count} parts"
+            + (palette != null ? $", palette {palette.Count} colours" : ", no palette overrides")
+            + (appearance.PartSwaps.Count > 0 ? $", {appearance.PartSwaps.Count} part swaps" : ""));
 
         for (var i = 0; i < setup.Parts.Count; i++)
         {
-            var partId = setup.Parts[i];
+            // A worn item can REPLACE a part's geometry outright - that is how a robe becomes the
+            // legs rather than being drawn over them.
+            var partId = appearance.PartSwaps.TryGetValue(i, out var swap) ? swap : setup.Parts[i];
 
-            // The placement frame positions and orients this part on the body. Without it every
-            // part renders at the origin and the character is a heap.
             var transform = Matrix4x4.Identity;
 
             if (setup.PlacementFrames.TryGetValue(0, out var placement)
@@ -79,18 +79,19 @@ public static class ModelBuilder
             if (scale != Vector3.One && scale != Vector3.Zero)
                 transform = Matrix4x4.CreateScale(scale) * transform;
 
-            AddGfxObj(portal, partId, transform, paletteOverrides, primitives, log, $"part{i}");
+            AddGfxObj(portal, partId, transform, appearance, palette, i, primitives, log, $"part{i}");
         }
 
         return primitives;
     }
 
-    /// <summary>Append one GfxObj's geometry, split into one primitive per surface.</summary>
     public static void AddGfxObj(
         PortalDatDatabase portal,
         uint gfxObjId,
         Matrix4x4 transform,
-        IReadOnlyDictionary<uint, uint> paletteOverrides,
+        Appearance appearance,
+        Dictionary<int, uint> palette,
+        int partIndex,
         List<GltfPrimitive> primitives,
         Action<string> log,
         string name)
@@ -100,13 +101,11 @@ public static class ModelBuilder
         if (obj == null || obj.Polygons.Count == 0)
             return;
 
-        // One primitive per surface, because a primitive carries exactly one material. Grouping
-        // by surface also means a body part with skin + a face texture emits two draws rather
-        // than one texture winning over the other.
+        // One primitive per surface: a glTF primitive carries exactly one material.
         var bySurface = new Dictionary<int, GltfPrimitive>();
 
-        // Normals are rotated but NOT translated, and must not inherit scale skew - the inverse
-        // transpose is the correct matrix for that and matters as soon as DefaultScale is not 1.
+        // Normals rotate but do not translate, and must not inherit scale skew - the inverse
+        // transpose is the right matrix, and it matters the moment DefaultScale is not 1.
         Matrix4x4.Invert(transform, out var inverted);
         var normalMatrix = Matrix4x4.Transpose(inverted);
 
@@ -124,7 +123,10 @@ public static class ModelBuilder
                 prim = new GltfPrimitive { Name = $"{name}.s{surfaceIdx}" };
 
                 if (surfaceIdx >= 0 && surfaceIdx < obj.Surfaces.Count)
-                    prim.TexturePng = SurfacePng(portal, obj.Surfaces[surfaceIdx], paletteOverrides, log);
+                {
+                    prim.TexturePng = SurfacePng(portal, obj.Surfaces[surfaceIdx],
+                                                 appearance, palette, partIndex, log);
+                }
 
                 bySurface[surfaceIdx] = prim;
                 primitives.Add(prim);
@@ -139,23 +141,21 @@ public static class ModelBuilder
                 prim.Positions.Add(Vector3.Transform(vert.Origin, transform));
                 prim.Normals.Add(Vector3.Normalize(Vector3.TransformNormal(vert.Normal, normalMatrix)));
 
-                // Per-POLYGON uv index into this vertex's own UV list - see the header note.
                 var uv = new Vector2(0, 0);
 
                 if (vert.UVs != null && vert.UVs.Count > 0)
                 {
                     var uvIdx = (v < poly.PosUVIndices.Count) ? poly.PosUVIndices[v] : 0;
 
-                    if (uvIdx < vert.UVs.Count)
-                        uv = new Vector2(vert.UVs[uvIdx].U, vert.UVs[uvIdx].V);
-                    else
-                        uv = new Vector2(vert.UVs[0].U, vert.UVs[0].V);
+                    uv = uvIdx < vert.UVs.Count
+                        ? new Vector2(vert.UVs[uvIdx].U, vert.UVs[uvIdx].V)
+                        : new Vector2(vert.UVs[0].U, vert.UVs[0].V);
                 }
 
                 prim.UVs.Add(uv);
             }
 
-            // Convex fan -> triangles. NumPts is usually 3 or 4 but the format does not promise it.
+            // Convex fan -> triangles. NumPts is usually 3 or 4, but the format does not promise it.
             for (var t = 1; t < poly.Vertices.Count - 1; t++)
             {
                 prim.Indices.Add(baseIndex);
@@ -165,89 +165,139 @@ public static class ModelBuilder
         }
     }
 
-    /// <summary>
-    /// Resolve a Surface to PNG bytes, applying the character's palette choice if it replaces the
-    /// one the surface names.
-    /// </summary>
     private static byte[] SurfacePng(
         PortalDatDatabase portal,
         uint surfaceId,
-        IReadOnlyDictionary<uint, uint> paletteOverrides,
+        Appearance appearance,
+        Dictionary<int, uint> palette,
+        int partIndex,
         Action<string> log)
     {
-        var _step = "read surface";
-
         try
         {
             var surface = portal.ReadFromDat<Surface>(surfaceId);
-            _step = $"surface ok type={surface?.Type} tex=0x{surface?.OrigTextureId:X8} pal=0x{surface?.OrigPaletteId:X8}";
 
-            if (surface == null)
+            if (surface == null || surface.OrigTextureId == 0)
                 return null;
 
-            // A solid-colour surface has no texture at all; leave the material untextured rather
-            // than inventing a 1x1 image.
-            if (surface.OrigTextureId == 0)
-                return null;
+            // TWO HOPS. Surface.OrigTextureId names a SURFACETEXTURE (0x05......), which is a
+            // LIST of Texture ids at descending detail. Reading it as a Texture throws
+            // EndOfStream on every body surface and leaves the model silently untextured.
+            var surfaceTextureId = appearance.SwapTexture(partIndex, surface.OrigTextureId);
 
-            // TWO HOPS, NOT ONE. `Surface.OrigTextureId` names a SURFACETEXTURE (0x05......),
-            // which is a LIST of Texture (0x06......) ids at descending detail - not a texture
-            // itself. Reading it directly as a Texture misparses and throws EndOfStream, which is
-            // exactly what it did: every body surface failed and the model came out untextured.
-            _step = $"read surfacetexture 0x{surface.OrigTextureId:X8}";
-            var surfaceTexture = portal.ReadFromDat<SurfaceTexture>(surface.OrigTextureId);
+            var surfaceTexture = portal.ReadFromDat<SurfaceTexture>(surfaceTextureId);
 
             if (surfaceTexture == null || surfaceTexture.Textures.Count == 0)
                 return null;
 
-            // Last entry is the highest detail in this list.
-            var textureId = surfaceTexture.Textures[^1];
-
-            _step = $"read texture 0x{textureId:X8}";
-            var texture = portal.ReadFromDat<Texture>(textureId);
-            _step = $"texture {texture?.Width}x{texture?.Height} fmt={texture?.Format} len={texture?.Length}";
+            var texture = portal.ReadFromDat<Texture>(surfaceTexture.Textures[^1]);
 
             if (texture == null || texture.Length == 0)
                 return null;
 
-            // The character's own palettes replace the surface's default where they match. This
-            // is what makes a body the player's skin tone rather than the setup's stock colour.
-            if (surface.OrigPaletteId != 0
-                && paletteOverrides.TryGetValue(surface.OrigPaletteId, out var replacement))
+            // DECODE PALETTISED TEXTURES OURSELVES. DO NOT USE Texture.CustomPaletteColors.
+            //
+            // ACE's own P8/INDEX16 path does this:
+            //
+            //     Palette pal = DatManager.PortalDat.ReadFromDat<Palette>(DefaultPaletteId);
+            //     foreach (entry in CustomPaletteColors) pal.Colors[entry.Key] = entry.Value;
+            //
+            // `ReadFromDat` returns the CACHED Palette instance, and that loop MUTATES it. So
+            // applying a custom palette to one texture permanently corrupts the shared palette
+            // for every later texture that references it. Clearing CustomPaletteColors afterwards
+            // does not help - the damage is to the cached Palette, not to the texture.
+            //
+            // Symptom, which is why this is worth the extra thirty lines: the first part comes
+            // out roughly right and everything after it goes black, so it reads as a lighting or
+            // normals problem rather than a palette one. Decoding against a LOCAL copy is both a
+            // fix and a guarantee that this exporter never leaves state behind in the dat cache.
+            var png = DecodePalettised(portal, texture, palette);
+
+            if (png != null)
+                return png;
+
+            using (var bmp = texture.GetBitmap())
+            using (var ms = new MemoryStream())
             {
-                ApplyPalette(portal, texture, replacement);
+                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                return ms.ToArray();
             }
-
-            _step += " | GetBitmap";
-            using var bmp = texture.GetBitmap();
-            using var ms = new MemoryStream();
-
-            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-
-            return ms.ToArray();
         }
         catch (Exception ex)
         {
-            log($"    !! surface 0x{surfaceId:X8} [{_step}]: {ex.GetType().Name}: {ex.Message}");
+            log($"    !! surface 0x{surfaceId:X8}: {ex.GetType().Name}: {ex.Message}");
             return null;
         }
     }
 
     /// <summary>
-    /// Swap a texture's colours for another palette's.
-    ///
-    /// `Texture.CustomPaletteColors` already exists in ACE.DatLoader for exactly this - it is
-    /// consulted by GetImageColorArray before the default palette - so the whole job is filling
-    /// it with the replacement palette's colours.
+    /// P8 / INDEX16 -> PNG, against a LOCAL palette copy with the character's overrides applied.
+    /// Returns null for any format that is not palettised, so the caller falls back to GetBitmap.
     /// </summary>
-    private static void ApplyPalette(PortalDatDatabase portal, Texture texture, uint paletteId)
+    private static byte[] DecodePalettised(
+        PortalDatDatabase portal, Texture texture, Dictionary<int, uint> overrides)
     {
-        var palette = portal.ReadFromDat<Palette>(paletteId);
+        if (!texture.DefaultPaletteId.HasValue)
+            return null;
 
-        if (palette?.Colors == null)
-            return;
+        var isP8 = texture.Format == SurfacePixelFormat.PFID_P8;
+        var isIndex16 = texture.Format == SurfacePixelFormat.PFID_INDEX16;
 
-        for (var i = 0; i < palette.Colors.Count; i++)
-            texture.CustomPaletteColors[i] = palette.Colors[i];
+        if (!isP8 && !isIndex16)
+            return null;
+
+        var source = portal.ReadFromDat<Palette>(texture.DefaultPaletteId.Value);
+
+        if (System.Environment.GetEnvironmentVariable("SG_PAL_DEBUG") == "1" && source != null)
+        {
+            var idxs = new List<int>();
+            using (var r = new BinaryReader(new MemoryStream(texture.SourceData)))
+                for (var k = 0; k < texture.Width * texture.Height; k++)
+                    idxs.Add(isP8 ? r.ReadByte() : r.ReadInt16());
+
+            Console.WriteLine($"      PAL tex {texture.Width}x{texture.Height} fmt={texture.Format} defPal=0x{texture.DefaultPaletteId:X8} palColors={source.Colors.Count} idxRange={idxs.Min()}..{idxs.Max()}");
+        }
+
+        if (source?.Colors == null || source.Colors.Count == 0)
+            return null;
+
+        // The copy is the whole point - see the note at the call site.
+        var colors = new List<uint>(source.Colors);
+
+        if (overrides != null)
+        {
+            foreach (var (index, colour) in overrides)
+            {
+                if (index >= 0 && index < colors.Count)
+                    colors[index] = colour;
+            }
+        }
+
+        using var bmp = new System.Drawing.Bitmap(texture.Width, texture.Height);
+        using var reader = new BinaryReader(new MemoryStream(texture.SourceData));
+
+        for (var y = 0; y < texture.Height; y++)
+        {
+            for (var x = 0; x < texture.Width; x++)
+            {
+                int index = isP8 ? reader.ReadByte() : reader.ReadInt16();
+
+                if (index < 0 || index >= colors.Count)
+                    index = 0;
+
+                var argb = colors[index];
+
+                bmp.SetPixel(x, y, System.Drawing.Color.FromArgb(
+                    (int)((argb & 0xFF000000) >> 24),
+                    (int)((argb & 0x00FF0000) >> 16),
+                    (int)((argb & 0x0000FF00) >> 8),
+                    (int)(argb & 0x000000FF)));
+            }
+        }
+
+        using var ms = new MemoryStream();
+        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+
+        return ms.ToArray();
     }
 }

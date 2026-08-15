@@ -224,8 +224,7 @@ public static class Program
         // --model: Shadowgain 130 Stage 1. Assemble one character's body into a .glb.
         if (modelSetup != null || heritage != null)
         {
-            BuildModel(portal, outDir, modelSetup, modelHead, skinPalette, hairPalette, eyesPalette,
-                       heritage, gender);
+            BuildModel(portal, outDir, heritage, gender, skinPalette, hairPalette, eyesPalette, modelHead);
             return 0;
         }
 
@@ -621,84 +620,101 @@ public static class Program
     /// palette to skin is precisely the kind of mistake that looks plausible in code and
     /// grotesque on screen.
     /// </summary>
-    private static void BuildModel(PortalDatDatabase portal, string outDir, string setup,
-        string head, string skin, string hair, string eyes, string heritage, string gender)
+    /// <summary>
+    /// 130: assemble one character and write a .glb.
+    ///
+    /// The appearance is accumulated in the order the game builds it - the body's own ObjDesc
+    /// first, then the character's chosen skin/hair/eye palettes over it. Stage 2 adds worn items
+    /// to the end of that same list; nothing else about this changes.
+    /// </summary>
+    private static void BuildModel(PortalDatDatabase portal, string outDir,
+        string heritage, string gender, string skin, string hair, string eyes, string head)
     {
         Directory.CreateDirectory(outDir);
 
-        var setupId = ParseId(setup);
+        var hg = ParseId(heritage);
+        var sx = (int)ParseId(gender ?? "1");
 
-        // THE BODY SETUP COMES FROM CHARGEN, NOT FROM THE CHARACTER'S Setup DID.
-        //
-        // Black Breath's `PropertyDataId.Setup` is 0x0200106D, which sounded authoritative and is
-        // not the body: it unpacks to THREE parts. A player body is ~20 (torso, head, upper and
-        // lower arms, hands, upper and lower legs, feet). The real one is keyed by heritage and
-        // gender in CharGen, alongside the base and skin palette SETS that go with it - which is
-        // also where the palettes a character picks are meant to be resolved against.
-        if (heritage != null)
+        if (!portal.CharGen.HeritageGroups.TryGetValue(hg, out var group)
+            || !group.Genders.TryGetValue(sx, out var sex))
         {
-            var hg = (uint)ParseId(heritage);
-            var sx = (int)ParseId(gender ?? "1");
-
-            if (portal.CharGen.HeritageGroups.TryGetValue(hg, out var group)
-                && group.Genders.TryGetValue(sx, out var sex))
-            {
-                Console.WriteLine($"    chargen: {group.Name} / {sex.Name}");
-                Console.WriteLine($"      setup 0x{sex.SetupID:X8}  basePalette 0x{sex.BasePalette:X8}  skinPalSet 0x{sex.SkinPalSet:X8}");
-                setupId = sex.SetupID;
-            }
-            else
-            {
-                Console.Error.WriteLine($"!! no chargen entry for heritage {hg} gender {sx}");
-                return;
-            }
+            Console.Error.WriteLine($"!! no chargen entry for heritage {hg} gender {sx}");
+            return;
         }
 
-        // Stage 1 applies the character's palettes to whatever the body's surfaces reference. The
-        // real mapping (which base palette each override replaces) lives in the ClothingTable
-        // sub-palette effects and lands in Stage 2; here the overrides are offered for every
-        // palette the surfaces name, which is enough to prove the pipeline end to end.
-        var overrides = new Dictionary<uint, uint>();
+        Console.WriteLine($"==> {group.Name} / {sex.Name}");
+        Console.WriteLine($"    setup 0x{sex.SetupID:X8}  basePalette 0x{sex.BasePalette:X8}  skinPalSet 0x{sex.SkinPalSet:X8}");
 
-        void Offer(string value)
-        {
-            if (value == null) return;
-            var id = ParseId(value);
-            if (id != 0) overrides[id] = id;   // placeholder identity; replaced per-surface below
-        }
-
-        Offer(skin); Offer(hair); Offer(eyes);
-
-        Console.WriteLine($"==> building model from setup {setup}");
-
-        // One-off diagnostics: are the surface files even present, and how big?
         if (System.Environment.GetEnvironmentVariable("SG_MODEL_DEBUG") == "1")
         {
-            var sm = portal.ReadFromDat<SetupModel>(setupId);
-            Console.WriteLine($"    DEBUG parts={sm.Parts.Count} placementFrames={sm.PlacementFrames.Count} scales={sm.DefaultScale.Count}");
+            var od = sex.BaseObjDesc;
+            Console.WriteLine($"    DEBUG BaseObjDesc: paletteID=0x{od.PaletteID:X8} subPalettes={od.SubPalettes.Count} texChanges={od.TextureChanges.Count} partChanges={od.AnimPartChanges.Count}");
+            foreach (var sp in od.SubPalettes)
+                Console.WriteLine($"      DEBUG sub 0x{sp.SubID:X8} offset={sp.Offset} numColors={sp.NumColors}");
+            foreach (var pc in od.AnimPartChanges)
+                Console.WriteLine($"      DEBUG part[{pc.PartIndex}] -> 0x{pc.PartID:X8}");
+            var ps = portal.ReadFromDat<ACE.DatLoader.FileTypes.PaletteSet>(sex.SkinPalSet);
+            Console.WriteLine($"      DEBUG skinPalSet has {ps?.PaletteList.Count} palettes: " +
+                string.Join(", ", (ps?.PaletteList ?? new List<uint>()).Take(8).Select(x => $"0x{x:X8}")));
+            Console.WriteLine($"      DEBUG hairColors: " + string.Join(", ", sex.HairColorList.Take(8).Select(x => $"0x{x:X8}")));
+            Console.WriteLine($"      DEBUG eyeColors: " + string.Join(", ", sex.EyeColorList.Take(8).Select(x => $"0x{x:X8}")));
+        }
 
-            foreach (var pid in sm.Parts.Take(4))
+        if (System.Environment.GetEnvironmentVariable("SG_PAL_DUMP") == "1")
+        {
+            foreach (var (label, pid) in new[] { ("base", sex.BasePalette), ("skin", ParseId(skin)), ("hair", ParseId(hair)), ("eyes", ParseId(eyes)) })
             {
-                var g = portal.ReadFromDat<GfxObj>(pid);
-                Console.WriteLine($"    DEBUG part 0x{pid:X8}: polys={g?.Polygons.Count} verts={g?.VertexArray.Vertices.Count} surfaces={g?.Surfaces.Count}");
+                if (pid == 0) continue;
+                var pal = portal.ReadFromDat<ACE.DatLoader.FileTypes.Palette>(pid);
+                var cols = pal?.Colors ?? new List<uint>();
+                // Where are this palette's NON-BLACK colours? A character palette is a full
+                // 2048-entry table that is meaningful only over the slice it applies to.
+                var first = -1; var last = -1;
+                for (var k = 0; k < cols.Count; k++)
+                    if ((cols[k] & 0x00FFFFFF) != 0) { if (first < 0) first = k; last = k; }
 
-                foreach (var sid in (g?.Surfaces ?? new List<uint>()).Take(3))
-                {
-                    var present = portal.AllFiles.ContainsKey(sid);
-                    var size = present ? portal.AllFiles[sid].FileSize : 0;
-                    Console.WriteLine($"      surface 0x{sid:X8} present={present} size={size}");
-                }
+                Console.WriteLine($"    DUMP {label} 0x{pid:X8}: {cols.Count} colours, non-black [{first}..{last}], "
+                    + $"sample@{Math.Max(first,0)}: " + string.Join(" ", cols.Skip(Math.Max(first,0)).Take(6).Select(c => $"{c:X8}")));
             }
         }
 
-        var prims = ModelBuilder.BuildSetup(portal, setupId, overrides, Console.WriteLine);
+        var appearance = new Appearance();
 
+        // The body's own description: its base palette, and any part/texture it differs from the
+        // raw setup by.
+        appearance.SetBasePalette(sex.BasePalette);
+        appearance.Apply(sex.BaseObjDesc);
+
+        // The character's choices, as SUB-PALETTE RANGES over that base. Ranges rather than whole
+        // palettes because a body texture is palettised: skin, hair and eyes each own a slice of
+        // the same colour table, which is why swapping the entire palette turns a character into
+        // one flat colour.
+        //
+        // The offsets below are the retail character-generation ranges. They are stated here
+        // rather than derived because the derivation lives in the client's chargen code, not in
+        // the dat - and being explicit means a wrong one is a visible, fixable number.
+        // Offsets and lengths ported verbatim from ACE's own WorldObject.AddBaseModelData, which
+        // is the server's implementation of this exact calculation - skin 0x00/0x18, hair
+        // 0x18/0x08, eyes 0x20/0x08. Not guessed.
+        AddRange(appearance, skin, 0x00, 0x18, "skin");
+        AddRange(appearance, hair, 0x18, 0x08, "hair");
+        AddRange(appearance, eyes, 0x20, 0x08, "eyes");
+
+        // THE HEAD IS PART 0x10, NOT A LOOSE OBJECT. AddBaseModelData adds it as an AnimPartChange
+        // at index 0x10; attaching it separately at the origin left a head-shaped spike under the
+        // model's feet and stretched its bounding box from 1.82 to 2.42.
         if (head != null)
         {
-            Console.WriteLine($"    head object {head}");
-            ModelBuilder.AddGfxObj(portal, ParseId(head), System.Numerics.Matrix4x4.Identity,
-                overrides, prims, Console.WriteLine, "head");
+            var headId = ParseId(head);
+
+            if (headId != 0)
+            {
+                appearance.PartSwaps[0x10] = headId;
+                Console.WriteLine($"    head    0x{headId:X8} as part 0x10");
+            }
         }
+
+        var prims = ModelBuilder.Build(portal, sex.SetupID, appearance, Console.WriteLine);
 
         var tris = prims.Sum(p => p.Indices.Count) / 3;
         var verts = prims.Sum(p => p.Positions.Count);
@@ -710,6 +726,23 @@ public static class Program
         Gltf.Write(path, prims);
 
         Console.WriteLine($"    wrote {path} ({new FileInfo(path).Length:N0} bytes)");
+    }
+
+    private static void AddRange(Appearance appearance, string paletteId, uint offset, uint count, string what)
+    {
+        if (paletteId == null)
+            return;
+
+        var id = ParseId(paletteId);
+
+        if (id == 0)
+            return;
+
+        // Offset and NumColors are stored /8 in the dat and scaled back up by DatLoader's
+        // unpacker, so the values handed in here are in the SAME units it produces.
+        appearance.AddSubPalette(id, offset * 8, count * 8);
+
+        Console.WriteLine($"    {what,-5} palette 0x{id:X8} over [{offset * 8}..{offset * 8 + count * 8})");
     }
 
     private static List<uint> ReadIdFile(string path)
