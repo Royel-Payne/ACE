@@ -162,6 +162,25 @@ def test_attributes_come_out_in_the_clients_panel_order():
     assert labels == ["Strength", "Endurance", "Coordination", "Quickness", "Focus", "Self"], labels
 
 
+def test_the_public_payload_says_nothing_about_presence():
+    """Chris, 2026-08-14: presence belongs on the gated panel, not on a public page.
+
+    `/api/public/character/{name}` needs no login and is linked from the honour roll, so an
+    `online` field there publishes "is this player at their keyboard" for every character on the
+    server, by name, to anyone. Asserted against the ENDPOINT's source rather than the builder,
+    because the leak was a one-line stamp applied after build_public returned - a test of the
+    builder alone would have passed while the endpoint leaked.
+    """
+    import inspect
+
+    from . import app as sgapp
+
+    source = inspect.getsource(sgapp.public_character)
+
+    assert '"online"' not in source, "the public endpoint must not stamp presence"
+    assert "online_names()" not in source, "the public endpoint must not read the presence feed"
+
+
 def test_the_public_payload_still_hides_everything_private():
     """Re-asserted here because 126 changed payload.py, and this is the one mistake in this
     service that could not be walked back."""

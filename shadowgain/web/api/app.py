@@ -441,8 +441,17 @@ def public_character(name: str):
     data, age = cache.public_characters.get_or_build(name.lower(), build)
 
     data = dict(data)
-    data["online"] = data["name"] in online_names()
     data["asOf"] = payload.iso(time.time() - age)
+
+    # NO `online` HERE, DELIBERATELY. Chris, 2026-08-14: *"I don't remember asking for anything
+    # public.. only on the log-in gated character panel, just your own logged in state - not a
+    # server wide list."*
+    #
+    # This endpoint needs no login and is linked from the honour roll, so stamping presence on it
+    # published "is this player at their keyboard right now" for every character on the server, by
+    # name, to anyone who asked. That was never requested - it arrived because the same one-line
+    # stamp was applied to both endpoints without asking who was reading. Presence lives on the
+    # gated panel and on the account's own picker, and nowhere else.
 
     return data
 
