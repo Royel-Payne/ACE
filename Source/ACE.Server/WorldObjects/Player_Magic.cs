@@ -584,10 +584,15 @@ namespace ACE.Server.WorldObjects
                 return false;
             }
 
-            Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ManaConversion), spell.PowerMod);
+            // Shadowgain 140: an item cast draws down the ITEM's mana - see casterItem.ItemCurMana
+            // above - so there is no conversion by the player to reward.
+            if (casterItem == null || !PropertyManager.GetBool("magic_gain_requires_player_cast").Item)
+            {
+                Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ManaConversion), spell.PowerMod);
 
-            // Shadowgain 004: mana conversion exercises Self.
-            AwardAttributesForMagicSkill(Skill.ManaConversion, spell.PowerMod);
+                // Shadowgain 004: mana conversion exercises Self.
+                AwardAttributesForMagicSkill(Skill.ManaConversion, spell.PowerMod);
+            }
 
             return true;
         }
@@ -1064,6 +1069,13 @@ namespace ACE.Server.WorldObjects
 
         private void CreatePlayerSpell(WorldObject target, Spell spell, bool isWeaponSpell)
         {
+            // Shadowgain 140: only the PLAYER's own casting trains magic. `isWeaponSpell` means the
+            // spell lives on the item - an equip aura or a proc - so the action behind it is the
+            // item's, not the caster's. Ordinary casting while holding a wand is unaffected,
+            // because IsWeaponSpell(spell.Id, casterItem) tests the SPELL, not the equipment.
+            var playerCast = !isWeaponSpell
+                || !PropertyManager.GetBool("magic_gain_requires_player_cast").Item;
+
             var targetCreature = target as Creature;
             var targetPlayer = target as Player;
 
@@ -1085,7 +1097,8 @@ namespace ACE.Server.WorldObjects
                     TryCastItemEnchantment_WithRedirects(spell, target, itemCaster);
 
                     // use target resistance?
-                    Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ItemEnchantment), spell.PowerMod);
+                    if (playerCast)
+                        Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ItemEnchantment), spell.PowerMod);
 
                     // Shadowgain 004: item enchantment exercises Focus.
                     AwardAttributesForMagicSkill(Skill.ItemEnchantment, spell.PowerMod);
@@ -1141,10 +1154,11 @@ namespace ACE.Server.WorldObjects
                             {
                                 var magicDifficulty = targetCreature.GetCreatureSkill(Skill.MagicDefense).Current;
 
-                                Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), magicDifficulty, opponent: targetCreature);
+                                if (playerCast)
+                                    Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), magicDifficulty, opponent: targetCreature);
 
                                 // Shadowgain 004: target-derived difficulty -> Focus/Self by school.
-                                if (Proficiency.AllowsUsageGain(this, targetCreature))
+                                if (playerCast && Proficiency.AllowsUsageGain(this, targetCreature))
                                     AwardAttributesForMagicSkill(spell.School, magicDifficulty);
                             }
 
@@ -1157,11 +1171,15 @@ namespace ACE.Server.WorldObjects
                         }
                         else
                         {
-                            Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), spell.PowerMod);
+                            if (playerCast)
+                            {
+                                Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), spell.PowerMod);
 
-                            // Shadowgain 004: no creature target here (self/item cast), so PowerMod
-                            // is the action's own magnitude - still external to the attribute.
-                            AwardAttributesForMagicSkill(spell.School, spell.PowerMod);
+                                // Shadowgain 004: no creature target here (self/item cast), so
+                                // PowerMod is the action's own magnitude - still external to the
+                                // attribute.
+                                AwardAttributesForMagicSkill(spell.School, spell.PowerMod);
+                            }
                         }
                     }
 

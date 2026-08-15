@@ -341,11 +341,23 @@ namespace ACE.Server.WorldObjects
                     // target's Magic Defense, so a developed main is the ideal practice dummy.
                     var pvpAllowed = Proficiency.AllowsUsageGain(player, creatureTarget);
 
-                    Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty, opponent: creatureTarget);
+                    // Shadowgain 140: THE ITEM CAST THIS, NOT THE PLAYER.
+                    //
+                    // Reported by Jkurs: a cape with a War Ring proc raises War Magic just by being
+                    // worn while you swing. The proc path is TryProcItem -> TryCastSpell with
+                    // isWeaponSpell: true, which lands on sp.IsWeaponSpell here - the flag was
+                    // already carried for resist-source purposes and simply never consulted for
+                    // gain. Ordinary casting is untouched: IsWeaponSpell means the spell lives on
+                    // the ITEM, not that an item happens to be equipped.
+                    var playerCast = !IsWeaponSpell
+                        || !PropertyManager.GetBool("magic_gain_requires_player_cast").Item;
+
+                    if (playerCast)
+                        Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty, opponent: creatureTarget);
 
                     // Shadowgain 004: same external difficulty drives the mental attribute for this
                     // school - Focus for war/void/enchantment, Self for life magic.
-                    if (pvpAllowed)
+                    if (pvpAllowed && playerCast)
                         player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty);
 
                     // Shadowgain 011: aiming a bolt trains Coordination, exactly as firing a bow does.
