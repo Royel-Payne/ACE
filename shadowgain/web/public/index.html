@@ -170,6 +170,14 @@
   .aslot .tag{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:6.5px;
     letter-spacing:.1px;text-transform:uppercase;color:var(--muted);pointer-events:none;line-height:1}
 
+  /* Three sigils across the top right, sharing row 1 of the two right-hand columns. */
+  .aethcell{grid-area:1/3/2/5;display:flex;gap:6px;align-items:center}
+  .aeth{flex:1;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);background:#0b1119;
+    display:grid;place-items:center;overflow:hidden}
+  .aeth.blue{border-color:#5b7fc0} .aeth.yellow{border-color:#c9a24b} .aeth.red{border-color:#c0504d}
+  .aeth.set{background:#0b1119}
+  .aeth.set .ico{width:26px;height:26px}
+
   .slotsbtn{position:absolute;left:9px;bottom:6px;z-index:4;display:flex;align-items:center;gap:6px;
     font-size:11px;color:#cdd7e2;cursor:pointer;user-select:none;letter-spacing:.3px}
   .slotsbtn:hover{color:#fff}
@@ -264,11 +272,7 @@
   .jgroup,.agroup{display:flex;flex-direction:column;gap:6px}
   .jgroup .lbl,.agroup .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
   .agroup{align-items:flex-end}
-  .jrow{display:flex;gap:7px;flex-wrap:wrap;max-width:220px} .arow{display:flex;gap:9px}
-  .aeth{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:#0b1119;display:grid;place-items:center;font-size:8px;color:var(--muted)}
-  .aeth.set{background:#0b1119;overflow:hidden}
-  .aeth.set .ico{width:26px;height:26px}
-  .aeth.red{border-color:#c0504d} .aeth.blue{border-color:#5b7fc0} .aeth.yellow{border-color:#c9a24b}
+  .jrow{display:flex;gap:7px;flex-wrap:wrap;max-width:340px}
 
   /* --- PK vs NPK colouring --- */
   .meta .npk{color:var(--muted)}
@@ -731,7 +735,6 @@ const WORN_SLOTS = [
   ['finger',  'Ring',     '1/4', 0],
   ['shield',  'Shield',   '1/5', 0],
 
-  ['ammo',    'Ammo',     '3/1', 0],
   ['wrist',   'Bracelet', '3/3', 1],
   ['finger',  'Ring',     '3/4', 1],
   ['weapon',  'Weapon',   '3/5', 0],
@@ -739,16 +742,28 @@ const WORN_SLOTS = [
   ['cloak',   'Cloak',    '4/2', 0],
   ['shirt',   'Shirt',    '4/3', 0],
   ['pants',   'Pants',    '4/4', 0],
-  ['wand',    'Caster',   '4/5', 0],
+  ['ammo',    'Ammo',     '4/5', 0],
 ];
 
-/* The armour coverage grid behind the Slots toggle, arranged anatomically. */
+/* The held-weapon cell takes whichever of the two is actually wielded. The client has ONE box
+ * there, not one per weapon class, because a character holds one thing at a time - a wand appears
+ * in exactly the same place a sword would. Anything that somehow escapes the frame still surfaces
+ * in the spare row below rather than vanishing. */
+const WEAPON_KEYS = ['weapon','wand'];
+
+/* The armour coverage grid, behind the Slots toggle.
+ *
+ * READ IT AS THREE ANATOMICAL CHAINS, which is what the client is doing and what the first
+ * version of this got wrong: arms run down the left column and END AT THE HANDS, the torso runs
+ * down the middle and ends at the feet, and the legs run down the right. Putting hands beside the
+ * chest and the legs under the abdomen looked tidy and was simply not the game's layout.
+ */
 const ARMOUR_GRID = [
-  ['head',      'Head',   '2/1'],
-  ['upperArms', 'Up Arm', '1/2'], ['chest',   'Chest', '2/2'], ['hands', 'Hands', '3/2'],
-  ['lowerArms', 'Lo Arm', '1/3'], ['abdomen', 'Abdmn', '2/3'],
-  ['upperLegs', 'Up Leg', '2/4'],
-  ['lowerLegs', 'Lo Leg', '2/5'], ['feet',    'Feet',  '3/5'],
+                                    ['head',      'Head',   '2/1'],
+  ['upperArms', 'Up Arm', '1/2'],   ['chest',     'Chest',  '2/2'],
+  ['lowerArms', 'Lo Arm', '1/3'],   ['abdomen',   'Abdmn',  '2/3'],   ['upperLegs', 'Up Leg', '3/3'],
+  ['hands',     'Hands',  '1/4'],                                     ['lowerLegs', 'Lo Leg', '3/4'],
+                                    ['feet',      'Feet',   '2/5'],
 ];
 
 let slotsOn = false;
@@ -774,7 +789,25 @@ function renderInventory(c){
   if(burden==null){ $('#burdenWrap').style.display='none'; }
   else { $('#burdenWrap').style.display=''; $('#burdenPct').textContent=burden+'%'; $('#burdenBar').style.width=Math.min(100,burden)+'%'; }
 
-  const frame = WORN_SLOTS.map(([k,label,cell,n])=>slotBox('eslot',label,cell,(bySlot[k]||[])[n])).join('');
+  const shown=new Set();
+  const pick=(k,n)=>{ const it=(bySlot[k]||[])[n]; if(it) shown.add(it); return it; };
+
+  const frame = WORN_SLOTS.map(([k,label,cell,n])=>{
+    // The single held-weapon box: melee first, then wand/caster, matching the client.
+    const it = k==='weapon'
+      ? WEAPON_KEYS.reduce((found,key)=>found||pick(key,0), null)
+      : pick(k,n);
+    return slotBox('eslot',label,cell,it);
+  }).join('');
+
+  // Aetheria: three sigils across the TOP RIGHT, which is where the client puts them - not in a
+  // separate strip under the frame, where they were before.
+  const aeth = [0,1,2].map(i=>{
+    const it=pick('aetheria'+(i+1),0);
+    const cc=['blue','yellow','red'][i];
+    return it ? `<div class="aeth ${cc} set" data-item="${reg(it)}" title="Aetheria — ${it.name}">${icon(it)}</div>`
+              : `<div class="aeth ${cc}" title="Aetheria (${cc}) — not set"></div>`;
+  }).join('');
 
   // The armour grid takes the first item covering each area, but SKIPS the clothing layer - a
   // shirt has its own box, and letting it claim `chest` would hide the armour worn over it.
@@ -785,6 +818,7 @@ function renderInventory(c){
 
   $('#equip').innerHTML = `
     ${frame}
+    <div class="aethcell">${aeth}</div>
     <div class="doll${slotsOn?' slots':''}">
       <div id="model3d" class="model3d"></div>
       <svg class="figure" id="figure2d" viewBox="0 0 96 212" aria-label="character">
@@ -797,22 +831,14 @@ function renderInventory(c){
       <div class="slotsbtn" id="slotsBtn" title="Show the armour slots"><span class="slotsdot"></span>Slots</div>
     </div>`;
 
-  // Anything the frame has no box for. Should normally be empty - it exists so a slot we have not
-  // accounted for surfaces instead of vanishing.
-  const placed = new Set(WORN_SLOTS.map(w=>w[0]));
-  const spare = worn.filter(it=>!placed.has(it.slot) && !(it.coverage||[]).length && it.slot!=='shirt' && it.slot!=='pants');
-  const aeth = ['red','blue','yellow'].map((cc,i)=>{
-    const it=(bySlot['aetheria'+(i+1)]||[])[0];
-    return it ? `<div class="aeth ${cc} set" data-item="${reg(it)}" title="Aetheria — ${it.name}">${icon(it)}</div>`
-              : `<div class="aeth ${cc}" title="Aetheria (${cc}) — not set">&nbsp;</div>`;
-  }).join('');
-  $('#otherbar').innerHTML = `
-    <div class="jewline">
-      <div class="jgroup">${spare.length
-        ? `<span class="lbl">Other</span><div class="jrow">${spare.map(o=>`<div class="islot" data-item="${reg(o)}" title="${o.name}">${icon(o)}</div>`).join('')}</div>`
-        : ''}</div>
-      <div class="agroup"><span class="lbl">Aetheria</span><div class="arow">${aeth}</div></div>
-    </div>`;
+  // Anything worn that the frame found no box for. Should normally be empty - it exists so a slot
+  // we have not accounted for surfaces instead of disappearing.
+  const spare = worn.filter(it=>!shown.has(it) && !(it.coverage||[]).length);
+  $('#otherbar').innerHTML = spare.length
+    ? `<div class="jewline"><div class="jgroup"><span class="lbl">Other</span><div class="jrow">${
+        spare.map(o=>`<div class="islot" data-item="${reg(o)}" title="${o.name}">${icon(o)}</div>`).join('')
+      }</div></div></div>`
+    : '';
 
   const conts = inv.containers||[];
   if(curCont>=conts.length) curCont=0;
