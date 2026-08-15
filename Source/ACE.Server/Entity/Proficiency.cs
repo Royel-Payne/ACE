@@ -134,6 +134,35 @@ namespace ACE.Server.Entity
             if (IsMagicSkill(skill.Skill))
                 multiplier *= PropertyManager.GetDouble("skill_gain_magic_multiplier").Item;
 
+            // Shadowgain 148: the OFFENSIVE schools only, and deliberately not the blanket magic
+            // dial above.
+            //
+            // Chris, who started as a mage and switched to two-handed: *"the grind was real for
+            // mages ... the archetype gets punished."* Measured on LIVE 2026-08-15, same characters
+            // measuring both in the same sessions:
+            //
+            //     TwoHandedCombat   difficulty 422   6,148 xp per award
+            //     VoidMagic         difficulty 224   3,765 xp per award   (61% of 2H)
+            //     WarMagic          difficulty 237   3,084 xp per award   (50% of 2H)
+            //
+            // The cause is structural: magic difficulty is the target's MAGIC DEFENCE, which on the
+            // content players actually fight runs about 0.56x its physical defence - and because the
+            // award goes as difficulty squared below the cap, a 0.56 input gap becomes a 0.50 payout
+            // gap. The 2026-08-06 note above concluded the caster deficit was early-game only, but
+            // that was measured across the whole 5,573-creature table; players do not fight a
+            // uniform sample, they fight the high-XP tail, and there the gap persists.
+            //
+            // NOT the blanket skill_gain_magic_multiplier, because it would also lift Mana
+            // Conversion (79M xp per 6h, the single largest source on the server) and Creature
+            // Enchantment (31M) - neither of which is behind. Fixing what is not broken to reach
+            // what is would be the over-correction Chris asked to avoid.
+            //
+            // SKILL ONLY, not the attribute award, which runs its own chain. Focus is already the
+            // LEADING attribute at rank 121; boosting it here would undo 147's correction of the
+            // Focus/Self gap in the same restart that shipped it.
+            if (skill.Skill == Skill.WarMagic || skill.Skill == Skill.VoidMagic)
+                multiplier *= PropertyManager.GetDouble("war_void_gain_multiplier").Item;
+
             // Shadowgain 005: uncapping removes Specialized's old advantage - a higher rank ceiling -
             // so without this Trained and Specialized collapse into identical progression, differing
             // only by the +5/+10 InitLevel head start. Specialized instead grows FASTER per use.
