@@ -84,6 +84,15 @@ public sealed class Appearance
     public bool HasPaletteWork => _subPalettes.Count > 0;
 
     /// <summary>
+    /// The accumulated ranges, in the order they were added. Exposed for the 152 ObjDesc dump:
+    /// palette ranges are the half of appearance that never shows up as geometry, so a diff that
+    /// cannot see them would call two differently-dyed characters identical.
+    ///
+    /// These are in ABSOLUTE colour indices; the server's own ObjDesc carries eighths.
+    /// </summary>
+    public IReadOnlyList<SubPalette> SubPalettes => _subPalettes;
+
+    /// <summary>
     /// The colour OVERRIDES only - the sub-palette ranges, and nothing else.
     ///
     /// THIS DELIBERATELY DOES NOT RETURN THE WHOLE BASE PALETTE, and getting that wrong is what

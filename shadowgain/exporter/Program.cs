@@ -109,8 +109,12 @@ public static class Program
         string datDir = null, outDir = null, itemIdFile = null;
         bool doIcons = false, doTables = false, doSizes = false;
         string modelSetup = null, modelHead = null, skinPalette = null, hairPalette = null, eyesPalette = null;
-        string heritage = null, gender = null;
+        string heritage = null, gender = null, charSetup = null, objDescOut = null;
+        // Default TRUE, matching CharacterOptions2.Default, which has ShowHelm and ShowCloak set.
+        // A character who has never touched the option shows both, so absence must mean shown.
+        bool showHelm = true, showCloak = true;
         var items = new List<string>();
+        var headTextures = new List<string>();
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -129,6 +133,18 @@ public static class Program
                 case "--hair": hairPalette = Next(args, ref i); break;
                 case "--eyes": eyesPalette = Next(args, ref i); break;
                 case "--item": items.Add(Next(args, ref i)); break;
+                // The character's OWN SetupTableId. Not the same thing as the heritage/gender
+                // default from CharGen: the Barber writes this, and the server keys every clothing
+                // lookup on it (152).
+                case "--setup": charSetup = Next(args, ref i); break;
+                case "--no-helm": showHelm = false; break;
+                case "--no-cloak": showCloak = false; break;
+                // "old:new" texture swaps on the head (part 0x10) - eyes, nose, mouth and hair.
+                // AddBaseModelData applies all four this way; without them the model wears the
+                // head model's DEFAULT face instead of the one the player chose (152).
+                case "--head-tex": headTextures.Add(Next(args, ref i)); break;
+                // Emit the computed ObjDesc as JSON, for diffing against the server's `sg-objdesc`.
+                case "--objdesc-json": objDescOut = Next(args, ref i); break;
                 case "--tables": doTables = true; break;
                 default:
                     Console.Error.WriteLine($"unknown argument: {args[i]}");
@@ -226,7 +242,8 @@ public static class Program
         // --model: Shadowgain 130 Stage 1. Assemble one character's body into a .glb.
         if (modelSetup != null || heritage != null)
         {
-            BuildModel(portal, outDir, heritage, gender, skinPalette, hairPalette, eyesPalette, modelHead, items);
+            BuildModel(portal, outDir, heritage, gender, skinPalette, hairPalette, eyesPalette, modelHead, items,
+                       charSetup, showHelm, showCloak, objDescOut, headTextures);
             return 0;
         }
 
@@ -486,6 +503,59 @@ public static class Program
         File.WriteAllText(path, JsonSerializer.Serialize(value, Json));
     }
 
+    /// <summary>
+    /// Shadowgain 152: the computed appearance, in the same shape `sg-objdesc` dumps from the game
+    /// server, so `tools/objdesc-diff.py` can compare them field for field.
+    ///
+    /// UNITS ARE NORMALISED TO EIGHTHS HERE. This exporter works in absolute colour indices and the
+    /// server's ObjDesc carries eighths (the client multiplies back by 8). Comparing the two raw
+    /// reports every single palette range as a mismatch, which buries any real one.
+    /// </summary>
+    private static void WriteObjDescJson(string path, PortalDatDatabase portal, uint bodySetupId,
+                                         uint setupTableId, Appearance appearance,
+                                         bool showHelm, bool showCloak)
+    {
+        // THE RESOLVED PART LIST, not the overrides. The server's ObjDesc names EVERY part of the
+        // setup, including the ones nothing covered and the empty ones (0x010001EC appears 17 times
+        // on a human setup). This exporter stores only the changes and lets ModelBuilder fall back
+        // to the setup - the same final geometry by a different route. Emitting only the overrides
+        // made 17 identical parts look like 17 disagreements and buried the real ones.
+        var bodySetup = portal.ReadFromDat<SetupModel>(bodySetupId);
+        var resolved = new List<object>();
+
+        for (var i = 0; i < (bodySetup?.Parts.Count ?? 0); i++)
+        {
+            var id = appearance.PartSwaps.TryGetValue(i, out var swap) ? swap : bodySetup.Parts[i];
+            resolved.Add(new { index = i, animationId = id });
+        }
+
+        var dump = new
+        {
+            source = "exporter",
+            setupTableId,
+            showHelm,
+            showCloak,
+            paletteId = appearance.BasePalette,
+            subPalettes = appearance.SubPalettes
+                .Select(p => new { subPaletteId = p.SubID, offset = p.Offset / 8, length = p.NumColors / 8 })
+                .OrderBy(p => p.subPaletteId).ThenBy(p => p.offset)
+                .ToList(),
+            textureChanges = appearance.TextureSwaps
+                .SelectMany(part => part.Value.Select(swap => new
+                {
+                    partIndex = part.Key, oldTexture = swap.Key, newTexture = swap.Value,
+                }))
+                .OrderBy(t => t.partIndex).ThenBy(t => t.oldTexture)
+                .ToList(),
+            animPartChanges = resolved,
+        };
+
+        Write(path, dump);
+
+        Console.WriteLine($"    wrote {path} (objdesc: {dump.subPalettes.Count} palette ranges, "
+            + $"{dump.textureChanges.Count} texture changes, {resolved.Count} parts)");
+    }
+
     // ---- icons --------------------------------------------------------------------------
 
     private static void ExportIcons(PortalDatDatabase portal, string outDir, string itemIdFile)
@@ -673,7 +743,8 @@ public static class Program
     /// </summary>
     private static void BuildModel(PortalDatDatabase portal, string outDir,
         string heritage, string gender, string skin, string hair, string eyes, string head,
-        List<string> items)
+        List<string> items, string charSetup = null, bool showHelm = true, bool showCloak = true,
+        string objDescOut = null, List<string> headTextures = null)
     {
         Directory.CreateDirectory(outDir);
 
@@ -759,22 +830,69 @@ public static class Program
             }
         }
 
-        // WORN ITEMS, LAST AND IN PRIORITY ORDER.
+        // THE FACE. Eyes, nose, mouth and hair are TEXTURE SWAPS on the head part, not geometry and
+        // not palettes - AddBaseModelData adds all four as `oldTexture -> newTexture` on part 0x10.
         //
-        // Order is the whole of layering: a later item's part swaps overwrite an earlier one's, so
-        // ascending ClothingPriority puts the robe over the shirt rather than under it. ACE sorts
-        // clothing before armour and armour by a computed VisualClothingPriority; that computed
-        // field is a runtime value this exporter does not have, so ClothingPriority alone is the
-        // approximation - it gives the right answer for every combination checked so far, and a
-        // wrong one would be visible immediately.
-        foreach (var spec in items.Select(ParseItem).OrderBy(x => x.Priority))
+        // Omitting them does not fail or look broken; it silently draws the head model's DEFAULT
+        // face, so every character of the same heritage and head shape shares one face. Found by
+        // diffing against the server's own ObjDesc, which listed four part-16 texture changes this
+        // exporter had none of (152).
+        foreach (var spec in headTextures ?? new List<string>())
         {
-            Console.WriteLine($"    item 0x{spec.ClothingBase:X8} template={spec.PaletteTemplate} shade={spec.Shade:0.###} priority={spec.Priority}");
+            var parts = spec.Split(':');
 
-            appearance.ApplyClothing(portal, spec.ClothingBase, sex.SetupID,
-                                     spec.PaletteTemplate, spec.Shade, Console.WriteLine);
+            if (parts.Length != 2)
+            {
+                Console.Error.WriteLine($"!! --head-tex wants old:new, got '{spec}'");
+                continue;
+            }
+
+            var oldTex = ParseId(parts[0]);
+            var newTex = ParseId(parts[1]);
+
+            if (oldTex == 0 || newTex == 0)
+                continue;
+
+            if (!appearance.TextureSwaps.TryGetValue(0x10, out var map))
+                appearance.TextureSwaps[0x10] = map = new Dictionary<uint, uint>();
+
+            map[oldTex] = newTex;
+
+            Console.WriteLine($"    face    0x{oldTex:X8} -> 0x{newTex:X8} on part 0x10");
         }
 
+        // WORN ITEMS, LAST AND IN THE SERVER'S ORDER.
+        //
+        // Order is the whole of layering: a later item's part swaps overwrite an earlier one's. The
+        // sequence, the setup fallback and the helm/cloak suppression are all ported in ObjDescPort
+        // (152) rather than approximated here - see that file for why the previous approximation
+        // was wrong rather than merely rough.
+        //
+        // THE SETUP IS THE CHARACTER'S OWN, not the heritage default. CharGen's SetupID is the
+        // right body to BUILD, but the Barber can leave a character wearing a different setup id,
+        // and every clothing lookup is keyed on that one.
+        var setupTableId = charSetup != null ? ParseId(charSetup) : sex.SetupID;
+
+        if (setupTableId != sex.SetupID)
+            Console.WriteLine($"    setup 0x{setupTableId:X8} (chargen default is 0x{sex.SetupID:X8})");
+
+        if (!showHelm) Console.WriteLine("    ShowYourHelmOrHeadGear is OFF");
+        if (!showCloak) Console.WriteLine("    ShowYourCloak is OFF");
+
+        var worn = items.Select(ParseItem).ToList();
+
+        foreach (var spec in ObjDescPort.Order(portal, worn))
+            Console.WriteLine($"    item 0x{spec.ClothingBase:X8} template={spec.PaletteTemplate} "
+                + $"shade={spec.Shade:0.###} priority={spec.ClothingPriority} type={spec.ItemType} "
+                + $"wielded={spec.Wielded} topLayer={(spec.TopLayerPriority?.ToString() ?? "unset")}");
+
+        ObjDescPort.ApplyAll(portal, appearance, setupTableId, worn, showHelm, showCloak, Console.WriteLine);
+
+        if (objDescOut != null)
+            WriteObjDescJson(objDescOut, portal, sex.SetupID, setupTableId, appearance, showHelm, showCloak);
+
+        // The BODY is still built from the chargen setup: that is the mesh this character is, and
+        // the remap above only ever affects which clothing entries are looked up.
         var prims = ModelBuilder.Build(portal, sex.SetupID, appearance, Console.WriteLine);
 
         var tris = prims.Sum(p => p.Indices.Count) / 3;
@@ -792,18 +910,42 @@ public static class Program
         Console.WriteLine($"    wrote {path} ({new FileInfo(path).Length:N0} bytes)");
     }
 
-    private readonly record struct ItemSpec(uint ClothingBase, int PaletteTemplate, double Shade, int Priority);
-
-    /// <summary>"clothingBase:paletteTemplate:shade:priority", any field after the first optional.</summary>
-    private static ItemSpec ParseItem(string spec)
+    /// <summary>
+    /// "clothingBase:paletteTemplate:shade:priority:itemType:wielded:topLayer:setup" — every field
+    /// after the first is optional, so the four-field form older callers pass still parses.
+    ///
+    /// The last four exist because the server's layering consults them (152), and the API passes
+    /// all eight.
+    ///
+    /// A four-field caller supplies no slot information, and the item is then flagged as such
+    /// rather than given an invented default — see WornItem.HasSlotInfo for why a plausible
+    /// default is actively worse than an admitted gap here.
+    ///
+    /// `topLayer` is TRI-STATE: "1" true, "0" false, empty unset. Unset is not the same as false —
+    /// it sorts between the two, and collapsing it to a bool moves every unmarked item under every
+    /// explicitly-bottom one.
+    /// </summary>
+    private static WornItem ParseItem(string spec)
     {
         var parts = spec.Split(':');
 
-        return new ItemSpec(
-            ParseId(parts[0]),
-            parts.Length > 1 && parts[1].Length > 0 ? int.Parse(parts[1]) : 0,
-            parts.Length > 2 && parts[2].Length > 0 ? double.Parse(parts[2], CultureInfo.InvariantCulture) : 0,
-            parts.Length > 3 && parts[3].Length > 0 ? int.Parse(parts[3]) : 0);
+        string Field(int n) => parts.Length > n && parts[n].Length > 0 ? parts[n] : null;
+
+        // The slot fields travel together: type without a wielded location cannot be bucketed
+        // either, so both must be present before the server's layering can be applied.
+        var hasSlotInfo = Field(4) != null && Field(5) != null;
+
+        return new WornItem(
+            ClothingBase: ParseId(parts[0]),
+            PaletteTemplate: Field(1) is { } t ? int.Parse(t) : 0,
+            Shade: Field(2) is { } s ? double.Parse(s, CultureInfo.InvariantCulture) : 0,
+            ClothingPriority: Field(3) is { } p ? int.Parse(p) : 0,
+            ItemType: Field(4) is { } it ? (ACE.Entity.Enum.ItemType)int.Parse(it) : 0,
+            Wielded: Field(5) is { } w ? (ACE.Entity.Enum.EquipMask)uint.Parse(w) : 0,
+            TopLayerPriority: Field(6) is { } tl ? tl == "1" : null,
+            SetupId: Field(7) is { } su ? ParseId(su) : 0,
+            Label: $"0x{ParseId(parts[0]):X8}",
+            HasSlotInfo: hasSlotInfo);
     }
 
     private static void AddRange(Appearance appearance, string paletteId, uint offset, uint count, string what)

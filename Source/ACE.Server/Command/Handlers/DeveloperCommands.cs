@@ -147,6 +147,116 @@ namespace ACE.Server.Command.Handlers
             CommandHandlerHelper.WriteOutputInfo(session, "Dumped skill attribute formulas to the server log.", ChatMessageType.Broadcast);
         }
 
+        /// <summary>
+        /// Shadowgain 152: emit the EXACT ObjDesc the client receives, as JSON.
+        ///
+        /// This exists to be a GROUND TRUTH, not a feature. my.shadowgain.com builds its 3D model
+        /// from the dats independently, and "independently" is the whole problem: it is a second
+        /// implementation of Creature.CalculateObjDesc, so nothing proves the two agree. This dumps
+        /// what the real client is actually sent, so the web model can be diffed against it instead
+        /// of eyeballed.
+        ///
+        /// It reads the appearance and nothing else - no writes, no side effects.
+        ///
+        /// ONLINE CHARACTERS ONLY, and that is not a limitation to route around: CalculateObjDesc
+        /// walks EquippedObjects, which is only populated for a Player loaded in memory. An offline
+        /// character has no inventory to walk, which is exactly why the web sheet cannot simply ask
+        /// the server for this and must compute its own.
+        /// </summary>
+        [CommandHandler("sg-objdesc", AccessLevel.Developer, CommandHandlerFlag.None, 0,
+            "(Shadowgain) Dump a character's ObjDesc - the appearance the client is sent - as JSON.",
+            "[character name]  (defaults to yourself)")]
+        public static void HandleShadowgainObjDesc(Session session, params string[] parameters)
+        {
+            var name = parameters?.Length > 0 ? string.Join(" ", parameters) : session?.Player?.Name;
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                CommandHandlerHelper.WriteOutputInfo(session, "Usage: sg-objdesc <character name>", ChatMessageType.Broadcast);
+                return;
+            }
+
+            var player = PlayerManager.GetOnlinePlayer(name);
+
+            if (player == null)
+            {
+                CommandHandlerHelper.WriteOutputInfo(session,
+                    $"'{name}' is not online. ObjDesc can only be computed for a loaded character - an offline one has no equipped objects to walk.",
+                    ChatMessageType.Broadcast);
+                return;
+            }
+
+            var objDesc = player.CalculateObjDesc();
+
+            // The inputs are dumped alongside the output on purpose. When the web model disagrees,
+            // the first question is always "did it start from the same character?" - and a setup id
+            // or a helm option that differs answers it without a second round trip.
+            var dump = new
+            {
+                character = player.Name,
+                id = player.Guid.Full,
+                setupTableId = player.SetupTableId,
+                heritage = player.Heritage,
+                gender = player.Gender,
+                showHelm = player.GetCharacterOption(CharacterOption.ShowYourHelmOrHeadGear),
+                showCloak = player.GetCharacterOption(CharacterOption.ShowYourCloak),
+                paletteId = objDesc.PaletteID,
+                // Offset/Length here are the SERVER's units - eighths of a colour index. The client
+                // multiplies them back by 8. Anything comparing against absolute indices has to
+                // scale, and forgetting to is a band an eighth of its intended width.
+                subPalettes = objDesc.SubPalettes
+                    .Select(p => new { subPaletteId = p.SubPaletteId, offset = p.Offset, length = p.Length })
+                    .ToList(),
+                textureChanges = objDesc.TextureChanges
+                    .Select(t => new { partIndex = t.PartIndex, oldTexture = t.OldTexture, newTexture = t.NewTexture })
+                    .ToList(),
+                animPartChanges = objDesc.AnimPartChanges
+                    .Select(a => new { index = a.Index, animationId = a.AnimationId })
+                    .ToList(),
+                // The equipment, in the order CalculateObjDesc actually applied it. The ORDER is
+                // the part a second implementation gets wrong, so it is recorded rather than left
+                // to be inferred from the result.
+                equipped = player.EquippedObjects.Values
+                    .Where(w => (w.CurrentWieldedLocation & (EquipMask.Clothing | EquipMask.Armor | EquipMask.Cloak)) != 0)
+                    .Select(w => new
+                    {
+                        name = w.Name,
+                        clothingBase = w.ClothingBase,
+                        itemType = w.ItemType.ToString(),
+                        wielded = w.CurrentWieldedLocation.ToString(),
+                        clothingPriority = w.ClothingPriority?.ToString(),
+                        topLayerPriority = w.TopLayerPriority,
+                        visualClothingPriority = w.VisualClothingPriority?.ToString(),
+                        paletteTemplate = w.PaletteTemplate,
+                        shade = w.Shade,
+                    })
+                    .ToList(),
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(dump,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+            var file = $"sg-objdesc-{player.Name.Replace(" ", "_")}.json";
+
+            try
+            {
+                // System.Environment explicitly: ACE.DatLoader has its own Environment file type.
+                var path = System.IO.Path.Combine(System.Environment.CurrentDirectory, file);
+                System.IO.File.WriteAllText(path, json);
+
+                log.Info($"[SG-OBJDESC] wrote {path} ({json.Length} bytes)");
+                CommandHandlerHelper.WriteOutputInfo(session, $"Wrote {path}", ChatMessageType.Broadcast);
+            }
+            catch (Exception ex)
+            {
+                // A read-only working directory is a deployment detail, not a reason to lose the
+                // dump - the log is always writable.
+                log.Info($"[SG-OBJDESC] could not write {file} ({ex.Message}); dumping inline:");
+                log.Info($"[SG-OBJDESC] {json}");
+                CommandHandlerHelper.WriteOutputInfo(session, "Dumped ObjDesc to the server log.", ChatMessageType.Broadcast);
+            }
+        }
+
         [CommandHandler("sg-xptable", AccessLevel.Developer, CommandHandlerFlag.None, 0,
             "(Shadowgain) Dump the trained/specialized skill XP cost curve to the server log.",
             "[rankInterval]")]

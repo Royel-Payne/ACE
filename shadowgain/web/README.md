@@ -153,6 +153,54 @@ visitor holding the old picture for a week.
 
 ---
 
+## The 3D character model, and why it is verifiable
+
+`/api/character/{id}/model.glb` assembles a character from the dats on demand (`api/model.py` ->
+`shadowgain/exporter`), cached by appearance signature rather than by clock.
+
+**This is a second implementation of the server's `Creature.CalculateObjDesc`, and that is a
+deliberate choice with a cost.** The obvious alternative — ask the game server what the character
+looks like — cannot work for the sheet: `CalculateObjDesc` walks `EquippedObjects`, which is only
+populated for a character loaded in memory, and the sheet must render offline characters too.
+
+So the same coupling `curves.py` accepts applies here: **a change to `CalculateObjDesc` or to
+`ClothingTable` handling on the server is a change to `exporter/ObjDescPort.cs`.**
+
+Unlike `curves.py`, this one is *checkable against the real thing*:
+
+```bash
+# in game, as Developer          -> writes sg-objdesc-<name>.json next to the server
+sg-objdesc Fred Sandford
+
+# from the exporter              -> the same shape, computed independently
+sg-datexport --dat <dats> --out /tmp/m --setup <id> --no-helm --item ... \
+             --objdesc-json /tmp/exporter.json
+
+python tools/objdesc-diff.py sg-objdesc-Fred_Sandford.json /tmp/exporter.json
+```
+
+Exit status is 0 only when the two agree, so it can gate a deploy. The diff normalises the two
+things that legitimately differ in representation and nothing else: the server carries palette
+ranges in **eighths** of a colour index while the exporter works in absolute, and the server emits
+an append-only change list where the exporter keeps only the winning write per part.
+
+### What the layering actually depends on
+
+Ordering is not cosmetic — a later item's part swaps overwrite an earlier one's. The order is:
+
+1. clothes and cloaks (`ItemType.Clothing`, not in an Armor/Extremity slot), by `ClothingPriority`
+2. then armour, by `TopLayerPriority` (false, then **unset**, then true), then `VisualClothingPriority`
+
+`TopLayerPriority` is tri-state and must stay that way; unset sorts *between* the two booleans.
+`VisualClothingPriority` is `ClothingTable.GetVisualPriority()` — a pure function of the dat record,
+**not** a runtime value, which an earlier pass assumed it was. That assumption was the reason the
+model was nearly right rather than right.
+
+The API therefore has to hand the exporter more than a clothing base: item type, wielded slot,
+top-layer flag, the item's own setup, the character's own `SetupTableId`, and the
+`ShowYourHelmOrHeadGear` / `ShowYourCloak` options. All of them feed the cache signature, because
+all of them change what is drawn.
+
 ## Deploying
 
 ```bash
