@@ -1097,11 +1097,24 @@ namespace ACE.Server.WorldObjects
                     TryCastItemEnchantment_WithRedirects(spell, target, itemCaster);
 
                     // use target resistance?
+                    //
+                    // Shadowgain 140b: BRACED, and that is the whole fix. 140C guarded the skill
+                    // award with an unbraced `if`, so the attribute award below it fell outside the
+                    // gate and an item-cast Item Enchantment - an equip aura, or one of the many
+                    // buff procs that are this school - still trained Focus. The skill stopped and
+                    // the attribute did not, which is the half nobody would have thought to check.
+                    //
+                    // The other two award sites in this method brace correctly; only this one read
+                    // as though it did. 119 fixed two unbraced if/else blocks in THIS SAME METHOD
+                    // for the same reason, one of them a NullReferenceException in waiting. Third
+                    // time in this method, so: braces here are not style, they are the bug.
                     if (playerCast)
+                    {
                         Proficiency.OnSuccessUse(this, GetCreatureSkill(Skill.ItemEnchantment), spell.PowerMod);
 
-                    // Shadowgain 004: item enchantment exercises Focus.
-                    AwardAttributesForMagicSkill(Skill.ItemEnchantment, spell.PowerMod);
+                        // Shadowgain 004: item enchantment exercises Focus.
+                        AwardAttributesForMagicSkill(Skill.ItemEnchantment, spell.PowerMod);
+                    }
 
                     if (spell.IsHarmful)
                     {
