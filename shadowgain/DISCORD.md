@@ -203,6 +203,53 @@ a check.
 
 ---
 
+## AutoMod: what Discord filters, and what it deliberately does not
+
+Discord's **native AutoMod**, not the bot and not MEE6. Three rules, all alerting to **#mod-log**,
+all with `BLOCK_MESSAGE` + `SEND_ALERT`:
+
+| rule | trigger | presets |
+|---|---|---|
+| Slurs and severe profanity | `KEYWORD_PRESET` | `SEXUAL_CONTENT`, `SLURS` |
+| Spam | `SPAM` | — |
+| Mention spam | `MENTION_SPAM` | — |
+
+**`PROFANITY` was removed on 2026-08-15.** This is an adult community and the filter was reading as a
+children's server. Every one of the eight entries in #mod-log at the time was ordinary swearing —
+*"that old shitty client"*, *"oh shit"*, *"i did bitch a bit on conquest"*, *"shes fucking wierd
+bro"*. Chris: *"we're all adults and nothing in the mod-log should have been modded."* None of it
+was aimed at anyone; it was people talking.
+
+**Slurs and sexual content are still blocked, and that was the deliberate half of the decision.**
+Loosening profanity is not the same as loosening everything, and the two are separate presets
+precisely so they can be judged separately.
+
+### One known false positive, accepted
+
+`SLURS` catches *"a deliberate retard to slow the gains"* — the word used in its literal engineering
+sense. The only lever Discord offers is an allow-list entry, which would permit that word in **every**
+context including as a slur. Not worth it for one message, and Chris: *"'retard' isn't a word I use
+often enough to care if it's filtered, I'll use something else that carries the same meaning."*
+
+So the allow-list is empty **on purpose**. If a legitimate word starts tripping this often enough to
+annoy, that is the lever — and it is a policy decision, not a config tweak.
+
+### Where this lives, and why that is a hazard
+
+AutoMod config exists **only in Discord**. It is not in this repo, not in `bot.env`, and not
+recoverable from a backup of anything we control — the same shape as the manual pieces in *Discord
+setup that must not be lost* below. The change is in Discord's audit log with the reason *"Adult
+community - allow ordinary profanity; slurs and sexual content still blocked"*, so it is attributable
+rather than looking like drift. **If the server is ever rebuilt, this section is the record of what
+the settings were.**
+
+Read or change the rules via the API with the bot token (it holds Administrator):
+`GET|PATCH /guilds/{guild}/auto-moderation/rules`. The rule ID as of 2026-08-15 is
+`1535871769947279370`. Verify with a fresh `GET` afterwards rather than trusting the `PATCH`
+response.
+
+---
+
 ## Discord setup that must not be lost
 
 If the server is ever rebuilt, these are the manual pieces:
