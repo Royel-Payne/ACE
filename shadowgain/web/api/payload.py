@@ -454,11 +454,12 @@ def build_skills(raw: dict) -> list[dict]:
             }
         )
 
-    # Highest VALUE first, then name — matching what the page displays. The page shows `base`
-    # (the figure the in-game panel shows, attribute formula included), so ordering by rank made
-    # the list look unsorted: Melee Defense is rank 191 / base 319, Two Handed Combat rank 183 /
-    # base 332.
-    out.sort(key=lambda s: (-s["base"], s["label"]))
+    # ALPHABETICAL, because that is how the in-game skill panel orders each group — Melee
+    # Defense, Summoning, Two Handed Combat. Sorted by rank first and by value second, both of
+    # which were guesses at what "sorted" should mean; the game had already answered it. The
+    # front-end groups and re-sorts anyway, so this is about the payload reading sensibly on its
+    # own rather than about what the page shows.
+    out.sort(key=lambda s: s["label"])
 
     return out
 

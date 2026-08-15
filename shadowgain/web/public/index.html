@@ -507,10 +507,15 @@ function renderSkills(c){
   const groups=[['specialized','Specialized'],['trained','Trained'],['untrained','Untrained (pruned)'],['unusable','Unusable']];
   const skills=c.skills||[]; let h='';
   for(const [g,label] of groups){
-    // Sorted by the number ON SCREEN. It used to sort by trueRank while displaying base, so
-    // Melee Defense (rank 191, base 319) sat above Two Handed Combat (rank 183, base 332) and
-    // the list read as unsorted to anyone actually looking at it.
-    const items=skills.filter(s=>s.group===g).sort((a,b)=>(b.base??b.trueRank??0)-(a.base??a.trueRank??0));
+    // ALPHABETICAL within each group, because that is what the in-game skill panel does.
+    //
+    // This has now been wrong twice in two different ways - first by trueRank, then by value -
+    // and both times it was a guess at what "sorted" ought to mean. The panel answers it: Melee
+    // Defense, Summoning, Two Handed Combat; then Arcane Lore, Armor Tinkering, Assess Creature.
+    // A player scanning for one skill finds it where the game trained them to look, which beats
+    // any ranking we could invent.
+    const items=skills.filter(s=>s.group===g)
+      .sort((a,b)=>a.label.localeCompare(b.label, 'en'));
     h+=`<div class="grouphdr">${label}<span class="ct">${items.length}</span></div>`;
     h+= items.length ? items.map(s=>statRow(s,'skill')).join('') : `<div class="emptygrp">None</div>`;
   }
