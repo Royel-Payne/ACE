@@ -135,55 +135,65 @@
   .bbar i{display:block;height:100%;background:linear-gradient(90deg,var(--arcane-dim),var(--green))}
   .viewbtn{font-size:11px;color:#cdd7e2;border:1px solid var(--line);border-radius:6px;padding:3px 11px;cursor:pointer;background:var(--panel)}
   .viewbtn:hover{border-color:var(--arcane-dim);color:#fff} .viewbtn.active{color:var(--gold);border-color:rgba(216,172,82,.45)}
-  /* 131 - the equipment frame, laid out like the client's own inventory panel: one column of
-     worn slots down the left, two down the right, the character between them, and the held gear
-     along the bottom. The empty cells at top-right are in the game too; leaving them empty keeps
-     the pairing (bracelet beside bracelet, ring beside ring) reading correctly. */
-  .equip{display:grid;grid-template-columns:52px 1fr 52px 52px;grid-template-rows:repeat(5,58px);
-    gap:6px;padding:14px 14px 8px;align-items:stretch}
-  .eslot{border-radius:8px;background:#0b1119;border:1px solid var(--line);
-    display:grid;place-items:center;position:relative;overflow:hidden}
+  /* 132 - ONE GRID FOR THE WHOLE FRAME.
+     The client does not box the character off from the slots: the armour slots share the same
+     rows and columns as the worn slots, and the paperdoll is simply drawn BEHIND the middle three
+     columns. The first build put the armour grid inside a bordered viewport, so armour slots and
+     worn slots sat on two different rhythms and visibly failed to line up. Six columns, five rows,
+     everything placed on it, character underneath - alignment then costs nothing to maintain. */
+  .invbody{display:grid;grid-template-columns:1fr auto;align-items:start}
+  .invmain{min-width:0}
+  /* SIX EQUAL COLUMNS. Mixing fixed side columns with elastic middle ones made the armour slots
+     visibly larger than the worn ones; the client's cells are all one size, and equal fractions
+     get that for free while keeping the character three columns wide. */
+  .equip{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:auto;
+    gap:5px;padding:12px 10px 6px;align-items:stretch}
+  .eslot{aspect-ratio:1;border-radius:8px;background:#0b1119;border:1px solid var(--line);
+    display:grid;place-items:center;position:relative;overflow:hidden;z-index:2}
   .eslot.fill{border-color:rgba(79,214,198,.42);box-shadow:0 0 0 1px rgba(79,214,198,.12)}
-  /* An empty slot must still read as a SLOT. The first pass used opacity:.45 on a dashed border
+  /* An empty slot must still read as a SLOT. An early pass used opacity:.45 on a dashed border
      over a near-black panel, which made the box vanish and left its caption floating in space. */
   .eslot.empty{border-style:dashed;border-color:rgba(126,148,173,.34);background:rgba(15,21,31,.55)}
-  .eslot.empty .ico{opacity:.5}
-  /* An empty dashed box says nothing about WHICH slot it is - the client uses distinct placeholder
-     art for that, which we do not have. A small caption is the honest web equivalent, and it is
-     shown only when the slot is empty so a real icon is never covered up. */
   .eslot .tag{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:7px;
     letter-spacing:.2px;text-transform:uppercase;color:#7e93a8;pointer-events:none;line-height:1}
-  .doll{grid-column:2;grid-row:1 / 6;position:relative;border-radius:12px;border:1px solid var(--line);
-    background:radial-gradient(130px 220px at 50% 30%, rgba(143,123,214,.14), transparent 70%), #0b111a}
-  .doll .figure{position:absolute;left:50%;top:32px;transform:translateX(-50%);width:96px;height:212px;opacity:.92}
 
-  /* The armour coverage grid, revealed by the Slots toggle exactly as the client does it: the
-     paperdoll gives way to the body-area slots rather than sharing the space with them. */
-  .agrid{position:absolute;inset:10px 8px 26px;display:none;grid-template-columns:repeat(3,1fr);
-    grid-template-rows:repeat(5,1fr);gap:5px;justify-items:center;align-items:center;z-index:3}
-  .doll.slots .agrid{display:grid}
+  /* The character occupies the middle three columns, unboxed and behind everything. */
+  .doll{grid-area:1 / 2 / 6 / 5;position:relative;z-index:1;
+    background:radial-gradient(120px 190px at 50% 34%, rgba(143,123,214,.13), transparent 72%)}
+  .doll .figure{position:absolute;left:50%;top:20px;transform:translateX(-50%);width:96px;height:212px;opacity:.92}
   .doll.slots .model3d,.doll.slots .figure,.doll.slots .modelhint{display:none}
-  .aslot{width:100%;max-width:44px;aspect-ratio:1;border-radius:8px;background:rgba(9,13,20,.85);
-    border:1px solid var(--line);display:grid;place-items:center;position:relative;overflow:hidden}
+
+  /* Armour slots are siblings on the SAME grid, not children of the doll - that is what keeps
+     every row aligned whether the toggle is on or off. */
+  .aslot{aspect-ratio:1;border-radius:8px;background:rgba(9,13,20,.9);border:1px solid var(--line);
+    display:grid;place-items:center;position:relative;overflow:hidden;z-index:2}
   .aslot.fill{border-color:rgba(79,214,198,.45);box-shadow:0 0 0 1px rgba(79,214,198,.14)}
   .aslot.empty{border-style:dashed;border-color:rgba(126,148,173,.32);background:rgba(15,21,31,.6)}
   .aslot .tag{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:6.5px;
-    letter-spacing:.1px;text-transform:uppercase;color:var(--muted);pointer-events:none;line-height:1}
+    letter-spacing:.1px;text-transform:uppercase;color:#7e93a8;pointer-events:none;line-height:1}
+  .equip:not(.slots) .aslot{display:none}
 
-  /* Three sigils across the top right, sharing row 1 of the two right-hand columns. */
-  .aethcell{grid-area:1/3/2/5;display:flex;gap:6px;align-items:center}
-  .aeth{flex:1;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);background:#0b1119;
-    display:grid;place-items:center;overflow:hidden}
-  .aeth.blue{border-color:#5b7fc0} .aeth.yellow{border-color:#c9a24b} .aeth.red{border-color:#c0504d}
-  .aeth.set{background:#0b1119}
-  .aeth.set .ico{width:26px;height:26px}
+  /* Three sigils across the top right, spanning the last three columns as the client does. */
+  /* Spans the last three columns as the client does, but the circles are SIZED like the other
+     slots and pushed right - the middle columns are elastic here, and letting the sigils flex to
+     fill them blew them up to half again the size of every other slot. */
+  /* Aetheria are ordinary square slots in the client, not roundels - which is also what keeps
+     every cell in the frame the same shape and size. */
+  .aethcell{grid-area:1 / 4 / 2 / 7;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;z-index:3}
+  .aeth.empty{border-style:solid;border-color:rgba(126,148,173,.22)}
+  .aeth .ghost{opacity:.42}
+  .aeth.blue.empty{border-color:rgba(91,127,192,.4)}
+  .aeth.yellow.empty{border-color:rgba(201,162,75,.4)}
+  .aeth.red.empty{border-color:rgba(192,80,77,.4)}
 
-  .slotsbtn{position:absolute;left:9px;bottom:6px;z-index:4;display:flex;align-items:center;gap:6px;
+  .slotsbtn{grid-area:5 / 2 / 6 / 4;align-self:end;justify-self:start;z-index:3;
+    display:flex;align-items:center;gap:6px;margin:0 0 4px 4px;
     font-size:11px;color:#cdd7e2;cursor:pointer;user-select:none;letter-spacing:.3px}
   .slotsbtn:hover{color:#fff}
   .slotsdot{width:9px;height:9px;border-radius:50%;background:#39424f;border:1px solid #58626f}
-  .doll.slots .slotsdot{background:var(--arcane);border-color:var(--arcane);
+  .equip.slots .slotsdot{background:var(--arcane);border-color:var(--arcane);
     box-shadow:0 0 6px rgba(79,214,198,.75)}
+
   .islot{width:40px;height:40px;border-radius:8px;background:#0b1119;border:1px solid var(--line);
     display:grid;place-items:center;position:relative}
   .islot.empty{border-style:dashed;opacity:.4}
@@ -191,12 +201,16 @@
     border-radius:3px;padding:0 2px;font-variant-numeric:tabular-nums}
   .psub{color:#cdd7e2;font-size:13px;padding:4px 16px 0;letter-spacing:.3px}
   .otherbar{display:block}
-  .sidepacks{display:flex;gap:7px;flex-wrap:wrap;padding:8px 16px 4px;align-items:center;border-top:1px solid var(--line)}
-  .sidepacks .lbl{width:100%;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
-  .spk{width:38px;height:38px;border-radius:8px;background:#0b1119;border:1px solid var(--line);display:grid;place-items:center;position:relative;cursor:pointer}
+  /* Packs run DOWN THE RIGHT of the whole panel, beside both the frame and the contents grid,
+     which is where the client keeps them. */
+  .sidepacks{display:flex;flex-direction:column;gap:6px;padding:12px 12px 8px 4px;align-items:center;
+    border-left:1px solid var(--line);align-self:stretch}
+  .sidepacks .lbl{font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:1px}
+  .spk{width:40px;height:40px;border-radius:8px;background:#0b1119;border:1px solid var(--line);display:grid;place-items:center;position:relative;cursor:pointer}
   .spk:hover{border-color:var(--arcane-dim)} .spk.sel{border-color:var(--arcane);box-shadow:0 0 0 1px rgba(79,214,198,.2)}
   .spk .tag{position:absolute;left:2px;top:1px;font-size:8px;color:var(--gold)}
-  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;padding:6px 16px 18px;max-height:300px;overflow-y:auto}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;
+    padding:6px 10px 16px;max-height:300px;overflow-y:auto;overflow-x:hidden}
   .grid::-webkit-scrollbar{width:9px} .grid::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
   .cell{aspect-ratio:1;border-radius:8px;background:#0b1119;border:1px solid var(--line);position:relative;display:grid;place-items:center}
   .focusnote{grid-column:1/-1;color:var(--muted);font-style:italic;font-size:13px;padding:10px 2px}
@@ -205,7 +219,7 @@
   /* The 2D figure stays as the fallback and is hidden only once a model actually renders, so a
      failed load leaves the panel looking deliberate rather than empty. */
   .doll.has3d .figure{display:none}
-  .modelhint{position:absolute;left:0;right:0;bottom:7px;text-align:center;font-size:10.5px;
+  .modelhint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:10.5px;
     color:var(--muted);z-index:2;pointer-events:none;letter-spacing:.4px}
   .cell.empty{background:#0a0f16;border-style:dashed;opacity:.45}
 
@@ -368,11 +382,15 @@
       <div class="invhdr"><span class="t" id="invName">Inventory</span>
         <span class="burden" id="burdenWrap">Burden <b id="burdenPct">&mdash;</b><span class="bbar"><i id="burdenBar"></i></span></span>
         </div>
-      <div class="equip" id="equip"></div>
-      <div class="otherbar" id="otherbar"></div>
-      <div class="sidepacks" id="sidepacks"></div>
-      <div class="psub" id="contHdr">Contents</div>
-      <div class="grid" id="packgrid"></div>
+      <div class="invbody">
+        <div class="invmain">
+          <div class="equip" id="equip"></div>
+          <div class="otherbar" id="otherbar"></div>
+          <div class="psub" id="contHdr">Contents</div>
+          <div class="grid" id="packgrid"></div>
+        </div>
+        <div class="sidepacks" id="sidepacks"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -484,6 +502,7 @@ function wireOnce(){
     // element, detaching the live WebGL canvas and losing the loaded model until the next fetch.
     if(e.target.closest('#slotsBtn')){
       slotsOn=!slotsOn;
+      document.querySelector('.equip')?.classList.toggle('slots', slotsOn);
       document.querySelector('.doll')?.classList.toggle('slots', slotsOn);
       return;
     }
@@ -735,14 +754,14 @@ const WORN_SLOTS = [
   ['finger',  'Ring',     '1/4', 0],
   ['shield',  'Shield',   '1/5', 0],
 
-  ['wrist',   'Bracelet', '3/3', 1],
-  ['finger',  'Ring',     '3/4', 1],
-  ['weapon',  'Weapon',   '3/5', 0],
+  ['wrist',   'Bracelet', '5/3', 1],
+  ['finger',  'Ring',     '5/4', 1],
+  ['weapon',  'Weapon',   '5/5', 0],
 
-  ['cloak',   'Cloak',    '4/2', 0],
-  ['shirt',   'Shirt',    '4/3', 0],
-  ['pants',   'Pants',    '4/4', 0],
-  ['ammo',    'Ammo',     '4/5', 0],
+  ['cloak',   'Cloak',    '6/2', 0],
+  ['shirt',   'Shirt',    '6/3', 0],
+  ['pants',   'Pants',    '6/4', 0],
+  ['ammo',    'Ammo',     '6/5', 0],
 ];
 
 /* The held-weapon cell takes whichever of the two is actually wielded. The client has ONE box
@@ -751,19 +770,35 @@ const WORN_SLOTS = [
  * in the spare row below rather than vanishing. */
 const WEAPON_KEYS = ['weapon','wand'];
 
-/* The armour coverage grid, behind the Slots toggle.
+/* The client's own Aetheria art, for the three sigil slots.
+ *
+ * Found from ace_world, not by eye: weenies 42635-42637 "Coalesced Aetheria" carry three
+ * consecutive IconIds, 0x06006C0A/0B/0C. Template-matching the reference screenshot had produced
+ * hundreds of plausible orbs - AC is full of them - and the database settled it outright.
+ *
+ * Note the dat's order is blue, RED, yellow while the panel reads blue, yellow, red.
+ *
+ * No ?v= stamp: an item icon's filename IS its IconId, so these bytes can never change and
+ * Caddy's immutable caching is exactly right for them. */
+const AETHERIA_ICONS = [
+  ['blue',   100690954],   // 0x06006C0A
+  ['yellow', 100690956],   // 0x06006C0C
+  ['red',    100690955],   // 0x06006C0B
+];
+
+/* The armour coverage grid - columns 2-4, the same three the character is drawn across.
  *
  * READ IT AS THREE ANATOMICAL CHAINS, which is what the client is doing and what the first
- * version of this got wrong: arms run down the left column and END AT THE HANDS, the torso runs
- * down the middle and ends at the feet, and the legs run down the right. Putting hands beside the
- * chest and the legs under the abdomen looked tidy and was simply not the game's layout.
+ * version got wrong: arms run down the left column and END AT THE HANDS, the torso runs down the
+ * middle and ends at the feet, and the legs run down the right. Confirmed against the client's own
+ * slot art, where each tile's silhouette highlights the body area it covers.
  */
 const ARMOUR_GRID = [
-                                    ['head',      'Head',   '2/1'],
-  ['upperArms', 'Up Arm', '1/2'],   ['chest',     'Chest',  '2/2'],
-  ['lowerArms', 'Lo Arm', '1/3'],   ['abdomen',   'Abdmn',  '2/3'],   ['upperLegs', 'Up Leg', '3/3'],
-  ['hands',     'Hands',  '1/4'],                                     ['lowerLegs', 'Lo Leg', '3/4'],
-                                    ['feet',      'Feet',   '2/5'],
+                                    ['head',      'Head',   '3/1'],
+  ['upperArms', 'Up Arm', '2/2'],   ['chest',     'Chest',  '3/2'],
+  ['lowerArms', 'Lo Arm', '2/3'],   ['abdomen',   'Abdmn',  '3/3'],   ['upperLegs', 'Up Leg', '4/3'],
+  ['hands',     'Hands',  '2/4'],                                     ['lowerLegs', 'Lo Leg', '4/4'],
+                                                                    ['feet',      'Feet',   '4/5'],
 ];
 
 let slotsOn = false;
@@ -802,11 +837,13 @@ function renderInventory(c){
 
   // Aetheria: three sigils across the TOP RIGHT, which is where the client puts them - not in a
   // separate strip under the frame, where they were before.
-  const aeth = [0,1,2].map(i=>{
+  const aeth = AETHERIA_ICONS.map(([cc,iconId],i)=>{
     const it=pick('aetheria'+(i+1),0);
-    const cc=['blue','yellow','red'][i];
-    return it ? `<div class="aeth ${cc} set" data-item="${reg(it)}" title="Aetheria — ${it.name}">${icon(it)}</div>`
-              : `<div class="aeth ${cc}" title="Aetheria (${cc}) — not set"></div>`;
+    // An empty sigil slot shows its own art dimmed, the way the client marks the slot - it says
+    // "aetheria goes here" without pretending something is equipped.
+    return it
+      ? `<div class="eslot aeth fill ${cc}" data-item="${reg(it)}" title="Aetheria — ${it.name}">${icon(it)}</div>`
+      : `<div class="eslot aeth empty ${cc}" title="Aetheria (${cc}) — not set"><img class="ico ghost" src="/assets/icons/item/${iconId}.png" alt="" loading="lazy"></div>`;
   }).join('');
 
   // The armour grid takes the first item covering each area, but SKIPS the clothing layer - a
@@ -816,9 +853,8 @@ function renderInventory(c){
                      (it.coverage||[]).forEach(k=>{ if(!A[k]) A[k]=it; }); });
   const armour = ARMOUR_GRID.map(([k,label,cell])=>slotBox('aslot',label,cell,A[k])).join('');
 
+  $('#equip').className = 'equip' + (slotsOn ? ' slots' : '');
   $('#equip').innerHTML = `
-    ${frame}
-    <div class="aethcell">${aeth}</div>
     <div class="doll${slotsOn?' slots':''}">
       <div id="model3d" class="model3d"></div>
       <svg class="figure" id="figure2d" viewBox="0 0 96 212" aria-label="character">
@@ -827,9 +863,11 @@ function renderInventory(c){
         <path d="M48 46 L48 200" stroke="#8f6f2c" stroke-width="1.5"/>
         <rect x="30" y="96" width="36" height="7" rx="2" fill="#6d3f86"/>
       </svg>
-      <div class="agrid">${armour}</div>
-      <div class="slotsbtn" id="slotsBtn" title="Show the armour slots"><span class="slotsdot"></span>Slots</div>
-    </div>`;
+    </div>
+    ${frame}
+    ${armour}
+    <div class="aethcell">${aeth}</div>
+    <div class="slotsbtn" id="slotsBtn" title="Show the armour slots"><span class="slotsdot"></span>Slots</div>`;
 
   // Anything worn that the frame found no box for. Should normally be empty - it exists so a slot
   // we have not accounted for surfaces instead of disappearing.
