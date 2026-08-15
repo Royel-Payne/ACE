@@ -112,6 +112,17 @@ def vital_formulas() -> dict[str, dict]:
 
 
 @lru_cache(maxsize=1)
+def spell_table() -> dict[int, dict]:
+    """Spell id -> name, from the dat. Used to name the spells on an item's examine text."""
+    path = DATA_DIR / "spells.json"
+
+    if not path.exists():
+        return {}
+
+    return {int(k): v for k, v in json.loads(path.read_text(encoding="utf-8")).items()}
+
+
+@lru_cache(maxsize=1)
 def enums() -> dict[str, dict[int, dict]]:
     raw = json.loads((DATA_DIR / "enums.json").read_text(encoding="utf-8"))
 

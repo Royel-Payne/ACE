@@ -91,7 +91,8 @@ def live_dials() -> dict:
                 for r in db.fetch_all(
                     cur,
                     "SELECT `key`, value FROM config_properties_boolean "
-                    "WHERE `key` IN ('skill_uncap_ranks','attributes_start_at_ten')",
+                    "WHERE `key` IN ('skill_uncap_ranks','attributes_start_at_ten',"
+                    "                'burden_capacity_floor_enabled')",
                 )
             }
 
@@ -100,7 +101,7 @@ def live_dials() -> dict:
                 for r in db.fetch_all(
                     cur,
                     "SELECT `key`, value FROM config_properties_long "
-                    "WHERE `key` IN ('attribute_max_value')",
+                    "WHERE `key` IN ('attribute_max_value','burden_capacity_floor')",
                 )
             }
 
@@ -110,6 +111,10 @@ def live_dials() -> dict:
             "skill_uncap_ranks": bools.get("skill_uncap_ranks", True),
             "attributes_start_at_ten": bools.get("attributes_start_at_ten", True),
             "attribute_max_value": longs.get("attribute_max_value", 290),
+            # 009's additive capacity floor. Read, not assumed: without it a caster's burden
+            # reads far heavier than the game shows them, because capacity would be 150*Str alone.
+            "burden_capacity_floor_enabled": bools.get("burden_capacity_floor_enabled", True),
+            "burden_capacity_floor": longs.get("burden_capacity_floor", 3000),
         }
 
     value, _ = _dials_cache.get_or_build("dials", build)

@@ -135,7 +135,7 @@
   .bbar i{display:block;height:100%;background:linear-gradient(90deg,var(--arcane-dim),var(--green))}
   .viewbtn{font-size:11px;color:#cdd7e2;border:1px solid var(--line);border-radius:6px;padding:3px 11px;cursor:pointer;background:var(--panel)}
   .viewbtn:hover{border-color:var(--arcane-dim);color:#fff} .viewbtn.active{color:var(--gold);border-color:rgba(216,172,82,.45)}
-  .equip{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:16px 14px 6px;align-items:start}
+  .equip{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:16px 14px 6px;align-items:start}
   .eqcol{display:flex;flex-direction:column;gap:7px}
   .eqcol .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
   .doll{position:relative;height:288px;border-radius:12px;border:1px solid var(--line);
@@ -152,8 +152,7 @@
   .stack{position:absolute;right:2px;bottom:1px;font-size:9.5px;color:#e7eef0;background:rgba(0,0,0,.6);
     border-radius:3px;padding:0 2px;font-variant-numeric:tabular-nums}
   .psub{color:#cdd7e2;font-size:13px;padding:4px 16px 0;letter-spacing:.3px}
-  .otherbar{display:flex;gap:7px;flex-wrap:wrap;padding:4px 16px 2px;align-items:center}
-  .otherbar .lbl{width:100%;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
+  .otherbar{display:block}
   .sidepacks{display:flex;gap:7px;flex-wrap:wrap;padding:8px 16px 4px;align-items:center;border-top:1px solid var(--line)}
   .sidepacks .lbl{width:100%;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
   .spk{width:38px;height:38px;border-radius:8px;background:#0b1119;border:1px solid var(--line);display:grid;place-items:center;position:relative;cursor:pointer}
@@ -173,6 +172,62 @@
   .legend{color:var(--muted);font-size:12px;margin:6px 0 0;text-align:center}
   footer{border-top:1px solid var(--line);margin-top:6px;padding:22px 0 44px;text-align:center;color:var(--muted);font-size:13px}
   .loading{color:var(--muted);text-align:center;padding:60px 0;font-style:italic}
+
+  /* --- tab panes scroll internally so the readout/status line stays put --- */
+  .tabpane{max-height:360px;overflow-y:auto}
+  .tabpane::-webkit-scrollbar{width:9px} .tabpane::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
+
+  /* --- item inspection: fast floating tooltip + a click/tap line for mobile --- */
+  .aslot,.islot,.cell{cursor:pointer}
+  .selitem{border-color:var(--gold) !important;box-shadow:0 0 0 1px rgba(216,172,82,.4) !important}
+  .itemsel{border-top:1px solid var(--line);padding:11px 16px;color:#cdd7e2;font-size:13.5px;min-height:16px}
+  .itemsel .m{color:var(--muted)} .itemsel b{color:#eaf3f2}
+  #floatTip{position:fixed;z-index:9999;max-width:290px;display:none;pointer-events:none;
+    background:linear-gradient(180deg,#141d2a,#0d141d);border:1px solid rgba(120,180,190,.28);
+    border-radius:10px;padding:11px 13px;box-shadow:0 10px 30px rgba(0,0,0,.55);font-size:13px;color:var(--ink)}
+  #floatTip .h{display:flex;gap:10px;align-items:center;margin-bottom:2px}
+  #floatTip .h .ico{width:34px;height:34px}
+  #floatTip .h .nm{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:15px;color:#fff}
+  #floatTip .sub{color:var(--muted);font-size:12px;margin-top:3px}
+  #floatTip .desc{margin-top:7px;padding-top:7px;border-top:1px solid var(--line);color:#c9d3df;white-space:pre-wrap;line-height:1.45}
+  #floatTip .pend{margin-top:6px;color:var(--muted);font-style:italic;font-size:12px}
+  /* --- full item examine panel: overlays the stats card on click (game-styled) --- */
+  .examine{position:absolute;inset:0;display:flex;flex-direction:column;z-index:6;
+    background:linear-gradient(180deg,#0e1620,#0b111a);border-radius:14px;overflow:hidden}
+  .examine.hidden{display:none}
+  .xbar{display:flex;align-items:center;justify-content:center;position:relative;padding:11px 34px;
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#182231,#0e1620)}
+  .xname{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:16px;color:#eaf3f2;text-align:center}
+  .xclose{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:1px solid var(--line);
+    color:var(--muted);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:15px;line-height:1}
+  .xclose:hover{color:#fff;border-color:var(--arcane-dim)}
+  .xhead{display:flex;gap:12px;align-items:center;padding:12px 16px 4px}
+  .xhead .ico{width:40px;height:40px}
+  .xbody{padding:8px 16px 16px;overflow-y:auto;font-size:13.5px;color:#cdd7e2;line-height:1.5;flex:1}
+  .xbody .ln{white-space:pre-wrap} .xbody .sp{height:9px} .xbody .g{color:var(--green)}
+  .xbody .pend{color:var(--muted);font-style:italic;margin-top:10px}
+  .xbody::-webkit-scrollbar{width:9px} .xbody::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
+
+  /* --- Aetheria (right of jewelry) --- */
+  .jewline{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:6px 16px 2px;flex-wrap:wrap}
+  .jgroup,.agroup{display:flex;flex-direction:column;gap:6px}
+  .jgroup .lbl,.agroup .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .agroup{align-items:flex-end}
+  .jrow{display:flex;gap:7px;flex-wrap:wrap;max-width:220px} .arow{display:flex;gap:9px}
+  .aeth{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:#0b1119;display:grid;place-items:center;font-size:8px;color:var(--muted)}
+  .aeth.red{border-color:#c0504d} .aeth.blue{border-color:#5b7fc0} .aeth.yellow{border-color:#c9a24b}
+
+  /* --- PK vs NPK colouring --- */
+  .meta .npk{color:var(--muted)}
+
+  /* --- mobile --- */
+  @media(max-width:640px){
+    .topnav{flex-direction:column;align-items:flex-start;gap:12px;padding:14px 0}
+    .navlinks{width:100%;flex-wrap:wrap;gap:14px 18px}
+    .banner{gap:12px 22px;padding:16px 18px}
+    .banner .cname{font-size:25px}
+    .tabpane{max-height:300px}
+  }
 </style>
 </head>
 <body>
@@ -223,10 +278,12 @@
 
 </div>
 
+<div id="floatTip"></div>
+
 <template id="sheetTpl">
   <div class="banner" id="banner"></div>
   <div class="sheet">
-    <div class="card">
+    <div class="card" style="position:relative">
       <div class="tabs">
         <div class="tab sel" data-tab="attributes">Attributes</div>
         <div class="tab" data-tab="skills">Skills</div>
@@ -238,6 +295,7 @@
       <div class="tabpane" id="pane-titles"></div>
       <div class="tabpane" id="pane-quests"></div>
       <div class="readout" id="readout"></div>
+      <div class="examine hidden" id="examine"></div>
     </div>
     <div class="card">
       <div class="invhdr"><span class="t" id="invName">Inventory</span>
@@ -267,7 +325,7 @@ const marker = m => m==='hard' ? '<span class="d" title="hard path">&dagger;</sp
 function timeAgo(iso){ if(!iso) return ''; const d=(Date.now()-new Date(iso))/36e5; if(isNaN(d)) return ''; if(d<1)return Math.max(1,Math.round(d*60))+'m ago'; if(d<24)return Math.round(d)+'h ago'; return Math.round(d/24)+'d ago'; }
 function untilTime(iso){ if(!iso) return null; const d=(new Date(iso)-Date.now())/36e5; if(isNaN(d)||d<=0) return null; if(d<1)return Math.round(d*60)+'m'; if(d<24)return Math.round(d)+'h'; return Math.round(d/24)+'d'; }
 
-let CHAR=null, showAvatar=true, curCont=0, refreshTimer=null;
+let CHAR=null, showAvatar=true, curCont=0, refreshTimer=null, curTab='attributes', SEL=[];
 
 /* ---------- boot / auth ---------- */
 async function boot(){
@@ -336,27 +394,80 @@ function mountSheet(){
   $('#charArea').querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
     $('#charArea').querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
     $('#charArea').querySelectorAll('.tabpane').forEach(x=>x.classList.remove('sel'));
-    t.classList.add('sel'); $('#pane-'+t.dataset.tab).classList.add('sel');
-    $('#charArea').querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); defaultReadout();
+    t.classList.add('sel'); curTab=t.dataset.tab; $('#pane-'+curTab).classList.add('sel');
+    $('#charArea').querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); closeExamine(); defaultReadout();
   });
-  $('#charArea').addEventListener('click', e=>{
-    const row=e.target.closest('.row[data-key]');
-    if(row){ $('#charArea').querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); row.classList.add('sel');
-      // Vitals are selectable now. They used to fall through to CHAR.skills, match nothing, and
-      // silently do nothing - a row that highlights on click and then shows you no reason why.
-      const k = row.dataset.kind;
-      const arr = k==='attr' ? CHAR.attributes : k==='vital' ? CHAR.vitals : CHAR.skills;
-      const o = (arr||[]).find(x=>x.key===row.dataset.key); if(o) showReadout(o, k); }
-    const spc=e.target.closest('.spk[data-cont]'); if(spc){ curCont=+spc.dataset.cont; renderInventory(CHAR); }
-  });
+  wireOnce();
   $('#viewBtn').onclick=()=>{ showAvatar=!showAvatar; $('#viewBtn').classList.toggle('active',!showAvatar); renderInventory(CHAR); };
 }
+
+/* Delegated once on the stable #charArea node — mountSheet re-renders its innards each character,
+ * so attaching per-mount would stack duplicate handlers. Reads CHAR/SEL live. */
+let wired=false;
+function wireOnce(){
+  if(wired) return; wired=true;
+  const area=$('#charArea'), ft=$('#floatTip');
+  area.addEventListener('click', e=>{
+    const row=e.target.closest('.row[data-key]');
+    if(row){ area.querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); row.classList.add('sel');
+      const k=row.dataset.kind, arr = k==='attr'?CHAR.attributes : k==='vital'?CHAR.vitals : CHAR.skills;
+      const o=(arr||[]).find(x=>x.key===row.dataset.key); if(o) showReadout(o,k); return; }
+    const spc=e.target.closest('.spk[data-cont]'); if(spc){ curCont=+spc.dataset.cont; renderInventory(CHAR); return; }
+    if(e.target.closest('#xclose')){ closeExamine(); return; }
+    const tile=e.target.closest('[data-item]');
+    if(tile){ const it=SEL[+tile.dataset.item]; if(it){ area.querySelectorAll('.selitem').forEach(x=>x.classList.remove('selitem')); tile.classList.add('selitem'); openExamine(it); } }
+  });
+  // fast custom tooltip (native title= is ~500ms and can't be styled)
+  area.addEventListener('mouseover', e=>{ const t=e.target.closest('[data-item]'); if(!t)return; const it=SEL[+t.dataset.item]; if(!it)return; ft.innerHTML=itemDetail(it); ft.style.display='block'; posTip(e); });
+  area.addEventListener('mousemove', e=>{ if(ft.style.display==='block') posTip(e); });
+  area.addEventListener('mouseout', e=>{ if(e.target.closest('[data-item]')) ft.style.display='none'; });
+}
+function posTip(e){ const ft=$('#floatTip'),pad=14; const r=ft.getBoundingClientRect();
+  let x=e.clientX+pad, y=e.clientY+pad;
+  if(x+r.width>innerWidth-8) x=e.clientX-r.width-pad;
+  if(y+r.height>innerHeight-8) y=Math.max(8,innerHeight-r.height-8);
+  ft.style.left=x+'px'; ft.style.top=y+'px'; }
+// hover = quick peek; the full examine text lives in the click-open left panel (openExamine)
+function itemDetail(it){
+  if(!it) return '';
+  const bits=[]; if(it.stack>1) bits.push('&times;'+fmt(it.stack)); if(it.slot&&it.slot!=='other') bits.push(it.slot[0].toUpperCase()+it.slot.slice(1));
+  return `<div class="h">${icon(it)}<span class="nm">${it.name||'Unknown item'}</span></div>${bits.length?`<div class="sub">${bits.join(' &middot; ')}</div>`:''}<div class="pend">Click for full details</div>`;
+}
+// green highlight for the stat lines the game colours (armor level, resists, damage, quality words)
+function hlLine(l){
+  return /^(Armor Level|Damage|Slashing|Piercing|Bludgeoning|Fire|Cold|Acid|Electric|Nether|Melee Defense|Missile Defense|Magic Defense)\b/i.test(l)
+    ? `<span class="g">${l}</span>` : l;
+}
+// the full item examine window (left card overlay). Renders the backend's full description when it
+// ships (127); until then, what we have + a note.
+function examineHtml(it){
+  let body;
+  if(it.desc){
+    const lines = Array.isArray(it.desc) ? it.desc : String(it.desc).split('\n');
+    body = lines.map(l=> l.trim()==='' ? '<div class="sp"></div>' : `<div class="ln">${hlLine(l)}</div>`).join('');
+  } else {
+    const bits=[]; if(it.stack>1) bits.push(`<div class="ln">Quantity: ${fmt(it.stack)}</div>`);
+    if(it.slot&&it.slot!=='other') bits.push(`<div class="ln">Slot: ${it.slot[0].toUpperCase()+it.slot.slice(1)}</div>`);
+    body = bits.join('') + `<div class="pend">Full item description coming soon.</div>`;
+  }
+  return `<div class="xbar"><span class="xname">${it.name||'Item'}</span><button class="xclose" id="xclose" title="Close">&times;</button></div>
+    <div class="xhead">${icon(it)}<span style="color:#9aa6b6;font-size:12.5px">${it.slot&&it.slot!=='other'?'Equipped &middot; '+it.slot:'Inventory item'}</span></div>
+    <div class="xbody">${body}</div>`;
+}
+function openExamine(it){ const ex=$('#examine'); ex.innerHTML=examineHtml(it); ex.classList.remove('hidden'); }
+function closeExamine(){ const ex=$('#examine'); if(ex){ ex.classList.add('hidden'); ex.innerHTML=''; } $('#charArea').querySelectorAll('.selitem').forEach(x=>x.classList.remove('selitem')); }
 function renderBanner(c){
   const loc = c.location && c.location.place;
+  // Red only for an actual killer. "Non-Player Killer" / "NPK" is the harmless default and reading
+  // it in alarm-red made every peaceful character look flagged. (If the VALUE itself is wrong, that
+  // is a backend read — see the 127 note.)
+  const pk = c.pkStatus;
+  const pkKiller = pk && ['pk','pklite','player killer','player killer lite'].includes(String(pk).toLowerCase());
+  const pkHtml = pk ? ` &middot; <span class="${pkKiller?'pk':'npk'}">${pk}</span>` : '';
   $('#banner').innerHTML = `
     <div class="idblock">
       <div class="cname">${marker(c.marker)}${c.name}</div>
-      <div class="meta">${[c.gender,c.heritage].filter(Boolean).join(' ')}${c.pkStatus?` &middot; <span class="pk">${c.pkStatus}</span>`:''}${c.title?` &middot; <span style="color:var(--gold)">${c.title}</span>`:''}</div>
+      <div class="meta">${[c.gender,c.heritage].filter(Boolean).join(' ')}${pkHtml}${c.title?` &middot; <span style="color:var(--gold)">${c.title}</span>`:''}</div>
     </div>
     <div class="stat"><span class="n">${c.level}</span><span class="l">Level</span></div>
     <div class="stat"><span class="n sm">${fmt(c.totalXP)}</span><span class="l">Total XP</span></div>
@@ -411,8 +522,10 @@ function renderQuests(c){
 }
 function defaultReadout(){
   const av=(CHAR.skillCredits&&CHAR.skillCredits.available)??0;
-  $('#readout').innerHTML = `<div class="hint">Click any row to see what it is worth and how far it has to go.</div>
-    <div class="credits"><span class="m">&nbsp;</span><span class="m">Skill Credits Available: <b>${av}</b></span></div>`;
+  // Skill credits are a SKILLS concept — only surface the line on the Skills tab.
+  const credits = curTab==='skills'
+    ? `<div class="credits"><span class="m">&nbsp;</span><span class="m">Skill Credits Available: <b>${av}</b></span></div>` : '';
+  $('#readout').innerHTML = `<div class="hint">Click any row to see what it is worth and how far it has to go.</div>${credits}`;
 }
 function creditsLine(o){
   const av=(CHAR.skillCredits&&CHAR.skillCredits.available)??0;
@@ -502,21 +615,42 @@ function showReadout(o, kind){
 }
 
 /* ---------- inventory (from equipped[] + containers[]) ---------- */
-const ARMOR_POS = { head:'top:6px;left:calc(50% - 19px)', chest:'top:64px;left:calc(50% - 19px)',
-  legs:'top:150px;left:calc(50% - 19px)', hands:'top:110px;left:10px', feet:'top:238px;left:calc(50% - 19px)' };
-const ARMOR_LABEL = { head:'Head', chest:'Chest', legs:'Legs', hands:'Hands', feet:'Feet' };
-const GEAR_SLOTS = [['weapon','Weapon'],['wand','Wand/Caster'],['shield','Shield']];
+// 10 armor coverage slots down the two EDGES of the avatar (Chris's order, 2026-08-14). The API
+// fills head/chest/hands/feet/legs today; the rest fill once item `coverage` ships (127) — e.g. a
+// robe covers Chest, Abdomen, Upper/Lower Arms, Upper/Lower Legs, Feet.
+const ARMOR_LEFT  = [['head','Head'],['chest','Chest'],['upperArms','Upper Arms'],['lowerArms','Lower Arms'],['hands','Hands']];
+const ARMOR_RIGHT = [['cloak','Cloak'],['abdomen','Abdomen'],['upperLegs','Upper Legs'],['lowerLegs','Lower Legs'],['feet','Feet']];
+const EDGE_TOPS = [8,64,120,176,232];
+const GEAR_SLOTS = [['weapon','Weapon'],['wand','Wand / Caster'],['shield','Shield']];
+const CLOAK_RE = /cloak|shroud|cape|mantle/i;
+
+function reg(it){ if(!it) return -1; SEL.push(it); return SEL.length-1; }
+function armorSlot(label,side,top,item){
+  const edge = side==='L' ? 'left:6px' : 'left:calc(100% - 44px)';
+  const di = item ? ` data-item="${reg(item)}"` : '';
+  return `<div class="aslot ${item?'fill':'empty'}"${di} style="top:${top}px;${edge}" title="${label}${item?' — '+item.name:''}">${item?icon(item):''}</div>`;
+}
 function renderInventory(c){
+  SEL=[];
   const inv=c.inventory||{equipped:[],containers:[]};
   const eq={}; (inv.equipped||[]).forEach(it=>{ if(it.slot==='other'){(eq.other=eq.other||[]).push(it);} else if(!eq[it.slot]) eq[it.slot]=it; });
   $('#invName').textContent='Inventory of '+c.name;
-  const burden = c.burden ?? (c.inventory&&c.inventory.burden);
-  if(burden==null){ $('#burdenWrap').style.display='none'; } else { $('#burdenPct').textContent=burden+'%'; $('#burdenBar').style.width=Math.min(100,burden)+'%'; }
+  const burden = c.burden ?? inv.burden;
+  if(burden==null){ $('#burdenWrap').style.display='none'; }
+  else { $('#burdenWrap').style.display=''; $('#burdenPct').textContent=burden+'%'; $('#burdenBar').style.width=Math.min(100,burden)+'%'; }
 
-  const armor = Object.keys(ARMOR_POS).map(k=>{ const it=eq[k];
-    return `<div class="aslot ${it?'fill':'empty'}" style="${ARMOR_POS[k]}" title="${ARMOR_LABEL[k]}${it?' — '+it.name:''}">${it?icon(it):''}</div>`; }).join('');
+  // cloak gets its own right-column slot; pull it out of 'other' by name until the backend gives it
+  // a real slot (127). Whatever remains in 'other' is jewelry.
+  const others=(eq.other||[]).slice();
+  let cloak=null; const ci=others.findIndex(o=>CLOAK_RE.test(o.name||'')); if(ci>=0) cloak=others.splice(ci,1)[0];
+
+  const A={ head:eq.head, chest:eq.chest, hands:eq.hands, feet:eq.feet, upperLegs:eq.legs, cloak };
+  // once the backend ships per-item `coverage` (127), a robe fills all its covered slots at once
+  (inv.equipped||[]).forEach(it=>{ (it.coverage||[]).forEach(k=>{ if(!A[k]) A[k]=it; }); });
+  const left  = ARMOR_LEFT.map(([k,l],i)=>armorSlot(l,'L',EDGE_TOPS[i],A[k])).join('');
+  const right = ARMOR_RIGHT.map(([k,l],i)=>armorSlot(l,'R',EDGE_TOPS[i],A[k])).join('');
   const gear = GEAR_SLOTS.map(([k,lbl])=>{ const it=eq[k];
-    return it?`<div class="islot" title="${lbl}: ${it.name}">${icon(it)}</div>`:`<div class="islot empty" title="${lbl} (empty)"></div>`; }).join('');
+    return it?`<div class="islot" data-item="${reg(it)}" title="${lbl}: ${it.name}">${icon(it)}</div>`:`<div class="islot empty" title="${lbl} (empty)"></div>`; }).join('');
 
   $('#equip').innerHTML = `
     <div class="eqcol"><span class="lbl">Wield</span>${gear}</div>
@@ -526,14 +660,19 @@ function renderInventory(c){
         <path d="M48 40 C26 47 22 82 24 150 L24 206 L72 206 L72 150 C74 82 70 47 48 40 Z" fill="#c9a24b"/>
         <path d="M48 46 L48 200" stroke="#8f6f2c" stroke-width="1.5"/>
         <rect x="30" y="96" width="36" height="7" rx="2" fill="#6d3f86"/>
-      </svg>${armor}
-    </div>
-    <div class="eqcol"><span class="lbl">Slots</span></div>`;
+      </svg>${left}${right}
+    </div>`;
 
-  const others = eq.other||[];
-  $('#otherbar').innerHTML = others.length
-    ? `<span class="lbl">Jewelry &amp; cloak</span>` + others.map(o=>`<div class="islot" title="${o.name}">${icon(o)}</div>`).join('')
-    : '';
+  // jewelry (left) + Aetheria (3 slots, right-aligned; not enabled on this character — 127 fills)
+  const jewel = others.length
+    ? others.map(o=>`<div class="islot" data-item="${reg(o)}" title="${o.name}">${icon(o)}</div>`).join('')
+    : '<span style="color:var(--muted);font-size:12px">none</span>';
+  const aeth = ['red','blue','yellow'].map(cc=>`<div class="aeth ${cc}" title="Aetheria (${cc}) — not set">&nbsp;</div>`).join('');
+  $('#otherbar').innerHTML = `
+    <div class="jewline">
+      <div class="jgroup"><span class="lbl">Jewelry</span><div class="jrow">${jewel}</div></div>
+      <div class="agroup"><span class="lbl">Aetheria</span><div class="arow">${aeth}</div></div>
+    </div>`;
 
   const conts = inv.containers||[];
   if(curCont>=conts.length) curCont=0;
@@ -547,7 +686,7 @@ function renderGrid(c){
   const conts=(c.inventory&&c.inventory.containers)||[];
   const cont=conts[curCont]||{name:'Pack',items:[]}; const items=cont.items||[];
   $('#contHdr').textContent = `Contents of ${cont.name} — ${items.length}`;
-  let cells=items.map(it=>`<div class="cell" title="${it.name}${it.stack>1?' ×'+it.stack:''}">${icon(it)}${it.stack>1?`<span class="stack">${it.stack>=1000?(Math.round(it.stack/100)/10)+'k':it.stack}</span>`:''}</div>`).join('');
+  let cells=items.map(it=>`<div class="cell" data-item="${reg(it)}">${icon(it)}${it.stack>1?`<span class="stack">${it.stack>=1000?(Math.round(it.stack/100)/10)+'k':it.stack}</span>`:''}</div>`).join('');
   const pad=Math.max(0,(Math.ceil(items.length/6)*6||6)-items.length);
   cells+=Array(pad).fill('<div class="cell empty"></div>').join('');
   $('#packgrid').innerHTML=cells;

@@ -35,7 +35,7 @@ import functools
 from pathlib import Path
 from typing import Any
 
-from . import curves, db, names
+from . import curves, db, items, names
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -95,7 +95,11 @@ INT_LEVEL = 25
 INT_AVAILABLE_SKILL_CREDITS = 24
 INT_GENDER = 113
 INT_HERITAGE = 188
-INT_PLAYER_KILLER_STATUS = 133
+# 127 #5: this was 133, which is ShowableOnRadar. Black Breath's radar value happens to be 4,
+# and 4 in the PlayerKillerStatus enum is "PK" - so a Non-Player Killer was labelled a killer on
+# their own character sheet, from a property that has nothing to do with PK at all. The two enums
+# overlapping on a plausible-looking value is what made it survive review.
+INT_PLAYER_KILLER_STATUS = 134
 INT_AGE = 125
 INT_STACK_SIZE = 12
 INT_CURRENT_WIELDED_LOCATION = 10
@@ -109,6 +113,9 @@ INT64_AVAILABLE_EXPERIENCE = 2
 STRING_NAME = 1
 
 DID_ICON = 8
+# 127 #4: Aetheria are the same base gem with a coloured OVERLAY, so the overlay is what
+# distinguishes red/blue/yellow.
+DID_ICON_OVERLAY = 50
 
 IID_CONTAINER = 2
 IID_WIELDER = 3
@@ -571,89 +578,123 @@ def build_quests(raw: dict, now: float) -> list[dict]:
     return out
 
 
-def build_inventory(cur, character_id: int) -> dict:
-    """The 2D paperdoll's data: what is worn, and what is in each pack.
+def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
+    """The paperdoll and the packs, with every item carrying its own examine text.
 
-    One query, not a walk. Every object a character owns carries either a Container (IID 2) or a
-    Wielder (IID 3) pointing at its owner — a pack's contents point at the PACK, and the pack
-    points at the character, so two levels of ContainerId cover the whole main pack -> sacks tree
-    the design asks for.
+    Two queries instead of one join-per-property. The first finds the objects; the second pulls
+    EVERY int/float/string/did/spell row for exactly those ids in one pass. That is deliberate:
+    127 asks for the full examine panel, which touches ~20 properties across four tables, and
+    LEFT JOINing each one would have turned a readable query into twenty joins and a row per
+    combination. Fetching the property rows wholesale and grouping them in Python is both faster
+    and the only version anyone will be able to change later.
     """
     rows = db.fetch_all(
         cur,
         """
-        SELECT b.id,
-               b.weenie_Type,
-               s.value       AS name,
-               d.value       AS icon,
-               stack.value   AS stack_size,
-               wield.value   AS wielded_location,
-               valid.value   AS valid_locations,
+        SELECT b.id, b.weenie_Type,
                container.value AS container_id,
                wielder.value   AS wielder_id
         FROM biota b
-        LEFT JOIN biota_properties_string s   ON s.object_Id = b.id AND s.type = %s
-        LEFT JOIN biota_properties_d_i_d d    ON d.object_Id = b.id AND d.type = %s
-        LEFT JOIN biota_properties_int stack  ON stack.object_Id = b.id AND stack.type = %s
-        LEFT JOIN biota_properties_int wield  ON wield.object_Id = b.id AND wield.type = %s
-        LEFT JOIN biota_properties_int valid  ON valid.object_Id = b.id AND valid.type = %s
         LEFT JOIN biota_properties_i_i_d container ON container.object_Id = b.id AND container.type = %s
-        LEFT JOIN biota_properties_i_i_d wielder   ON wielder.object_Id = b.id AND wielder.type = %s
+        LEFT JOIN biota_properties_i_i_d wielder   ON wielder.object_Id = b.id   AND wielder.type = %s
         WHERE container.value = %s OR wielder.value = %s
            OR container.value IN (
                 SELECT object_Id FROM biota_properties_i_i_d
                 WHERE type = %s AND value = %s
               )
         """,
-        (
-            STRING_NAME,
-            DID_ICON,
-            INT_STACK_SIZE,
-            INT_CURRENT_WIELDED_LOCATION,
-            INT_VALID_LOCATIONS,
-            IID_CONTAINER,
-            IID_WIELDER,
-            character_id,
-            character_id,
-            IID_CONTAINER,
-            character_id,
-        ),
+        (IID_CONTAINER, IID_WIELDER, character_id, character_id, IID_CONTAINER, character_id),
     )
+
+    if not rows:
+        return {"equipped": [], "containers": [], "burden": None}
+
+    ids = [r["id"] for r in rows]
+    marks = ",".join(["%s"] * len(ids))
+
+    def props(table: str, value_col: str = "value") -> dict[int, dict]:
+        out: dict[int, dict] = {}
+
+        for r in db.fetch_all(
+            cur,
+            f"SELECT object_Id, type, {value_col} AS v FROM {table} WHERE object_Id IN ({marks})",
+            tuple(ids),
+        ):
+            out.setdefault(r["object_Id"], {})[r["type"]] = r["v"]
+
+        return out
+
+    ints = props("biota_properties_int")
+    floats = props("biota_properties_float")
+    strings = props("biota_properties_string")
+    dids = props("biota_properties_d_i_d")
+
+    spells: dict[int, list[int]] = {}
+
+    for r in db.fetch_all(
+        cur,
+        f"SELECT object_Id, spell FROM biota_properties_spell_book WHERE object_Id IN ({marks})",
+        tuple(ids),
+    ):
+        spells.setdefault(r["object_Id"], []).append(r["spell"])
 
     equipped: list[dict] = []
     by_container: dict[int, list[dict]] = {}
-    container_names: dict[int, str] = {}
+    container_names: dict[int, tuple[str, str]] = {}
+    total_burden = 0
 
     for row in rows:
+        oid = row["id"]
+        i, f, st, d = ints.get(oid, {}), floats.get(oid, {}), strings.get(oid, {}), dids.get(oid, {})
+
+        icon_id = d.get(DID_ICON)
+        stack = int(i.get(INT_STACK_SIZE) or 1)
+        detail = items.build_detail(i, f, st, spells.get(oid, []))
+
         item = {
-            "id": row["id"],
-            "name": row["name"] or "(unnamed)",
-            "iconId": row["icon"],
+            "id": oid,
+            "name": items.display_name(st.get(STRING_NAME) or "(unnamed)", i, f),
+            "iconId": icon_id,
             "icon": icon_url(
-                f"/assets/icons/item/{row['icon']}.png" if row["icon"]
+                f"/assets/icons/item/{icon_id}.png" if icon_id
                 else "/assets/icons/placeholder.png"
             ),
-            "stack": int(row["stack_size"] or 1),
+            "stack": stack,
             "cat": "util",
+            # BOTH SHAPES, and both are load-bearing. The front-end renders `it.desc` (array or
+            # newline string) and shows "Full item description coming soon." for anything without
+            # it, so `desc` is what actually reaches the page. `detail` carries the same facts
+            # named and typed, so a later layout can position armour level or spells properly
+            # instead of parsing sentences back apart.
+            "detail": detail,
+            "desc": detail["lines"],
         }
 
-        # WeenieType.Container == 21. A pack is both an item and a place items live, so it is
-        # recorded on both sides: it appears in the character's own grid AND gets its own tab.
-        #
-        # Its icon comes along, because the side bar draws the ACTUAL pack - a green pack, a tan
-        # sack - and every one of them is a real object carrying its own IconId. Only the main
-        # pack has none, because it is the character's own inventory rather than a thing.
+        # 127 #4: Aetheria are identified by an icon OVERLAY rather than a different icon, so the
+        # overlay id has to travel or all three sigils render as the same base gem.
+        if (overlay := d.get(DID_ICON_OVERLAY)):
+            item["iconOverlayId"] = overlay
+            item["iconOverlay"] = icon_url(f"/assets/icons/item/{overlay}.png")
+
+        # NOT multiplied by the stack. EncumbranceVal is ALREADY the total for the object as it
+        # stands - 1,000 Prismatic Tapers store 6,000, and StackUnitEncumbrance (type 13) holds
+        # the 6 per taper. Multiplying by the stack double-counts by the stack size, which put
+        # Black Breath at 49,520% burden before this was checked against a real stack.
+        total_burden += int(i.get(items.INT_ENCUMBRANCE) or 0)
+
         if row["weenie_Type"] == 21 and row["container_id"] == character_id:
-            container_names[row["id"]] = (item["name"], item["icon"])
+            container_names[oid] = (item["name"], item["icon"])
 
         if row["wielder_id"] == character_id:
+            wielded = i.get(INT_CURRENT_WIELDED_LOCATION)
+
             equipped.append(
                 {
                     **item,
-                    "slot": _slot_name(row["wielded_location"]),
-                    # The raw mask travels too, so the front-end can get more specific later
-                    # (a full doll with ring/neck/cloak tiles) without a backend change.
-                    "wieldedLocation": row["wielded_location"],
+                    "slot": items.slot_name(wielded),
+                    # 127 #2: EVERY area this covers, not just one. A robe reports eight.
+                    "coverage": items.coverage(wielded),
+                    "wieldedLocation": wielded,
                 }
             )
             continue
@@ -667,14 +708,12 @@ def build_inventory(cur, character_id: int) -> dict:
         {
             "id": character_id,
             "name": "Main Pack",
-            # The client draws a fixed backpack here; see UiIcons in the exporter for how that
-            # texture was identified.
             "icon": icon_url("/assets/icons/ui/mainpack.png"),
             "items": sorted(by_container.get(character_id, []), key=lambda i: i["name"]),
         }
     ]
 
-    # A character can carry several identical packs — Black Breath has two both named "Pack" —
+    # A character can carry several identical packs - Black Breath has two both named "Pack" -
     # and two tabs reading "Pack" is a UI the player cannot navigate. Numbering only kicks in
     # when a name actually repeats, so the common single-Sack case stays clean.
     name_counts: dict[str, int] = {}
@@ -700,52 +739,93 @@ def build_inventory(cur, character_id: int) -> dict:
             }
         )
 
-    return {"equipped": equipped, "containers": containers}
+    burden = _burden(total_burden, strength, dials)
+
+    return {
+        "equipped": equipped,
+        "containers": containers,
+        # `burden` is the PERCENT AS A NUMBER, because that is what the front-end consumes -
+        # it renders `burden + '%'` straight into the meter, and handing it the detail object
+        # printed "Burden [object Object]%" on the live page. The detail travels alongside for
+        # anything that wants the actual figures.
+        "burden": burden["percent"],
+        "burdenDetail": burden,
+    }
 
 
-# EquipMask (ACE.Entity.Enum.EquipMask) -> the eight paperdoll slots the mockup draws.
-#
-# Coarse on purpose: the client has thirty-odd equip bits and the paperdoll has eight tiles, so
-# clothing and armour covering the same body area collapse onto one slot.
-#
-# ORDER IS THE WHOLE DESIGN, AND IT IS NOT THE OBVIOUS ONE. A garment's CurrentWieldedLocation
-# is every area it covers, not one slot — a hooded robe sets HeadWear *and* ChestWear *and*
-# AbdomenWear *and* the leg bits. So a head-first scan puts every robe in the helmet tile, which
-# is exactly what the first version of this did to Black Breath's Pathwarden Robe. Torso first,
-# head LAST: a pure helmet sets only HeadWear and still lands correctly, while anything that
-# also covers a body wins the more informative slot.
-_SLOTS = [
-    (0x00100000 | 0x02000000, "weapon"),                            # MeleeWeapon, TwoHanded
-    (0x00200000, "shield"),                                         # Shield
-    (0x00400000 | 0x01000000, "wand"),                              # MissileWeapon, Held (casters)
-    (0x00000002 | 0x00000004 | 0x00000200 | 0x00000400, "chest"),   # chest/abdomen wear + armor
-    (0x00000040 | 0x00000080 | 0x00002000 | 0x00004000, "legs"),    # leg wear + armor
-    (0x00000008 | 0x00000010 | 0x00000020 | 0x00000800 | 0x00001000, "hands"),  # arms + hands
-    (0x00000100, "feet"),                                           # FootWear
-    (0x00000001, "head"),                                           # HeadWear — last, see above
-]
+def _burden(carried: int, strength: int, dials: dict) -> dict:
+    """127 #7: burden, matching the number the CLIENT shows.
 
+    `carried` is the plain sum of every item's EncumbranceVal - NOT multiplied by stack size,
+    because that property is already the total for the object as it stands (1,000 Prismatic
+    Tapers store 6,000; StackUnitEncumbrance holds the 6 per taper). Containers are not
+    double-counted either: a pack stores only its own 15.
 
-def _slot_name(wielded_location: int | None) -> str:
-    """A paperdoll slot, or "other" for jewellery and cloaks the eight-tile doll cannot show.
+    Capacity mirrors `Player.GetEncumbranceCapacity()` - `150 * Strength` - because that is the
+    figure the server sends the client as PropertyInt.EncumbranceCapacity, and the page's job is
+    to agree with what the player sees in game.
 
-    "other" is deliberately not forced into a tile. Necklaces, rings, bracelets, trinkets and
-    cloaks are five more equip bits with nowhere to go, and dropping one on top of the armour
-    the player actually cares about would be worse than listing it separately.
+    TWO THINGS THIS IS KNOWINGLY APPROXIMATE ABOUT, both from reading a saved snapshot:
+
+      * the server uses Strength.CURRENT (buffed); we only have base, so a buffed character reads
+        slightly heavier here than in game;
+      * `AugmentationIncreasedCarryingCapacity` would raise capacity by 30 x Strength per
+        augmentation, and is not read.
+
+    Both err the same way - reporting MORE burden than the player has - which is the safe
+    direction for a number nobody should act on from a web page.
+
+    NOTE FOR THE SERVER, not applied here: 009's `burden_capacity_floor` is added inside
+    EncumbranceSystem.EncumbranceCapacity, which drives the physics/movement penalty, while
+    Player.GetEncumbranceCapacity has its own copy of the formula WITHOUT it. So the floor
+    currently moves the penalty but not the capacity the client displays, which is not what 009's
+    own comment says it intended. Flagged in Task.md 127 rather than papered over here.
     """
-    if not wielded_location:
-        return "other"
+    capacity = 150 * max(0, strength)
 
-    for mask, name in _SLOTS:
-        if wielded_location & mask:
-            return name
-
-    return "other"
+    return {
+        "carried": carried,
+        "capacity": capacity,
+        "percent": round(100 * carried / capacity, 1) if capacity > 0 else None,
+        # True when the figure is unbuffed base Strength, so the front-end can hedge if it wants.
+        "approximate": True,
+    }
 
 
 # ---------------------------------------------------------------------------------------------
 # the two payloads
 # ---------------------------------------------------------------------------------------------
+
+
+# The game spells these out; the enum does not. "NPK" on a character sheet is jargon, and the
+# front-end colours on the value, so it needs to be able to tell a real killer from everyone else.
+PK_STATUS_NAMES = {
+    0: None,                    # Undef - nothing worth saying
+    1: "Protected",
+    2: "Non-Player Killer",
+    4: "Player Killer",
+    8: "Unprotected",
+    0x40: "Player Killer Lite",
+}
+
+
+def _strength(raw: dict) -> int:
+    """The character's Strength VALUE (starting + ranks), which is what burden capacity uses."""
+    for row in raw["attributes"]:
+        if row["type"] == 1:
+            return (row["init_Level"] or 0) + (row["level_From_C_P"] or 0)
+
+    return 0
+
+
+def _pk_status(value: int | None) -> str | None:
+    if value is None:
+        return None
+
+    if value in PK_STATUS_NAMES:
+        return PK_STATUS_NAMES[value]
+
+    return curves.enum_label("playerKillerStatus", value)
 
 
 def _identity(raw: dict) -> dict:
@@ -758,7 +838,7 @@ def _identity(raw: dict) -> dict:
         "marker": _marker(raw["bools"]),
         "gender": curves.enum_label("gender", ints.get(INT_GENDER)),
         "heritage": curves.enum_label("heritage", ints.get(INT_HERITAGE)),
-        "pkStatus": curves.enum_label("playerKillerStatus", ints.get(INT_PLAYER_KILLER_STATUS)),
+        "pkStatus": _pk_status(ints.get(INT_PLAYER_KILLER_STATUS)),
         "level": ints.get(INT_LEVEL, 1) or 1,
         "totalXP": raw["int64s"].get(INT64_TOTAL_EXPERIENCE, 0) or 0,
     }
@@ -846,7 +926,7 @@ def build_private(cur, raw: dict, dials: dict, now: float) -> dict:
         "skills": skills,
         "skillCredits": build_skill_credits(raw, skills),
         "titles": titles,
-        "inventory": build_inventory(cur, char["id"]),
+        "inventory": build_inventory(cur, char["id"], _strength(raw), dials),
         "quests": build_quests(raw, now),
         "public": False,
     }

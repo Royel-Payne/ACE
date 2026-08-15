@@ -333,6 +333,31 @@ public static class Program
 
         Console.WriteLine("    vitals.json       health/stamina/mana attribute formulas");
 
+        // --- spells.json: the names on an item's spellbook -----------------------------------
+        //
+        // 127 ask #1: an item's examine text lists the spells on it, and the shard stores only
+        // their ids. The names live here in the dat, so they are exported alongside everything
+        // else rather than fetched at request time.
+        var spells = new SortedDictionary<uint, object>();
+
+        foreach (var (id, sb) in portal.SpellTable.Spells)
+        {
+            spells[id] = new
+            {
+                name = sb.Name,
+                desc = sb.Desc,
+                school = sb.School.ToString(),
+                // Power orders the tiers within a category (Strength Self I..VIII), which is what
+                // lets the page show "Strength Self VI" rather than a bare id.
+                power = sb.Power,
+                mana = sb.BaseMana,
+                icon = sb.Icon,
+            };
+        }
+
+        Write(Path.Combine(dataDir, "spells.json"), spells);
+        Console.WriteLine($"    spells.json       {spells.Count} spells");
+
         // --- enums.json: every id the shard stores that the payload must name ---------------
         //
         // The shard is all raw ints - heritage 10, gender 2, pk status 4, title 765. Every one of

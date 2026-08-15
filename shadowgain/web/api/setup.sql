@@ -57,6 +57,8 @@ GRANT SELECT ON ace_shard.biota_properties_d_i_d             TO 'sgweb'@'%';
 GRANT SELECT ON ace_shard.biota_properties_i_i_d             TO 'sgweb'@'%';
 GRANT SELECT ON ace_shard.character_properties_title_book    TO 'sgweb'@'%';
 GRANT SELECT ON ace_shard.character_properties_quest_registry TO 'sgweb'@'%';
+-- 127: an item's spellbook, for the examine text the tooltip renders.
+GRANT SELECT ON ace_shard.biota_properties_spell_book  TO 'sgweb'@'%';
 -- The live dials the rank maths reads. PropertyManager loads these rows OVER the compiled
 -- defaults, so computing ranks without them means computing on a curve the server abandoned.
 GRANT SELECT ON ace_shard.config_properties_boolean          TO 'sgweb'@'%';
