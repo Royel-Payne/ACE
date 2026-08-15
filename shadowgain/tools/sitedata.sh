@@ -156,30 +156,36 @@ ONLINE=null; LANDBLOCKS=null; OBJECTS=null; CREATURES=null
 SERVING=false
 if [ "$UP" = true ]; then
   T0=$(date -u +%Y-%m-%dT%H:%M:%S)
-  # 124: `sg-roster` rides along on the SAME attach as serverstatus - the attach is the expensive
-  # part, so a second one would double the console round-trips on a 30-second timer for one extra
-  # line. It names every online player, which is what my.shadowgain.com needs to put an "Online"
-  # dot next to the right character. Nothing passive can supply it: PlayerManager's online list
-  # lives in memory, ACE's `[LOGIN]` line is log.Debug against an INFO-capped appender so it
-  # never reaches the log at all, and the shard's login/logoff timestamps are NOT a substitute -
-  # ACE writes FUTURE values into LogoffTimestamp to drive the PK timer (Player.cs), so a
-  # character who fought recently looks permanently online.
+  # `sg-roster` rides along on the SAME attach as serverstatus - the attach is the expensive part
+  # (a fixed 8s, because `docker attach` never exits on its own), so a second command on it is
+  # very nearly free. It names the online characters, which my.shadowgain.com uses to put an
+  # "Online" dot beside a player's OWN characters on the logged-in panel.
   #
-  # 124a: THIS WAS `listplayers` FOR ABOUT AN HOUR, AND THAT WAS A MISTAKE. Privileged commands
-  # are recorded by ShadowgainAudit and relayed to Discord #audit, so a 30-second timer posted
-  # "CONSOLE [Developer] ran @listplayers" to #audit twice a minute and buried the staff actions
-  # that channel exists to surface.
+  # 127c: THIS WAS BRIEFLY BLAMED FOR BREAKING THE PUBLIC HONOUR ROLL, AND IT WAS NOT THE CAUSE.
+  # The real fault was the `docker logs` read below being killed by its own 10s timeout, because
+  # the container log had grown to 548 MB and `--since` alone still scans the whole file. See
+  # the note there. Removing this command did not fix it; adding `--tail` did.
   #
-  # `serverstatus` never did that only because it sits in ShadowgainAudit.ReadOnlyNoise. So does
-  # `sg-roster` - which is the SAME output as listplayers ("<Name> : <accountId>", one per line)
-  # at Advocate tier, and is explicitly documented there as "polled by the admin console plugin
-  # to draw its roster panel". Polling is what it is for.
-  #
-  # The lesson generalises: before putting ANY console command on a timer, check it against
-  # ReadOnlyNoise. If it is not in that set, a poll becomes a Discord flood.
-  printf 'serverstatus\nsg-roster\n' | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
+  # `sg-roster` and not `listplayers`: both print the same roster, but listplayers is a
+  # Developer-tier command that ShadowgainAudit relays to Discord #audit, and putting it on a
+  # 15s timer flooded that channel (125). sg-roster is in ReadOnlyNoise, which is what a command
+  # meant for polling looks like. Before putting ANY console command on a timer, check that set.
+  { echo serverstatus; echo sg-roster; } | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
   sleep 2
-  SS=$(timeout -s KILL 10 docker logs --since "$T0" ace-server 2>&1 || true)
+  # `--tail` IS NOT OPTIONAL, IT IS THE WHOLE COST. 039 section E bounded this read with
+  # `--since` so it would not grow with uptime - but `--since` only bounds the OUTPUT. Docker
+  # still scans forward through the json log to find the window, so the call stays O(file size).
+  # At 548 MB that measured **14.2 seconds**; with `--tail 4000` alongside it, **66 ms** - Docker
+  # seeks from the END instead. Same data, 200x faster.
+  #
+  # This is what broke the public honour roll. One status run had grown to ~32s against a timer
+  # firing every 15s, so runs piled up two and three deep and their `docker attach` calls
+  # contended for the one console. A collided run parses no serverstatus, SERVING stays false,
+  # and status.json says the world is OFFLINE while it is perfectly healthy.
+  #
+  # 4000 lines is ~40s of a busy log, so the reply we just asked for cannot scroll past before we
+  # read it; every parse below still takes `tail -1`, so extra history is harmless.
+  SS=$(timeout -s KILL 10 docker logs --since "$T0" --tail 4000 ace-server 2>&1 || true)
 
   N=$(printf '%s' "$SS" | grep -oE '[0-9]+ players online' | tail -1 | grep -oE '^[0-9]+' || true)
   if [ -n "$N" ]; then ONLINE=$N; SERVING=true; fi
@@ -193,58 +199,49 @@ if [ "$UP" = true ]; then
   C=$(printf '%s' "$SS" | grep -oE 'Creatures: [0-9]+' | tail -1 | grep -oE '[0-9]+$' || true)
   [ -n "$C" ] && CREATURES=$C
 
-  # 124: the online character NAMES, from listplayers. Feeds the "Online" dot on
-  # my.shadowgain.com, which needs to know WHICH character is on, not just how many.
+  # The online character NAMES, for the logged-in panel's own-characters dot.
   #
-  # The format is one "<Name> : <accountId>" per line, with only the FIRST line carrying a log
-  # prefix ("ACE >> ... INFO : † Adramelech : 13") because the whole list is written as a single
-  # multi-line message. So the prefix is stripped conditionally rather than assumed.
+  # THE MARKER MUST COME OFF. Names arrive as "† Black Breath" - the hard-lane prefix is cosmetic
+  # and is NOT part of character.name, so leaving it on would make every hard-lane character fail
+  # the comparison and read as permanently offline.
   #
-  # THE MARKER MUST COME OFF. Names arrive as "† Black Breath" - the hard-lane prefix is
-  # cosmetic and is NOT part of character.name, so leaving it on would make every hard-lane
-  # character fail the name comparison and read as offline. The sed strips everything before
-  # the first ASCII letter or digit, which handles any marker prefix the dial is ever set to.
+  # The leading space before the colon is load-bearing: it matches a roster row and NOT
+  # sg-roster's trailing "Total connected Players: 10", which has no space there. Deduped because
+  # a `--tail` window can hold two runs' output.
   #
-  # The account id is discarded on purpose - it is not needed to answer "is this character
-  # online", and an account id is a different class of fact from a character name.
-  #
-  # `awk '!seen[$0]++'` DEDUPES, because a `docker logs --since` window can contain TWO runs.
-  # The window is second-granularity and this timer fires every 30s, so an overlapping manual
-  # run or a slow console reply lands both lists in the same slice - measured, 20 matching
-  # lines for 10 players. Same class of trap as the stale `Exiting at` in DEPLOY.md: `--since`
-  # bounds the read, it does not guarantee the read saw exactly one run.
-  # The leading space before the colon is load-bearing: it matches a roster row
-  # ("† Black Breath : 3") and NOT sg-roster's trailing "Total connected Players: 10", which has
-  # no space there. The explicit grep -v is belt and braces - a summary line silently parsed as a
-  # player called "Total connected Players" would be a very confusing bug to chase.
+  # The account id is DISCARDED. It is not needed to answer "is this character online", and an
+  # account id is a different class of fact from a character name.
+  # `l.strip()` and not `l.rstrip(<newline>)`: an escaped newline inside this single-quoted
+  # python one-liner is one layer of quoting away from becoming a REAL newline, which breaks
+  # the literal, errors python, and is then swallowed by `|| true` - leaving an empty roster
+  # and every character reading offline, silently. It did exactly that. No backslashes here.
   NAMES_JSON=$(printf '%s' "$SS" \
     | grep -aE ' : [0-9]+[[:space:]]*$' \
     | grep -avE 'Total connected Players' \
     | sed -E 's/^.*INFO : //' \
     | sed -E 's/ : [0-9]+[[:space:]]*$//' \
     | sed -E 's/^[^A-Za-z0-9]+//' \
-    | sed -E 's/[[:space:]]+$//' \
-    | grep -av '^$' \
+    | grep -av '^[[:space:]]*$' \
     | awk '!seen[$0]++' \
-    | python3 -c 'import json,sys; print(json.dumps([l.rstrip("\n") for l in sys.stdin]))' 2>/dev/null || true)
+    | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin]))' 2>/dev/null || true)
+
 fi
 
-# An empty or unparseable list becomes [] rather than null: the consumer treats "not in the
-# list" as offline, and null would have to be special-cased at the other end for no gain.
+# NOT IN status.json, AND NOT IN THE WEB ROOT.
+#
+# status.json is public and the honour roll reads it. Chris, 2026-08-15: *"what's not allowed is
+# a view to other characters online state"* - other people's accounts. So the roster lands in
+# /opt/ACE, which Caddy does not serve, and only the character portal's API reads it, to light a
+# dot beside characters on the VIEWER'S OWN account behind login. The public character page
+# carries no presence at all.
+#
+# An empty or unparseable list becomes [] rather than null: "not in the list" already means
+# offline, and null would need special-casing at the other end for no gain.
 [ -z "${NAMES_JSON:-}" ] && NAMES_JSON="[]"
 
-# DELIBERATELY NOT IN status.json, AND NOT IN THE WEB ROOT.
-#
-# status.json is public, and a public who-is-online roster is a new disclosure about players
-# rather than about the server - a different thing from the player COUNT that feed already
-# carries, and not a call this script should make on its own. So the names land in /opt/ACE,
-# which Caddy does not serve, and only the character portal's API reads them (as the sgweb
-# user, over the filesystem). It uses them for one thing: an online dot beside a character the
-# viewer is already entitled to see.
-#
-# Written via a temp file and mv so a reader can never catch a half-written array.
-printf '{"generated":"%s","names":%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$NAMES_JSON" \
-  > /opt/ACE/.online-names.json.tmp
+# Temp file and mv, so a reader can never catch a half-written array.
+printf '{"generated":"%s","names":%s}
+' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$NAMES_JSON"   > /opt/ACE/.online-names.json.tmp
 chmod 644 /opt/ACE/.online-names.json.tmp
 mv /opt/ACE/.online-names.json.tmp /opt/ACE/online-names.json
 
