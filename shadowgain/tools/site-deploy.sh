@@ -28,6 +28,11 @@ SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o 
 # plugin.html is UNLISTED (noindex, not in the nav) but it is still a real page, so it
 # ships on a full deploy like any other. Leaving it out of this list would mean a future
 # edit plus a bare ./site-deploy.sh silently skips it.
+#
+# vitaeum.html is the ONE deliberate exclusion (153). It lives in landing/ because that is where
+# the static pages are authored, but it is served from a different host and a different web root
+# (/var/www/vitaeum/index.html) by vitaeum-deploy.sh. Adding it here would ship a second copy to
+# shadowgain.com/vitaeum.html and the verify loop below would pass, so nothing would complain.
 DEFAULT_FILES=(index.html setup.html tuning.html honourroll.html plugin.html
                favicon.svg og-image.png discord-icon-512.png)
 

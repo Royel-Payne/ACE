@@ -1,0 +1,37 @@
+# Shadowgain 153 - vitaeum.shadowgain.com, a "Coming Soon" page for Apex's client project.
+#
+# APPENDED to /etc/caddy/Caddyfile by shadowgain/tools/vitaeum-deploy.sh, between the markers
+#   # >>> vitaeum (managed by vitaeum-deploy.sh)
+#   # <<< vitaeum
+# so a redeploy replaces this block and never touches the shadowgain.com or my.shadowgain.com
+# blocks that share the file.
+#
+# Static only. One HTML file, no API, no proxy, nothing to restart - the whole page is self
+# contained (inline CSS, inline SVG sigil, inline rain canvas) and loads no external asset.
+#
+# It gets its OWN web root rather than a path under /var/www/shadowgain, so the apex site's pages
+# are not reachable under this hostname. A rewrite into the shared root would have been fewer
+# moving parts and would also have served tuning.html from vitaeum.shadowgain.com.
+#
+# TLS is not optional here: the apex sets `Strict-Transport-Security ... includeSubDomains`, so a
+# browser that has ever seen shadowgain.com will REFUSE plain HTTP to this subdomain. Caddy
+# provisions on first request via an ACME challenge, so the A record must resolve to this droplet
+# before the block is loaded - vitaeum-deploy.sh checks that and refuses rather than starting a
+# retry loop against Let's Encrypt's rate limits.
+
+vitaeum.shadowgain.com {
+	root * /var/www/vitaeum
+	encode gzip zstd
+	file_server
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+	}
+
+	# A placeholder page whose whole job is to change when the project does. Never cache it.
+	@html path *.html /
+	header @html Cache-Control "no-cache"
+}
