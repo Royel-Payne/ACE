@@ -645,6 +645,45 @@ def _workmanship_names() -> dict[int, str]:
 
 WORKMANSHIP_NAMES = _workmanship_names()
 
+# The client's word for a resistance, and the thresholds it uses.
+#
+# THE WORDS ARE THE CLIENT'S, the thresholds are DERIVED - and the difference matters, so it is
+# written down rather than blurred. The five strings live in acclient.exe beside the client's own
+# "  (%.0f)" format for the parenthesised figure, and there is no sixth: nothing below
+# "Below Average" exists, so it is the floor and there is no unknown region at the bottom.
+#
+# The BOUNDARIES are not a table anywhere in the binary - they are inline constants in comparison
+# code - so they are derived from observation. Seven independent points, all consistent with one
+# 0.4 ladder, and no point contradicts it:
+#
+#     0.7 Below Average      1.2 Above Average      2.0 Unparalleled
+#     0.9 Average            1.6 Excellent
+#     1.0 Average            1.7 Excellent
+#
+# 0.7/0.9/1.0/1.2 come from the community wiki's UNBUFFED Hoary Mattekar Robe, which prints word
+# and value together against a known armour level; 1.6/1.7/2.0 from Chris's own in-game panels. A
+# stray 1.6 double sits in the binary a few bytes from these strings, which is weak corroboration
+# for that step being real rather than fitted.
+#
+# This is the one thing here that is inferred rather than read, so: if a future item shows a word
+# that disagrees, the ladder is wrong and this comment holds every point it was built from.
+RESISTANCE_WORDS = [
+    (2.0, "Unparalleled"),
+    (1.6, "Excellent"),
+    (1.2, "Above Average"),
+    (0.8, "Average"),
+    (float("-inf"), "Below Average"),
+]
+
+
+def resistance_word(mod: float) -> str:
+    for floor, word in RESISTANCE_WORDS:
+        if mod >= floor:
+            return word
+
+    return RESISTANCE_WORDS[-1][1]
+
+
 RESISTANCES = [
     ("Slashing", FLOAT_ARMOR_MOD_SLASH),
     ("Piercing", FLOAT_ARMOR_MOD_PIERCE),
@@ -837,7 +876,11 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             for k in mods:
                 # The client greens each resistance a bane raised and leaves the rest plain - which
                 # is why its Nether row is the only one in black on Black Breath's robe.
-                add(k, _fmt(round(armor_for_res * mod_keys[k])), is_buffed=mod_buffed.get(k, False))
+                #
+                # "Word (value)" is the client's own shape, down to the two spaces before the
+                # bracket in its format string.
+                add(k, f"{resistance_word(mod_keys[k])}  ({_fmt(round(armor_for_res * mod_keys[k]))})",
+                    is_buffed=mod_buffed.get(k, False))
         else:
             # Clothing with no armour of its own: the multiplier is all there is to report.
             add("Protection", ", ".join(f"{k} x{v:g}" for k, v in mods.items()))
