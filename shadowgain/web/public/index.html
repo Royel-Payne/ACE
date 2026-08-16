@@ -30,11 +30,20 @@
   h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:600;margin:0}
   .hidden{display:none !important}
 
-  .topnav{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--line)}
+  /* 142: padding, gap and wrap copied from the apex nav so both headers are the same height. */
+  .topnav{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    padding:20px 0;border-bottom:1px solid var(--line)}
+  .navright{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
   .brand{color:#e7eef0;font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:19px;letter-spacing:.5px}
   .brand b{color:var(--arcane)}
-  .navlinks{display:flex;gap:20px;align-items:center;font-size:14.5px}
+  .navlinks{display:flex;gap:18px;align-items:center;font-size:14.5px;flex-wrap:wrap}
   .navlinks a.active{color:var(--gold)}
+  /* 153: Vitaeum is Zan's project and carries his green, not the portal's arcane teal - the
+     colours are deliberately the same literals the apex pages use inline. */
+  .navlinks a.newlink{color:#46e86a;font-weight:700}
+  .navlinks a.newlink:hover{color:#8bff9e}
+  .newbadge{font-size:9px;background:#2be84f;color:#04140a;border-radius:4px;padding:1px 5px;
+    vertical-align:middle;letter-spacing:.5px;font-weight:700}
   .acct .btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:#dbe4ea;font-size:13.5px;cursor:pointer}
   .acct .btn:hover{border-color:var(--arcane-dim)}
 
@@ -109,13 +118,41 @@
   .row .nm{flex:1;color:#dbe4ea;font-size:14.5px}
   .row .vl{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px}
   .vl.trained{color:var(--green)} .vl.specialized{color:var(--gold)} .vl.untrained{color:var(--violet)} .vl.unusable{color:var(--muted)}
+  /* 136 - the client's convention: a buffed figure is green, an unbuffed one is not. */
+  .vl.isbuffed{color:var(--green)} .vl.plain{color:#d7e0ea}
   .row .sb{font-size:11px;color:var(--gold);border:1px solid rgba(216,172,82,.4);border-radius:5px;padding:1px 5px;margin-left:2px}
   .emptygrp{color:var(--muted);font-style:italic;font-size:13px;padding:4px 8px 8px}
 
   .readout{border-top:1px solid var(--line);background:rgba(9,12,18,.5);padding:13px 16px}
   .readout .top{display:flex;justify-content:space-between;align-items:baseline}
   .readout .rn{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:17px;color:#eaf3f2}
-  .readout .rn .buff{font-size:13px;color:var(--red);margin-left:6px}
+  /* 141 - one row shape, shared by both stat readouts and by the pane header, so the two tabs
+     cannot drift into different layouts again. */
+  .rrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    font-size:12.5px;color:#9aa6b6;padding:3px 0}
+  .rrow b{color:#dce4ec;font-variant-numeric:tabular-nums;font-weight:600}
+  .rrow.goal b{color:var(--arcane)}
+  /* 145: a short qualifier on a row label, for when the label alone is ambiguous. */
+  .rrow .qual{font-size:10.5px;color:#6f7f90;font-style:italic;margin-left:5px}
+  /* 143: the level bar lives in the banner now. These are character-level figures and the banner
+     is always visible, so the stat tabs neither duplicate them nor spend scroll space on them.
+     The bar was the one thing 141's pane header had that the banner lacked. */
+  .banner .stat.xpnext{min-width:132px}
+  /* 144: THE BAR MUST NOT MAKE ITS BLOCK TALLER.
+     The banner is align-items:center, so one taller block shifts every block on its row off the
+     shared baseline. 143 hung the level bar under XP TO NEXT only, which made that block 11px
+     taller than its neighbours - invisible on desktop where the blocks rarely share a wrapped
+     row, and a clear 5.5px slip on a phone, where they do. Measured at a 379px viewport:
+     XP-to-next number at 588.1 against its row-mate's 593.6.
+     Taking the bar out of flow makes every .stat the same height again, so the numbers share a
+     baseline and the labels share a baseline at every width. It sits in the banner's row gap
+     (12px mobile / 16px desktop), which is more than the 10px it needs. */
+  .banner .stat{position:relative}
+  .banner .lvlbar{position:absolute;left:0;right:0;top:100%;margin-top:5px}
+  .lvlbar{height:5px;border-radius:3px;background:#141b26;overflow:hidden;margin-top:6px}
+  .lvlbar i{display:block;height:100%;background:linear-gradient(90deg,#8f7bd6,#c0504d)}
+  .readout .rn .buff{font-size:13px;margin-left:6px;color:var(--green)}
+  .readout .rn .buff.down{color:var(--red)}
   .readout .rk{color:var(--arcane);font-variant-numeric:tabular-nums;font-weight:600}
   .bar{height:9px;border-radius:6px;background:#0a0f16;border:1px solid var(--line);margin:9px 0 6px;overflow:hidden}
   .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--arcane-dim),var(--arcane));border-radius:6px}
@@ -293,8 +330,13 @@
 
   /* --- mobile --- */
   @media(max-width:640px){
-    .topnav{flex-direction:column;align-items:flex-start;gap:12px;padding:14px 0}
-    .navlinks{width:100%;flex-wrap:wrap;gap:14px 18px}
+    /* 142: THE HEADER NO LONGER STACKS BELOW 640px.
+       This was the actual cause of the shape shift Chris reported, not the account button's
+       position: the portal switched flex-direction to column here while the apex pages have no
+       nav media query at all and simply wrap in a row. So at the same narrow width the portal
+       header was 103px and two-tier while the apex stayed 72px and one row. Keeping row + wrap
+       matches the apex at every width, which is the whole point. */
+    .navlinks{flex-wrap:wrap;gap:14px 18px}
     .banner{gap:12px 22px;padding:16px 18px}
     .banner .cname{font-size:25px}
     /* Same height on narrow screens: pane height is driven by ROW COUNT, not width, so a
@@ -334,12 +376,23 @@
 
   <!-- ============ PORTAL VIEW ============ -->
   <div id="portalView" class="hidden">
+    <!-- 142: the account button used to sit INSIDE .navlinks, so it shared the links' gap and
+         wrapped with them - the header changed shape between here and the apex pages. The apex
+         nav is two children (brand, then a right-hand group) under space-between; matching that
+         structure is what keeps the shape identical, rather than tuning numbers until it looks
+         close. The button now follows the links inside that group. -->
     <nav class="topnav">
       <a class="brand" href="https://shadowgain.com/">&#x25C8; <b>Shadowgain</b></a>
-      <div class="navlinks">
-        <a href="https://shadowgain.com/">Home</a>
-        <a href="https://shadowgain.com/honourroll.html">Honour Roll</a>
-        <a href="/" class="active">Characters</a>
+      <div class="navright">
+        <div class="navlinks">
+          <a href="https://shadowgain.com/">Home</a>
+          <a href="https://shadowgain.com/honourroll.html">Honour Roll</a>
+          <a href="/" class="active">Characters</a>
+          <!-- 153: same link, same position and same badge as the five apex pages. The apex
+               writes it inline; here it is a class, because this nav is styled by the sheet
+               above and an inline colour would not follow it if the palette ever moves. -->
+          <a href="https://vitaeum.shadowgain.com" class="newlink">Vitaeum <span class="newbadge">NEW</span></a>
+        </div>
         <div class="acct"><button class="btn" id="logoutBtn" title="Sign out"><span id="acctName">Account</span> &nbsp;&#9099;</button></div>
       </div>
     </nav>
@@ -411,6 +464,9 @@ function timeAgo(iso){ if(!iso) return ''; const d=(Date.now()-new Date(iso))/36
 function untilTime(iso){ if(!iso) return null; const d=(new Date(iso)-Date.now())/36e5; if(isNaN(d)||d<=0) return null; if(d<1)return Math.round(d*60)+'m'; if(d<24)return Math.round(d)+'h'; return Math.round(d/24)+'d'; }
 
 let CHAR=null, curCont=0, refreshTimer=null, curTab='attributes', SEL=[];
+// Where the equipment frame's own SEL entries end. renderGrid rewinds to it so repeated grid
+// renders replace their items instead of appending a fresh copy on every pack click.
+let SEL_BASE=0;
 
 /* ---------- boot / auth ---------- */
 async function boot(){
@@ -497,7 +553,18 @@ function wireOnce(){
     if(row){ area.querySelectorAll('.row.sel').forEach(x=>x.classList.remove('sel')); row.classList.add('sel');
       const k=row.dataset.kind, arr = k==='attr'?CHAR.attributes : k==='vital'?CHAR.vitals : CHAR.skills;
       const o=(arr||[]).find(x=>x.key===row.dataset.key); if(o) showReadout(o,k); return; }
-    const spc=e.target.closest('.spk[data-cont]'); if(spc){ curCont=+spc.dataset.cont; renderInventory(CHAR); return; }
+    // 139: A PACK CLICK ONLY CHANGES WHICH CONTAINER IS LISTED. It used to re-run the whole of
+    // renderInventory, which rebuilds #equip from innerHTML - destroying the doll and the live
+    // WebGL canvas inside it, and leaving the old context and its animation loop running against
+    // a detached element. One click and the model was gone for the rest of the session.
+    const spc=e.target.closest('.spk[data-cont]');
+    if(spc){
+      curCont=+spc.dataset.cont;
+      area.querySelectorAll('.spk.sel').forEach(x=>x.classList.remove('sel'));
+      spc.classList.add('sel');
+      renderGrid(CHAR);
+      return;
+    }
     // The Slots toggle flips a class rather than re-rendering: a re-render would replace the doll
     // element, detaching the live WebGL canvas and losing the loaded model until the next fetch.
     if(e.target.closest('#slotsBtn')){
@@ -549,6 +616,11 @@ function examineHtml(it){
 }
 function openExamine(it){ const ex=$('#examine'); ex.innerHTML=examineHtml(it); ex.classList.remove('hidden'); }
 function closeExamine(){ const ex=$('#examine'); if(ex){ ex.classList.add('hidden'); ex.innerHTML=''; } $('#charArea').querySelectorAll('.selitem').forEach(x=>x.classList.remove('selitem')); }
+/* 143: how far into the current level, for the banner's bar. */
+function levelPct(c){
+  const into=c.xpIntoLevel||0, next=c.xpToNextLevel||0, tot=into+next;
+  return tot ? Math.round(100*into/tot) : 0;
+}
 function renderBanner(c){
   const loc = c.location && c.location.place;
   // Red only for an actual killer. "Non-Player Killer" / "NPK" is the harmless default and reading
@@ -564,7 +636,8 @@ function renderBanner(c){
     </div>
     <div class="stat"><span class="n">${c.level}</span><span class="l">Level</span></div>
     <div class="stat"><span class="n sm">${fmt(c.totalXP)}</span><span class="l">Total XP</span></div>
-    <div class="stat"><span class="n sm">${fmt(c.xpToNextLevel)}</span><span class="l">XP to next</span></div>
+    <div class="stat xpnext"><span class="n sm">${fmt(c.xpToNextLevel)}</span><span class="l">XP to next</span>
+      <div class="lvlbar" title="${fmt(c.xpIntoLevel||0)} of ${fmt((c.xpIntoLevel||0)+(c.xpToNextLevel||0))} into level ${c.level}"><i style="width:${levelPct(c)}%"></i></div></div>
     <div class="stat"><span class="n sm onl"><span class="dot ${c.online?'on':''}"></span>${c.online?'Online':'Offline'}</span><span class="l">${c.online?'Now':(c.lastLogin?'Last '+timeAgo(c.lastLogin):'Status')}</span></div>
     ${loc?`<div class="stat"><span class="n sm">${c.location.place}</span><span class="l">Last location</span></div>`:''}`;
 }
@@ -586,13 +659,17 @@ function statRow(o,kind){
   // it (init + rank + the dat's attribute formula), and 332 is the number on the in-game panel
   // and the one `@myskills` leads with ("base 332", then rank underneath). Rank moves to the
   // readout, exactly as it did for attributes in 126a - same rule, both halves of the sheet.
-  const shown = o.base ?? o.trueRank ?? 0;
-  return `<div class="row" data-key="${o.key}" data-kind="${kind}">${icon(o)}<span class="nm">${o.label}${badge}</span><span class="vl ${vlcls}">${shown}</span></div>`;
+  // 136: the value IN FORCE, and green when a buff is what puts it there - the client's own
+  // convention (green buffed, plain otherwise, delta shown for the selected row). Colour used to
+  // encode the skill GROUP, which the group headers already say, so it was free to repurpose.
+  const buffed = o.buffed != null && o.buffed !== o.base;
+  const shown = o.buffed ?? o.base ?? o.trueRank ?? 0;
+  return `<div class="row" data-key="${o.key}" data-kind="${kind}">${icon(o)}<span class="nm">${o.label}${badge}</span><span class="vl ${buffed?'isbuffed':'plain'}">${shown}</span></div>`;
 }
 function renderAttributes(c){
   let h = `<div class="grouphdr">Attributes</div>` + (c.attributes||[]).map(a=>statRow(a,'attr')).join('');
   if(c.vitals&&c.vitals.length){ h += `<div class="grouphdr">Vitals</div>` + c.vitals.map(v=>
-    `<div class="row" data-key="${v.key}" data-kind="vital">${icon(v)}<span class="nm">${v.label}</span><span class="vl trained">${v.current}/${v.max}</span></div>`).join(''); }
+    `<div class="row" data-key="${v.key}" data-kind="vital">${icon(v)}<span class="nm">${v.label}</span><span class="vl ${v.buff?'isbuffed':'plain'}">${v.current}/${v.max}</span></div>`).join(''); }
   $('#pane-attributes').innerHTML = h;
 }
 function renderSkills(c){
@@ -668,76 +745,101 @@ function creditsLine(o){
  * should not have to work out that they are being told the same thing twice in different words.
  */
 function showReadout(o, kind){
+  /* 141 - ONE STRUCTURE FOR BOTH TABS, modelled on the client's own panels.
+   *
+   * Attributes and Skills had drifted into two different shapes: attributes carried
+   * "(base N) of max" in the headline, skills carried a standalone "true rank" line, and the two
+   * laid out differently. The client does not do that - both of its tabs read
+   *
+   *     <Name>: <value> (+buff)
+   *     Experience To Raise:      <x>
+   *     Unassigned Experience:    <pool>
+   *
+   * So that is the shape here, and anything either tab needs beyond it is just another labelled
+   * row in the same list. Divergence then costs an extra row rather than a different layout.
+   *
+   * The one place we deliberately BEAT the client: at Shadowgain's uncapped levels its attribute
+   * panel gives up and prints "Experience To Raise: Infinity!". We have the real figure, and
+   * showing it is a large part of why this site exists (123).
+   */
   const into=o.xpIntoRank||0, next=o.xpToNextRank||0, total=into+next;
   const pct=total?Math.round(100*into/total):0;
-  const buff=(o.buffed!=null&&o.buffed!==o.base)?`<span class="buff">${o.buffed>o.base?'+':''}${o.buffed-o.base}</span>`:'';
   const isSkill = kind==='skill';
   const isVital = kind==='vital';
 
-  /* --- vitals: they earn nothing of their own, so no rank, no bar, no credits ------------- */
+  // 140B: progression is ALWAYS unbuffed - buffs never touch spent XP.
+  const trainedValue = o.base ?? o.trueRank ?? 0;
+  const isBuffed = o.buffed != null && o.buffed !== o.base;
+  const shown = o.buffed ?? o.base ?? o.trueRank ?? 0;
+
+  // A space before the bracket, as the client renders it: "Strength: 255 (+35)".
+  const buff = isBuffed
+    ? ` <span class="buff${o.buffed<o.base?' down':''}">(${o.buffed>o.base?'+':''}${fmt(o.buffed-o.base)})</span>` : '';
+
+  // The client's headline, verbatim in form: "Strength: 255 (+35)".
+  const head = `<div class="top"><span class="rn">${o.label}:</span><span class="rk">${fmt(shown)}${buff}</span></div>`;
+
+  const row = (label, value, cls) =>
+    `<div class="rrow${cls?' '+cls:''}"><span>${label}</span><b>${value}</b></div>`;
+
+  /* --- vitals earn nothing of their own, so they carry no progression rows --------------- */
   if(isVital){
     const gov = o.governedBy
       ? `Rises with <b>${o.governedBy}</b> &mdash; raise that and this follows.`
       : 'Rises with the attribute that governs it, rather than being raised directly.';
-    $('#readout').innerHTML =
-      `<div class="top"><span class="rn">${o.label}</span><span class="rk">${fmt(o.current)}<span class="hint" style="margin-left:6px">of ${fmt(o.max)}</span></span></div>
-       <div class="hint" style="margin-top:6px">${gov}</div>`;
+    $('#readout').innerHTML = head
+      + row('Current', `${fmt(o.current)} of ${fmt(o.max)}`)
+      + (o.buff ? row('From buffs', `+${fmt(o.buff)}`) : '')
+      + `<div class="hint" style="margin-top:6px">${gov}</div>`;
     return;
   }
 
-  /* --- headline: an attribute leads with its VALUE, a skill with its true rank ------------ */
-  const headline = o.base ?? o.trueRank ?? 0;
-  const badge = '';
-  // The ceiling quoted beside an attribute is the VALUE ceiling (start + max ranks), never the
-  // rank cap - putting a value next to a rank cap is the exact ambiguity 122 removed in game.
-  const ceiling = (!isSkill && o.maxRank!=null && o.startingValue!=null)
-    ? `<span class="hint" style="margin-left:8px">of ${fmt(o.startingValue + o.maxRank)}</span>` : '';
+  const rows = [];
+
+  /* 145: NAME THE UNBUFFED FIGURE ON BOTH TABS.
+   *
+   * The headline is the BUFFED value, and until now skills never showed the unbuffed one at all -
+   * it was only implied by the "to N" target. Chris asked to label it, and reasonably guessed the
+   * "true rank" row was it. It is not: for Two Handed Combat the rank is 195 and the unbuffed
+   * value is 356. Rank is the progression currency; the value is rank plus the attribute formula.
+   * So the unbuffed value gets its own row rather than a caption on the wrong number.
+   *
+   * Attributes carry their ceiling on the same row; skills have no ceiling, but they DO fold in
+   * attributes, which is worth saying because it explains why the number moves when Strength does.
+   */
+  if(!isSkill && o.maxRank!=null && o.startingValue!=null)
+    rows.push(row('Unbuffed value', `${fmt(trainedValue)} of ${fmt(o.startingValue + o.maxRank)}`));
+  else if(isSkill && trainedValue>0)
+    rows.push(row('Unbuffed value <span class="qual">attributes applied</span>', fmt(trainedValue)));
+
+  // Rank is the point for SKILLS - it is the number the retail client cannot display past its
+  // table, which is the reason this site exists (123). For attributes it is bookkeeping (126c).
+  if(isSkill && (o.trueRank||0)>0)
+    rows.push(row('True rank', `<span style="color:var(--gold)">${fmt(o.trueRank)}</span>`));
+
+  if(total>0) rows.push(row('Experience to raise', fmt(next), 'goal'));
+  if((o.xpSpent||0)>0) rows.push(row('Experience earned', fmt(o.xpSpent)));
+  if(CHAR && CHAR.unassignedXP!=null) rows.push(row('Unassigned experience', fmt(CHAR.unassignedXP)));
+
+  const bar = total>0 ? `<div class="bar"><i style="width:${pct}%"></i></div>` : '';
   const maxed = !isSkill && o.maxRank!=null && o.trueRank>=o.maxRank;
 
-  const head = `<div class="top"><span class="rn">${o.label}${buff}${badge}</span><span class="rk">${headline}${ceiling}</span></div>`;
+  let note = '';
 
-  // The one place rank still belongs. It is not bookkeeping here - it is the number the retail
-  // client physically cannot display past its table, which is the reason this site exists (123).
-  // Only for skills: an attribute's rank really is bookkeeping, and 126c removed it.
-  const trueRankLine = (isSkill && (o.trueRank||0)>0)
-    ? `<div class="hint" style="margin-top:6px">true rank <b style="color:var(--gold)">${fmt(o.trueRank)}</b></div>` : '';
+  if(maxed) note = `<div class="hint" style="margin-top:6px">At its ceiling &mdash; this attribute is finished.</div>`;
+  else if(isSkill && o.group==='untrained' && (o.xpSpent||0)>0)
+    // 093: pruning FREEZES a skill, it does not destroy it. Saying so is the difference between a
+    // player thinking they set a skill aside and thinking they threw it away.
+    note = `<div class="hint" style="margin-top:6px">Set aside. <b>${fmt(o.xpSpent)}</b> experience is held for it &mdash; re-train it, free, and it returns exactly as it was.</div>`;
+  else if(isSkill && o.group==='unusable')
+    note = `<div class="hint" style="margin-top:6px">Cannot be used until it is trained, and it has earned no experience.</div>`;
+  else if(isSkill && !total && !(o.xpSpent||0))
+    note = `<div class="hint" style="margin-top:6px">Not trained, and has earned no experience.</div>`;
 
-  // NO RANK LINE. Chris, 2026-08-14: rank is bookkeeping and bookkeeping is only confusing.
-  //
-  // What replaces it is TOTAL EXPERIENCE EARNED, which is the one number a player actually
-  // recognises about a stat - it is what `@mystats` prints as "experience earned" and what
-  // `@myskills` sorts by. It sits on the left of the progress row, opposite the goal, so the
-  // pair reads as "this is what it cost me, that is what the next point costs".
-  const earned = (o.xpSpent||0) > 0 ? `${fmt(o.xpSpent)} experience earned` : '';
-  const goal = `<div class="xp"><span>${earned}</span><span>${fmt(next)} to ${fmt(headline+1)}</span></div>`;
-  const earnedLine = earned ? `<div class="xp" style="margin-top:6px"><span>${earned}</span><span></span></div>` : '';
-
-  let body;
-
-  if(total>0){
-    body = `${head}${trueRankLine}
-       <div class="bar"><i style="width:${pct}%"></i></div>
-       ${goal}`;
-  } else if(maxed){
-    body = `${head}<div class="hint" style="margin-top:6px">At its ceiling &mdash; this attribute is finished.</div>${earnedLine}`;
-  } else if(!isSkill){
-    body = head + earnedLine;
-  } else if(o.group==='untrained' && (o.xpSpent||0)>0){
-    // fall through with the frozen rank shown
-    // 093: pruning FREEZES a skill, it does not destroy it. Saying so is the difference between
-    // a player thinking they set a skill aside and thinking they threw it away.
-    body = `${head}${trueRankLine}<div class="hint" style="margin-top:6px">Set aside. <b>${fmt(o.xpSpent)}</b> experience is held for it &mdash; re-train it, free, and it returns exactly as it was.</div>`;
-  } else if(o.group==='unusable'){
-    body = `${head}<div class="hint" style="margin-top:6px">Cannot be used until it is trained, and it has earned no experience.</div>`;
-  } else {
-    body = `${head}<div class="hint" style="margin-top:6px">Not trained, and has earned no experience.</div>`;
-  }
-
-  $('#readout').innerHTML = body + (isSkill?creditsLine(o):'');
+  $('#readout').innerHTML = head + bar + rows.join('') + note + (isSkill?creditsLine(o):'');
 }
 
-/* ---------- inventory (from equipped[] + containers[]) ---------- */
-// 10 armor coverage slots down the two EDGES of the avatar (Chris's order, 2026-08-14). The API
+
 // fills head/chest/hands/feet/legs today; the rest fill once item `coverage` ships (127) — e.g. a
 // robe covers Chest, Abdomen, Upper/Lower Arms, Upper/Lower Legs, Feet.
 /* 131 - the worn-slot frame, in the client's arrangement.
@@ -884,9 +986,32 @@ function renderInventory(c){
     ? `<span class="lbl">Packs (${conts.length})</span>` + conts.map((p,i)=>
         `<div class="spk ${i===curCont?'sel':''}" data-cont="${i}" title="${p.name} (${(p.items||[]).length})">${icon(p)}</div>`).join('')
     : '';
+
+  SEL_BASE = SEL.length;
   renderGrid(c);
+  reattachModel();
+}
+
+/* Put the live canvas back if something rebuilt the panel around it.
+ *
+ * renderInventory replaces #equip wholesale, so any caller of it detaches the renderer's canvas.
+ * The pack click no longer does that, but a future one might, and the failure is silent - the
+ * model simply vanishes. Re-parenting is cheap and makes renderInventory safe for any caller. */
+function reattachModel(){
+  const host = document.querySelector('#model3d');
+
+  if(!_viewer || !host || _viewer.canvas.parentElement === host) return;
+
+  host.appendChild(_viewer.canvas);
+  _viewer.observer.disconnect();
+  _viewer.observer.observe(host);
+  _viewer.host = host;
+  _viewer.resize();
+  document.querySelector('.doll')?.classList.add('has3d');
 }
 function renderGrid(c){
+  // Drop anything a previous grid render registered - see SEL_BASE.
+  SEL.length = SEL_BASE;
   const conts=(c.inventory&&c.inventory.containers)||[];
   const cont=conts[curCont]||{name:'Pack',items:[]}; const items=cont.items||[];
 

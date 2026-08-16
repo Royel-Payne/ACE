@@ -59,6 +59,12 @@ GRANT SELECT ON ace_shard.character_properties_title_book    TO 'sgweb'@'%';
 GRANT SELECT ON ace_shard.character_properties_quest_registry TO 'sgweb'@'%';
 -- 127: an item's spellbook, for the examine text the tooltip renders.
 GRANT SELECT ON ace_shard.biota_properties_spell_book  TO 'sgweb'@'%';
+
+-- 136: active enchantments, so the sheet can show BUFFED values the way the client does.
+-- Without this the page reported base Strength while the game showed base+35, which surfaced as a
+-- burden figure that looked inverted (46% in game, 54% here) but was only unbuffed.
+-- SELECT only, like everything else here: this reads the buffs, it can never apply one.
+GRANT SELECT ON ace_shard.biota_properties_enchantment_registry TO 'sgweb'@'%';
 -- The live dials the rank maths reads. PropertyManager loads these rows OVER the compiled
 -- defaults, so computing ranks without them means computing on a curve the server abandoned.
 GRANT SELECT ON ace_shard.config_properties_boolean          TO 'sgweb'@'%';

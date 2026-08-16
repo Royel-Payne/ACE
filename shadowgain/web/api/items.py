@@ -30,10 +30,410 @@ INT_SPELLCRAFT = 106
 INT_CURRENT_MANA = 107
 INT_MAX_MANA = 108
 INT_DIFFICULTY = 109
-INT_GEM_COUNT = 265
-INT_GEM_TYPE = 266
-INT_WIELD_SKILLTYPE = 158
-INT_WIELD_DIFFICULTY = 159
+# 137: these were 265 and 266, which are EquipmentSetId and PetClass. Nothing consumed them, so
+# the mistake was invisible - a gem count would have rendered a set id had anything read them.
+INT_GEM_COUNT = 177
+INT_GEM_TYPE = 178
+
+# --- weapons, and the general facts the examine panel was missing entirely (137) ---------------
+INT_UI_EFFECTS = 18
+INT_BONDED = 33
+INT_DAMAGE = 44
+INT_DAMAGE_TYPE = 45
+INT_WEAPON_SKILL = 48
+INT_WEAPON_TIME = 49
+INT_ATTUNED = 114
+INT_CLEAVING = 292
+INT_MAX_STRUCTURE = 91
+INT_STRUCTURE = 92
+INT_ITEMS_CAPACITY = 6
+INT_CONTAINERS_CAPACITY = 7
+
+FLOAT_WEAPON_DEFENSE = 29
+FLOAT_DAMAGE_VARIANCE = 22
+FLOAT_WEAPON_OFFENSE = 62
+FLOAT_DAMAGE_MOD = 63
+FLOAT_CRITICAL_MULTIPLIER = 136
+FLOAT_SLAYER_DAMAGE_BONUS = 138
+FLOAT_MANA_CONVERSION_MOD = 144
+FLOAT_CRITICAL_FREQUENCY = 147
+FLOAT_WEAPON_MISSILE_DEFENSE = 149
+FLOAT_WEAPON_MAGIC_DEFENSE = 150
+FLOAT_ELEMENTAL_DAMAGE_MOD = 152
+FLOAT_IGNORE_ARMOR = 155
+FLOAT_ARMOR_MOD_NETHER = 165
+
+# DamageType is a BITFIELD - a weapon can be Slashing/Piercing at once, and several are.
+DAMAGE_TYPE_NAMES = [
+    (0x001, "Slashing"), (0x002, "Piercing"), (0x004, "Bludgeoning"),
+    (0x008, "Cold"), (0x010, "Fire"), (0x020, "Acid"), (0x040, "Electric"),
+    (0x080, "Health"), (0x100, "Stamina"), (0x200, "Mana"), (0x400, "Nether"),
+]
+
+# UiEffects, the glow the client puts on an item. "Magical" is the one players look for.
+UI_EFFECT_NAMES = [
+    (0x0001, "Magical"), (0x0002, "Poisoned"), (0x0004, "Boosts Health"),
+    (0x0008, "Boosts Mana"), (0x0010, "Boosts Stamina"), (0x0020, "Fire"),
+    (0x0040, "Lightning"), (0x0080, "Frost"), (0x0100, "Acid"),
+    (0x0200, "Bludgeoning"), (0x0400, "Slashing"),
+]
+
+
+def _flags(value: int | None, table) -> list[str]:
+    return [name for bit, name in table if value and value & bit]
+
+
+def _pct(mod: float | None, places: int = 0) -> str | None:
+    """A multiplier around 1.0 rendered the way the game phrases it: a signed percentage."""
+    if mod is None or abs(mod - 1.0) < 0.0005:
+        return None
+
+    return f"{'+' if mod > 1 else ''}{round((mod - 1) * 100, places):g}%"
+# 138: these were 158 and 159, BOTH OFF BY ONE. 158 is WieldRequirements (how to read the other
+# two), 159 is WieldSkillType, 160 is WieldDifficulty. Unlike the gem constants, these WERE being
+# read - so every "Wield Requirement" line on the site quoted a requirement TYPE as a skill and a
+# skill id as a difficulty. Wrong, and confidently formatted.
+INT_WIELD_REQUIREMENTS = 158
+INT_WIELD_SKILLTYPE = 159
+INT_WIELD_DIFFICULTY = 160
+
+# AC allows up to three stacked wield requirements on one item.
+WIELD_SETS = ((158, 159, 160), (270, 271, 272), (273, 274, 275))
+
+# --- what the rest of the loot types were missing (138) ----------------------------------------
+INT_ARMOR_TYPE = 27
+INT_AMMO_TYPE = 50
+INT_WEAPON_RANGE = 60
+INT_BOOSTER_ENUM = 89
+INT_BOOST_VALUE = 90
+INT_ITEM_ALLEGIANCE_RANK_LIMIT = 110
+INT_ITEM_SKILL_LEVEL_LIMIT = 115
+INT_ITEM_MANA_COST = 117
+INT_SLAYER_CREATURE_TYPE = 166
+INT_NUM_ITEMS_IN_MATERIAL = 170
+INT_RESISTANCE_MODIFIER_TYPE = 263
+INT_EQUIPMENT_SET_ID = 265
+INT_REMAINING_LIFESPAN = 268
+INT_UNIQUE = 279
+INT_USE_REQUIRES_SKILL = 366
+INT_USE_REQUIRES_SKILL_LEVEL = 367
+INT_USE_REQUIRES_LEVEL = 369
+
+# An item can carry up to five imbues.
+INT_IMBUED_EFFECTS = (179, 303, 304, 305, 306)
+
+FLOAT_MAXIMUM_VELOCITY = 26
+FLOAT_RESISTANCE_MODIFIER = 157
+
+# --- enum names, GENERATED from ACE's own enum files -------------------------------------------
+#
+# Not typed out by hand, and that is the point: hand-mapping ids has now produced two separate
+# bugs in this file (the gem pair, and the wield triple above). These were parsed straight from
+# ACE.Entity/Enum/*.cs, implicit values included.
+
+WIELD_REQUIREMENT_NAMES = {
+    1: "Skill",
+    2: "Raw Skill",
+    3: "Attrib",
+    4: "Raw Attrib",
+    5: "Secondary Attrib",
+    6: "Raw Secondary Attrib",
+    7: "Level",
+    8: "Training",
+    9: "Int Stat",
+    10: "Bool Stat",
+    11: "Creature Type",
+    12: "Heritage Type",
+}
+
+ARMOR_TYPE_NAMES = [
+    (0x1, "Cloth"),
+    (0x2, "Leather"),
+    (0x4, "Studded Leather"),
+    (0x8, "Scalemail"),
+    (0x10, "Chainmail"),
+    (0x20, "Metal"),
+]
+
+AMMO_TYPE_NAMES = {
+    1: "Arrow",
+    2: "Bolt",
+    4: "Atlatl",
+    8: "Arrow Crystal",
+    16: "Bolt Crystal",
+    32: "Atlatl Crystal",
+    64: "Arrow Chorizite",
+    128: "Bolt Chorizite",
+    256: "Atlatl Chorizite",
+}
+
+IMBUED_EFFECT_NAMES = [
+    (0x1, "Critical Strike"),
+    (0x2, "Crippling Blow"),
+    (0x4, "Armor Rending"),
+    (0x8, "Slash Rending"),
+    (0x10, "Pierce Rending"),
+    (0x20, "Bludgeon Rending"),
+    (0x40, "Acid Rending"),
+    (0x80, "Cold Rending"),
+    (0x100, "Electric Rending"),
+    (0x200, "Fire Rending"),
+    (0x400, "Melee Defense"),
+    (0x800, "Missile Defense"),
+    (0x1000, "Magic Defense"),
+    (0x2000, "Spellbook"),
+    (0x4000, "Nether Rending"),
+    (0x20000000, "Ignore Some Magic Projectile Damage"),
+    (0x40000000, "Always Critical"),
+    (0x80000000, "Ignore All Armor"),
+]
+
+CREATURE_TYPE_NAMES = {
+    1: "Olthoi",
+    2: "Banderling",
+    3: "Drudge",
+    4: "Mosswart",
+    5: "Lugian",
+    6: "Tumerok",
+    7: "Mite",
+    8: "Tusker",
+    9: "Phyntos Wasp",
+    10: "Rat",
+    11: "Auroch",
+    12: "Cow",
+    13: "Golem",
+    14: "Undead",
+    15: "Gromnie",
+    16: "Reedshark",
+    17: "Armoredillo",
+    18: "Fae",
+    19: "Virindi",
+    20: "Wisp",
+    21: "Knathtead",
+    22: "Shadow",
+    23: "Mattekar",
+    24: "Mumiyah",
+    25: "Rabbit",
+    26: "Sclavus",
+    27: "Shallows Shark",
+    28: "Monouga",
+    29: "Zefir",
+    30: "Skeleton",
+    31: "Human",
+    32: "Shreth",
+    33: "Chittick",
+    34: "Moarsman",
+    35: "Olthoi Larvae",
+    36: "Slithis",
+    37: "Deru",
+    38: "Fire Elemental",
+    39: "Snowman",
+    41: "Bunny",
+    42: "Lightning Elemental",
+    43: "Rockslide",
+    44: "Grievver",
+    45: "Niffis",
+    46: "Ursuin",
+    47: "Crystal",
+    48: "Hollow Minion",
+    49: "Scarecrow",
+    50: "Idol",
+    51: "Empyrean",
+    52: "Hopeslayer",
+    53: "Doll",
+    54: "Marionette",
+    55: "Carenzi",
+    56: "Siraluun",
+    57: "Aun Tumerok",
+    58: "Hea Tumerok",
+    59: "Simulacrum",
+    60: "Acid Elemental",
+    61: "Frost Elemental",
+    62: "Elemental",
+    63: "Statue",
+    64: "Wall",
+    65: "Altered Human",
+    66: "Device",
+    67: "Harbinger",
+    68: "Dark Sarcophagus",
+    69: "Chicken",
+    70: "Gotrok Lugian",
+    71: "Margul",
+    72: "Bleached Rabbit",
+    73: "Nasty Rabbit",
+    74: "Grimacing Rabbit",
+    75: "Burun",
+    76: "Target",
+    77: "Ghost",
+    78: "Fiun",
+    79: "Eater",
+    80: "Penguin",
+    81: "Ruschk",
+    82: "Thrungus",
+    83: "Viamontian Knight",
+    84: "Remoran",
+    85: "Swarm",
+    86: "Moar",
+    87: "Enchanted Arms",
+    88: "Sleech",
+    89: "Mukkir",
+    90: "Merwart",
+    91: "Food",
+    92: "Paradox Olthoi",
+    93: "Harvest",
+    94: "Energy",
+    95: "Apparition",
+    96: "Aerbax",
+    97: "Touched",
+    98: "Blighted Moarsman",
+    99: "Gear Knight",
+    100: "Gurog",
+    101: "Anekshay",
+}
+
+EQUIPMENT_SET_NAMES = {
+    1: "Test",
+    2: "Test2",
+    3: "Unknown3",
+    4: "Carraidas Benediction",
+    5: "Noble Relic",
+    6: "Ancient Relic",
+    7: "Alduressa Relic",
+    8: "Ninja",
+    9: "Empyrean Rings",
+    10: "Arm Mind Heart",
+    11: "Armor Perfect Light",
+    12: "Armor Perfect Light2",
+    13: "Soldiers",
+    14: "Adepts",
+    15: "Archers",
+    16: "Defenders",
+    17: "Tinkers",
+    18: "Crafters",
+    19: "Hearty",
+    20: "Dexterous",
+    21: "Wise",
+    22: "Swift",
+    23: "Hardened",
+    24: "Reinforced",
+    25: "Interlocking",
+    26: "Flameproof",
+    27: "Acidproof",
+    28: "Coldproof",
+    29: "Lightningproof",
+    30: "Society Armor",
+    31: "Colosseum Clothing",
+    32: "Graveyard Clothing",
+    33: "Olthoi Clothing",
+    34: "Noobie Armor",
+    35: "Aetheria Defense",
+    36: "Aetheria Destruction",
+    37: "Aetheria Fury",
+    38: "Aetheria Growth",
+    39: "Aetheria Vigor",
+    40: "Rare Damage Resistance",
+    41: "Rare Damage Boost",
+    42: "Olthoi Armor DRed",
+    43: "Olthoi Armor CRat",
+    44: "Olthoi Armor CRed",
+    45: "Olthoi Armor DRat",
+    46: "Alduressa Relic Upgrade",
+    47: "Ancient Relic Upgrade",
+    48: "Noble Relic Upgrade",
+    49: "Cloak Alchemy",
+    50: "Cloak Arcane Lore",
+    51: "Cloak Armor Tinkering",
+    52: "Cloak Assess Person",
+    53: "Cloak Light Weapons",
+    54: "Cloak Missile Weapons",
+    55: "Cloak Cooking",
+    56: "Cloak Creature Enchantment",
+    57: "Cloak Crossbow",
+    58: "Cloak Finesse Weapons",
+    59: "Cloak Deception",
+    60: "Cloak Fletching",
+    61: "Cloak Healing",
+    62: "Cloak Item Enchantment",
+    63: "Cloak Item Tinkering",
+    64: "Cloak Leadership",
+    65: "Cloak Life Magic",
+    66: "Cloak Loyalty",
+    67: "Cloak Mace",
+    68: "Cloak Magic Defense",
+    69: "Cloak Magic Item Tinkering",
+    70: "Cloak Mana Conversion",
+    71: "Cloak Melee Defense",
+    72: "Cloak Missile Defense",
+    73: "Cloak Salvaging",
+    74: "Cloak Spear",
+    75: "Cloak Staff",
+    76: "Cloak Heavy Weapons",
+    77: "Cloak Thrown Weapon",
+    78: "Cloak Two Handed Combat",
+    79: "Cloak Unarmed Combat",
+    80: "Cloak Void Magic",
+    81: "Cloak War Magic",
+    82: "Cloak Weapon Tinkering",
+    83: "Cloak Assess Creature",
+    84: "Cloak Dirty Fighting",
+    85: "Cloak Dual Wield",
+    86: "Cloak Recklessness",
+    87: "Cloak Shield",
+    88: "Cloak Sneak Attack",
+    89: "Ninja_New",
+    90: "Cloak Summoning",
+    91: "Shrouded Soul",
+    92: "Darkened Mind",
+    93: "Clouded Spirit",
+    94: "Minor Stinging Shrouded Soul",
+    95: "Minor Sparking Shrouded Soul",
+    96: "Minor Smoldering Shrouded Soul",
+    97: "Minor Shivering Shrouded Soul",
+    98: "Minor Stinging Darkened Mind",
+    99: "Minor Sparking Darkened Mind",
+    100: "Minor Smoldering Darkened Mind",
+    101: "Minor Shivering Darkened Mind",
+    102: "Minor Stinging Clouded Spirit",
+    103: "Minor Sparking Clouded Spirit",
+    104: "Minor Smoldering Clouded Spirit",
+    105: "Minor Shivering Clouded Spirit",
+    106: "Major Stinging Shrouded Soul",
+    107: "Major Sparking Shrouded Soul",
+    108: "Major Smoldering Shrouded Soul",
+    109: "Major Shivering Shrouded Soul",
+    110: "Major Stinging Darkened Mind",
+    111: "Major Sparking Darkened Mind",
+    112: "Major Smoldering Darkened Mind",
+    113: "Major Shivering Darkened Mind",
+    114: "Major Stinging Clouded Spirit",
+    115: "Major Sparking Clouded Spirit",
+    116: "Major Smoldering Clouded Spirit",
+    117: "Major Shivering Clouded Spirit",
+    118: "Blackfire Stinging Shrouded Soul",
+    119: "Blackfire Sparking Shrouded Soul",
+    120: "Blackfire Smoldering Shrouded Soul",
+    121: "Blackfire Shivering Shrouded Soul",
+    122: "Blackfire Stinging Darkened Mind",
+    123: "Blackfire Sparking Darkened Mind",
+    124: "Blackfire Smoldering Darkened Mind",
+    125: "Blackfire Shivering Darkened Mind",
+    126: "Blackfire Stinging Clouded Spirit",
+    127: "Blackfire Sparking Clouded Spirit",
+    128: "Blackfire Smoldering Clouded Spirit",
+    129: "Blackfire Shivering Clouded Spirit",
+    130: "Shimmering Shadows Set",
+    131: "Brown Society Locket",
+    132: "Yellow Society Locket",
+    133: "Red Society Band",
+    134: "Green Society Band",
+    135: "Purple Society Band",
+    136: "Blue Society Band",
+    137: "Gauntlet Garb",
+    138: "Paragon Missile",
+    139: "Paragon Caster",
+    140: "Paragon Melee",
+}
+
 
 FLOAT_MANA_RATE = 5
 FLOAT_ARMOR_MOD_SLASH = 13
@@ -224,6 +624,7 @@ RESISTANCES = [
     ("Fire", FLOAT_ARMOR_MOD_FIRE),
     ("Acid", FLOAT_ARMOR_MOD_ACID),
     ("Lightning", FLOAT_ARMOR_MOD_ELECTRIC),
+    ("Nether", FLOAT_ARMOR_MOD_NETHER),
 ]
 
 
@@ -314,10 +715,223 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> 
         detail["activationDifficulty"] = difficulty
         add("Difficulty", _fmt(difficulty))
 
-    if (wield_diff := ints.get(INT_WIELD_DIFFICULTY)):
-        skill = curves.enum_label("skill", ints.get(INT_WIELD_SKILLTYPE))
-        detail["wieldRequirement"] = {"skill": skill, "level": wield_diff}
-        add("Wield Requirement", f"{skill} {_fmt(wield_diff)}" if skill else _fmt(wield_diff))
+    # --- requirements (138) ---------------------------------------------------------------------
+    #
+    # WieldRequirements says how to READ the other two. Skill/RawSkill make WieldSkillType a skill
+    # id; Attrib and the Secondary variants make it an attribute; Level ignores it entirely and
+    # WieldDifficulty is a character level. The old code assumed "skill" always and printed the
+    # requirement TYPE where the skill belonged.
+    reqs = []
+
+    for req_prop, skill_prop, diff_prop in WIELD_SETS:
+        kind = ints.get(req_prop)
+        difficulty = ints.get(diff_prop)
+
+        if not difficulty:
+            continue
+
+        if kind in (1, 2):                       # Skill / RawSkill
+            what = curves.enum_label("skill", ints.get(skill_prop))
+        elif kind in (3, 4):                     # Attrib / RawAttrib
+            what = curves.enum_label("attribute", ints.get(skill_prop))
+        elif kind in (5, 6):                     # SecondaryAttrib / Raw
+            what = curves.enum_label("attribute2nd", ints.get(skill_prop))
+        elif kind == 7:                          # Level - the difficulty IS the level
+            what = "Level"
+        elif kind == 11:
+            what = CREATURE_TYPE_NAMES.get(ints.get(skill_prop))
+        else:
+            what = WIELD_REQUIREMENT_NAMES.get(kind)
+
+        reqs.append({"type": WIELD_REQUIREMENT_NAMES.get(kind), "of": what, "level": difficulty})
+        add("Wield Requirement", f"{what} {_fmt(difficulty)}" if what else _fmt(difficulty))
+
+    if reqs:
+        detail["wieldRequirements"] = reqs
+        # Kept for anything already reading the old singular field.
+        detail["wieldRequirement"] = {"skill": reqs[0]["of"], "level": reqs[0]["level"]}
+
+    if (lvl := ints.get(INT_USE_REQUIRES_LEVEL)):
+        detail["useRequiresLevel"] = lvl
+        add("Requires Level", _fmt(lvl))
+
+    use_skill = curves.enum_label("skill", ints.get(INT_USE_REQUIRES_SKILL))
+    use_level = ints.get(INT_USE_REQUIRES_SKILL_LEVEL)
+
+    if use_skill and use_level:
+        detail["useRequiresSkill"] = {"skill": use_skill, "level": use_level}
+        add("Requires Skill", f"{use_skill} {_fmt(use_level)}")
+
+    if (rank := ints.get(INT_ITEM_ALLEGIANCE_RANK_LIMIT)):
+        detail["allegianceRankLimit"] = rank
+        add("Requires Allegiance Rank", _fmt(rank))
+
+    if (skill_limit := ints.get(INT_ITEM_SKILL_LEVEL_LIMIT)):
+        detail["activationSkillLevel"] = skill_limit
+        add("Activation Skill Level", _fmt(skill_limit))
+
+    if (mana_cost := ints.get(INT_ITEM_MANA_COST)):
+        detail["manaCost"] = mana_cost
+        add("Mana Cost", _fmt(mana_cost))
+
+    # --- weapons (137) --------------------------------------------------------------------------
+    #
+    # THE EXAMINE PANEL HAD NO WEAPON HANDLING AT ALL. It was templated off a robe, so a sword
+    # reported its value, burden and material and then stopped - no damage, no speed, no skill.
+    # Chris found it by clicking a weapon and getting a near-empty window.
+    #
+    # Everything below is omitted when absent, so a robe gains nothing and a caster shows only the
+    # caster-ish half of it. That is why there is no "is this a weapon" test: the properties
+    # decide, which also means a weapon type nobody anticipated still renders whatever it carries.
+    if (damage := ints.get(INT_DAMAGE)):
+        variance = floats.get(FLOAT_DAMAGE_VARIANCE)
+        detail["damage"] = {"max": damage, "variance": variance}
+
+        # The client quotes a RANGE, and the stored pair is max plus the fraction below it that
+        # the minimum sits - so the minimum has to be derived rather than read.
+        if variance:
+            add("Damage", f"{int(round(damage * (1 - variance)))} - {_fmt(damage)}")
+        else:
+            add("Damage", _fmt(damage))
+
+    if (types := _flags(ints.get(INT_DAMAGE_TYPE), DAMAGE_TYPE_NAMES)):
+        detail["damageTypes"] = types
+        add("Damage Type", ", ".join(types))
+
+    if (skill := curves.enum_label("skill", ints.get(INT_WEAPON_SKILL))):
+        detail["weaponSkill"] = skill
+        add("Attack Skill", skill)
+
+    if (speed := ints.get(INT_WEAPON_TIME)) is not None and speed:
+        detail["weaponSpeed"] = speed
+        add("Speed", _fmt(speed))
+
+    # The bonuses, all stored as multipliers around 1.0. No descriptor words are invented for
+    # them - the client shows percentages and so does this.
+    for label, prop, key in (
+        ("Damage Bonus", FLOAT_DAMAGE_MOD, "damageMod"),
+        ("Attack Bonus", FLOAT_WEAPON_OFFENSE, "attackMod"),
+        ("Melee Defense Bonus", FLOAT_WEAPON_DEFENSE, "meleeDefenseMod"),
+        ("Missile Defense Bonus", FLOAT_WEAPON_MISSILE_DEFENSE, "missileDefenseMod"),
+        ("Magic Defense Bonus", FLOAT_WEAPON_MAGIC_DEFENSE, "magicDefenseMod"),
+        ("Mana Conversion Bonus", FLOAT_MANA_CONVERSION_MOD, "manaConversionMod"),
+        ("Elemental Damage", FLOAT_ELEMENTAL_DAMAGE_MOD, "elementalDamageMod"),
+        ("Slayer Bonus", FLOAT_SLAYER_DAMAGE_BONUS, "slayerDamageBonus"),
+        ("Ignores Armor", FLOAT_IGNORE_ARMOR, "ignoreArmor"),
+    ):
+        if (text := _pct(floats.get(prop))) is not None:
+            detail[key] = floats.get(prop)
+            add(label, text)
+
+    if (crit := floats.get(FLOAT_CRITICAL_FREQUENCY)):
+        detail["criticalFrequency"] = crit
+        add("Critical Chance", f"{round(crit * 100, 1):g}%")
+
+    if (critmul := floats.get(FLOAT_CRITICAL_MULTIPLIER)):
+        detail["criticalMultiplier"] = critmul
+        add("Critical Damage", f"x{round(critmul, 2):g}")
+
+    if (cleave := ints.get(INT_CLEAVING)):
+        detail["cleaving"] = cleave
+        add("Cleaving", f"{cleave} targets")
+
+    # --- missile weapons, which had nothing of their own --------------------------------------
+    if (rng := ints.get(INT_WEAPON_RANGE)):
+        detail["weaponRange"] = rng
+        add("Range", _fmt(rng))
+
+    if (ammo := AMMO_TYPE_NAMES.get(ints.get(INT_AMMO_TYPE))):
+        detail["ammoType"] = ammo
+        add("Ammo Type", ammo)
+
+    if (vel := floats.get(FLOAT_MAXIMUM_VELOCITY)):
+        detail["maximumVelocity"] = vel
+        add("Velocity", f"{round(vel, 1):g}")
+
+    # A slayer bonus is meaningless without saying what it slays; the bonus was already shown.
+    if (slays := CREATURE_TYPE_NAMES.get(ints.get(INT_SLAYER_CREATURE_TYPE))):
+        detail["slays"] = slays
+        add("Slays", slays)
+
+    # Resistance rending - the type is a DamageType, the modifier a multiplier.
+    rend_type = _flags(ints.get(INT_RESISTANCE_MODIFIER_TYPE), DAMAGE_TYPE_NAMES)
+    rend = floats.get(FLOAT_RESISTANCE_MODIFIER)
+
+    if rend_type and rend:
+        detail["resistanceRending"] = {"types": rend_type, "modifier": rend}
+        add("Resistance Rending", f"{', '.join(rend_type)} x{round(rend, 2):g}")
+
+    imbues = []
+
+    for prop in INT_IMBUED_EFFECTS:
+        imbues += _flags(ints.get(prop), IMBUED_EFFECT_NAMES)
+
+    if imbues:
+        detail["imbues"] = sorted(set(imbues))
+        add("Imbued", ", ".join(sorted(set(imbues))))
+
+    # --- armour and clothing -------------------------------------------------------------------
+    if (armor_types := _flags(ints.get(INT_ARMOR_TYPE), ARMOR_TYPE_NAMES)):
+        detail["armorType"] = armor_types
+        add("Armor Type", ", ".join(armor_types))
+
+    if (equip_set := EQUIPMENT_SET_NAMES.get(ints.get(INT_EQUIPMENT_SET_ID))):
+        detail["equipmentSet"] = equip_set
+        add("Set", equip_set)
+
+    # --- food, potions and salvage --------------------------------------------------------------
+    boost_vital = curves.enum_label("attribute2nd", ints.get(INT_BOOSTER_ENUM))
+    boost = ints.get(INT_BOOST_VALUE)
+
+    if boost_vital and boost:
+        detail["restores"] = {"vital": boost_vital, "amount": boost}
+        add("Restores", f"{_fmt(boost)} {boost_vital}")
+
+    if (units := ints.get(INT_NUM_ITEMS_IN_MATERIAL)):
+        detail["salvageUnits"] = units
+        add("Salvage Units", _fmt(units))
+
+    if (life := ints.get(INT_REMAINING_LIFESPAN)):
+        detail["remainingLifespan"] = life
+        add("Remaining Lifespan", f"{_fmt(life)}s")
+
+    if ints.get(INT_UNIQUE):
+        detail["unique"] = True
+        lines.append("Unique")
+
+    # --- general facts that apply to anything ---------------------------------------------------
+    if (effects := _flags(ints.get(INT_UI_EFFECTS), UI_EFFECT_NAMES)):
+        detail["uiEffects"] = effects
+        add("Aura", ", ".join(effects))
+
+    # Structure is uses remaining - tinkering tools, keys, spell components all carry it, and a
+    # player wants to know how many are left far more than they want most of the rest of this.
+    structure, max_structure = ints.get(INT_STRUCTURE), ints.get(INT_MAX_STRUCTURE)
+
+    if max_structure:
+        detail["structure"] = {"current": structure or 0, "max": max_structure}
+        add("Uses", f"{_fmt(structure or 0)} / {_fmt(max_structure)}")
+
+    if (gem_count := ints.get(INT_GEM_COUNT)):
+        gem = MATERIAL_NAMES.get(ints.get(INT_GEM_TYPE))
+        detail["gems"] = {"count": gem_count, "type": gem}
+        add("Gems", f"{gem_count} x {gem}" if gem else _fmt(gem_count))
+
+    items_cap, cont_cap = ints.get(INT_ITEMS_CAPACITY), ints.get(INT_CONTAINERS_CAPACITY)
+
+    if items_cap or cont_cap:
+        detail["capacity"] = {"items": items_cap or 0, "containers": cont_cap or 0}
+        add("Capacity", f"{items_cap or 0} items, {cont_cap or 0} packs")
+
+    # Attuned cannot be given away, Bonded cannot be dropped. Both change what a player can do
+    # with the item, so both are worth a line.
+    if ints.get(INT_ATTUNED):
+        detail["attuned"] = True
+        lines.append("Attuned")
+
+    if ints.get(INT_BONDED):
+        detail["bonded"] = True
+        lines.append("Bonded")
 
     # --- spells ---------------------------------------------------------------------------------
     if spells:

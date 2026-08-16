@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import re
 
-from . import payload
+from . import items, payload
 
 ISO = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
@@ -129,17 +129,17 @@ def test_a_vital_never_reports_more_current_than_max():
         ],
     }
 
-    for v in payload.build_vitals(raw):
+    for v in payload.build_vitals(raw, []):
         assert v["current"] <= v["max"], f"{v['key']}: {v['current']}/{v['max']} is impossible"
 
-    health = next(v for v in payload.build_vitals(raw) if v["key"] == "health")
+    health = next(v for v in payload.build_vitals(raw, []) if v["key"] == "health")
 
     # The unbuffed figure is still reported, unmodified, for anything that wants the truth.
     assert health["base"] == 199
     assert health["max"] == 205
 
     # An UNbuffed, damaged character must still show its real ceiling, not its current value.
-    stamina = next(v for v in payload.build_vitals(raw) if v["key"] == "stamina")
+    stamina = next(v for v in payload.build_vitals(raw, []) if v["key"] == "stamina")
     assert stamina["current"] == 247 and stamina["max"] == 318
 
 
@@ -157,7 +157,7 @@ def test_attributes_come_out_in_the_clients_panel_order():
     }
 
     labels = [a["label"] for a in payload.build_attributes(raw, {
-        "attributes_start_at_ten": True, "attribute_max_value": 290})]
+        "attributes_start_at_ten": True, "attribute_max_value": 290}, [])]
 
     assert labels == ["Strength", "Endurance", "Coordination", "Quickness", "Focus", "Self"], labels
 
@@ -210,3 +210,75 @@ if __name__ == "__main__":
     print(f"\n{passed} passed, {failed} failed")
 
     raise SystemExit(1 if failed else 0)
+
+
+# --- 136 / 138: the two things that were silently wrong ----------------------------------------
+
+
+def test_buffs_do_not_stack_within_a_spell_category():
+    """The rule the whole buffed-value feature rests on.
+
+    Black Breath carries +15 permanent and +35 timed on Strength, and the client shows +35, not
+    +50. Enchantments group by spell category and only the strongest in each applies. Picking the
+    top by LayerId instead of PowerLevel happens to give the same answer here, so the second case
+    below deliberately makes them disagree.
+    """
+    from . import enchantments
+
+    same_category = [
+        {"category": 100, "power": 2, "start": -10, "type": enchantments.ATTRIBUTE
+         | enchantments.ADDITIVE | enchantments.SINGLE_STAT, "key": 1, "value": 15.0},
+        {"category": 100, "power": 6, "start": -5, "type": enchantments.ATTRIBUTE
+         | enchantments.ADDITIVE | enchantments.SINGLE_STAT, "key": 1, "value": 35.0},
+    ]
+
+    assert enchantments.attribute_current(220, same_category, 1) == 255
+
+    # Two DIFFERENT categories do sum.
+    two_categories = [
+        dict(same_category[0], category=100),
+        dict(same_category[1], category=200),
+    ]
+
+    assert enchantments.attribute_current(220, two_categories, 1) == 270
+
+
+def test_an_expired_enchantment_is_ignored_and_a_permanent_one_is_not():
+    """StartTime ticks BACKWARDS toward -Duration; a negative Duration never expires."""
+    from . import enchantments
+
+    assert not enchantments.is_live(duration=100, start=-100)   # exactly spent
+    assert not enchantments.is_live(duration=100, start=-150)   # long gone
+    assert enchantments.is_live(duration=100, start=-50)        # still running
+    assert enchantments.is_live(duration=-1, start=-99999)      # permanent
+
+
+def test_wield_requirement_reads_the_requirement_type_not_a_skill():
+    """138: these ids were all off by one and the line was confidently wrong.
+
+    A Frost Long Sword on the shard stores WieldRequirements=2 (RawSkill), WieldSkillType=44
+    (Heavy Weapons), WieldDifficulty=250. The old constants read 158 as the skill and 159 as the
+    level, and rendered "Bow 44".
+    """
+    detail = items.build_detail({158: 2, 159: 44, 160: 250}, {}, {}, [])
+
+    assert any("Heavy Weapons 250" in line for line in detail["lines"]), detail["lines"]
+    assert not any("Bow" in line for line in detail["lines"]), detail["lines"]
+
+    # WieldRequirement.Level (7) ignores the skill field entirely - the difficulty IS the level.
+    level_only = items.build_detail({158: 7, 159: 1, 160: 150}, {}, {}, [])
+
+    assert any("Level 150" in line for line in level_only["lines"]), level_only["lines"]
+
+
+def test_a_weapon_reports_its_damage_and_a_robe_does_not():
+    """137: the examine panel was templated off a robe and had no weapon handling at all."""
+    weapon = items.build_detail(
+        {44: 60, 45: 0x10}, {22: 0.25}, {}, [])          # 60 max damage, 25% variance, Fire
+
+    assert "Damage: 45 - 60" in weapon["lines"], weapon["lines"]
+    assert "Damage Type: Fire" in weapon["lines"], weapon["lines"]
+
+    robe = items.build_detail({28: 200}, {}, {}, [])      # armour level only
+
+    assert not any(line.startswith("Damage") for line in robe["lines"]), robe["lines"]

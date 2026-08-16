@@ -35,7 +35,7 @@ import functools
 from pathlib import Path
 from typing import Any
 
-from . import curves, db, items, names
+from . import curves, db, enchantments, items, names
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -224,6 +224,9 @@ def load_character(cur, character_id: int) -> dict | None:
             "FROM biota_properties_skill WHERE object_Id = %s",
             (character_id,),
         ),
+        # 136: live buffs, so attributes, vitals, skills and burden read as the client reads them.
+        # Already filtered to the unexpired here, so every consumer downstream can just use it.
+        "enchantments": enchantments.load(cur, character_id),
         "titles": [
             r["title_Id"]
             for r in db.fetch_all(
@@ -270,7 +273,21 @@ def _attribute_bases(attributes: list[dict]) -> dict[int, int]:
     }
 
 
-def build_attributes(raw: dict, dials: dict) -> list[dict]:
+def _attribute_currents(attributes: list[dict], ench: list[dict]) -> dict[int, int]:
+    """The same map, BUFFED — what the client actually feeds the formulas.
+
+    136: `AttributeFormula.GetFormula` has a `current` flag defaulting to true, and CreatureSkill
+    uses the current variant for its displayed value while using the base variant for Base. So a
+    skill moves when a Strength buff lands, even with no skill buff of its own. Passing this map
+    instead of the base one IS the current variant — the formula itself does not change.
+    """
+    return {
+        aid: enchantments.attribute_current(base, ench, aid)
+        for aid, base in _attribute_bases(attributes).items()
+    }
+
+
+def build_attributes(raw: dict, dials: dict, ench: list[dict]) -> list[dict]:
     out = []
 
     by_id = {row["type"]: row for row in raw["attributes"]}
@@ -291,6 +308,10 @@ def build_attributes(raw: dict, dials: dict) -> list[dict]:
 
         base = starting + rank
 
+        # 136: what the client shows. It prints the buffed number in green with the delta beneath,
+        # so both travel: `value` stays the base the character owns, `buffed` is what is in force.
+        buffed = enchantments.attribute_current(base, ench, attr_id)
+
         key = (curves.enum_label("attribute", attr_id) or f"attr{attr_id}").lower()
 
         out.append(
@@ -299,8 +320,10 @@ def build_attributes(raw: dict, dials: dict) -> list[dict]:
                 "label": curves.enum_label("attribute", attr_id),
                 "cat": "magic" if attr_id in (5, 6) else ("def" if attr_id == 2 else "phys"),
                 "base": base,
-                # `buffed` deliberately equals `base` — see the note in build_private().
-                "buffed": base,
+                # 136: `buffed` used to be a placeholder equal to `base`, waiting for live buffs
+                # to be worth reading. They are now read, so it carries the real figure.
+                "buffed": buffed,
+                "buff": buffed - base,
                 "trueRank": rank,
                 "maxRank": max_ranks,
                 "startingValue": starting,
@@ -314,7 +337,7 @@ def build_attributes(raw: dict, dials: dict) -> list[dict]:
     return out
 
 
-def build_vitals(raw: dict) -> list[dict]:
+def build_vitals(raw: dict, ench: list[dict]) -> list[dict]:
     """The three vitals.
 
     004 holds these at the same fraction of their ceiling as the attribute that governs them —
@@ -324,6 +347,9 @@ def build_vitals(raw: dict) -> list[dict]:
     """
     formulas = curves.vital_formulas()
     bases = _attribute_bases(raw["attributes"])
+    # A vital's ceiling follows its governing attribute, so a buffed attribute raises it even with
+    # no vital buff at all - which is why the buffed max is computed from the buffed attributes.
+    currents = _attribute_currents(raw["attributes"], ench)
 
     out = []
 
@@ -341,6 +367,12 @@ def build_vitals(raw: dict) -> list[dict]:
             (row["init_Level"] or 0)
             + (row["level_From_C_P"] or 0)
             + curves.apply_formula(formula, bases)
+        )
+
+        buffed_max = enchantments.vital_current_max(
+            (row["init_Level"] or 0) + (row["level_From_C_P"] or 0)
+            + curves.apply_formula(formula, currents),
+            ench, vital_id,
         )
 
         # WHICH ATTRIBUTE THIS VITAL FOLLOWS, named rather than assumed.
@@ -365,19 +397,20 @@ def build_vitals(raw: dict) -> list[dict]:
                 "cat": {"health": "def", "stamina": "phys", "mana": "magic"}[key],
                 # `max` IS NOT SIMPLY `base`, AND THE DIFFERENCE IS VISIBLE.
                 #
-                # `base` is the UNBUFFED ceiling, which is all a saved snapshot can compute — the
-                # buffed ceiling depends on live enchantments this service deliberately does not
-                # read. But `current_Level` is whatever the character had at their last save,
-                # buffs included. So a buffed character saves with current ABOVE base, and the
-                # page rendered "Health 205/199" — a ratio that cannot exist.
+                # `base` is the UNBUFFED ceiling. `current_Level` is whatever the character had at
+                # their last save, buffs included — so a buffed character saves with current ABOVE
+                # base, and the page once rendered "Health 205/199", a ratio that cannot exist.
                 #
-                # `current` can never exceed the true maximum, so max(base, current) is a strictly
-                # better LOWER BOUND on that maximum than base alone, and it can never produce an
-                # impossible ratio. It is an estimate and is documented as one; `base` travels
-                # alongside, unmodified, for anything that wants the honest unbuffed figure.
+                # 136 makes the real ceiling computable: enchantments are read now, and a vital's
+                # ceiling follows its governing attribute, so `buffed_max` accounts for both a
+                # direct vital buff and an attribute buff underneath it. The max(...) that follows
+                # is no longer an estimate standing in for the truth — it is a floor guarding
+                # against a save whose current outran what we can reconstruct.
                 "current": current,
-                "max": max(base, current),
+                "max": max(buffed_max, current),
+                "baseMax": base,
                 "base": base,
+                "buff": buffed_max - base,
                 "ranks": row["level_From_C_P"] or 0,
                 "xpSpent": row["c_P_Spent"] or 0,
                 "governedBy": governed_by,
@@ -388,7 +421,7 @@ def build_vitals(raw: dict) -> list[dict]:
     return out
 
 
-def build_skills(raw: dict) -> list[dict]:
+def build_skills(raw: dict, ench: list[dict]) -> list[dict]:
     """Every skill the character has a row for, grouped the way the in-game panel groups them.
 
     The four groups are the whole point of this tab (Task.md 123):
@@ -401,6 +434,7 @@ def build_skills(raw: dict) -> list[dict]:
     """
     table = curves.skill_table()
     bases = _attribute_bases(raw["attributes"])
+    currents = _attribute_currents(raw["attributes"], ench)
     int64s = raw["int64s"]
 
     out = []
@@ -436,9 +470,15 @@ def build_skills(raw: dict) -> list[dict]:
             rank, into, to_next = 0, 0, 0
 
         base = (row["init_Level"] or 0) + rank
+        buffed = base
 
         if meta.get("usableUntrained") or sac >= curves.SAC_TRAINED:
             base += curves.apply_formula(meta.get("formula", {}), bases)
+            # The buffed figure feeds the formula BUFFED attributes, then applies the skill's own
+            # enchantments on top - CreatureSkill.Current in that order.
+            buffed += curves.apply_formula(meta.get("formula", {}), currents)
+
+        buffed = enchantments.skill_current(buffed, ench, skill_id)
 
         spec_cost = meta.get("upgradeCost", 0) or 0
         can_specialize = spec_cost < SPEC_COST_SENTINEL
@@ -451,7 +491,8 @@ def build_skills(raw: dict) -> list[dict]:
                 "cat": _category(skill_id, meta.get("category", 2)),
                 "group": group,
                 "base": base,
-                "buffed": base,
+                "buffed": buffed,
+                "buff": buffed - base,
                 "trueRank": rank,
                 "xpSpent": xp,
                 "xpIntoRank": into,
@@ -804,15 +845,13 @@ def _burden(carried: int, strength: int, dials: dict) -> dict:
     figure the server sends the client as PropertyInt.EncumbranceCapacity, and the page's job is
     to agree with what the player sees in game.
 
-    TWO THINGS THIS IS KNOWINGLY APPROXIMATE ABOUT, both from reading a saved snapshot:
+    ONE THING THIS IS KNOWINGLY APPROXIMATE ABOUT:
+    `AugmentationIncreasedCarryingCapacity` would raise capacity by 30 x Strength per
+    augmentation, and is not read. It errs the safe way - reporting MORE burden than the player
+    has - for a number nobody should act on from a web page.
 
-      * the server uses Strength.CURRENT (buffed); we only have base, so a buffed character reads
-        slightly heavier here than in game;
-      * `AugmentationIncreasedCarryingCapacity` would raise capacity by 30 x Strength per
-        augmentation, and is not read.
-
-    Both err the same way - reporting MORE burden than the player has - which is the safe
-    direction for a number nobody should act on from a web page.
+    The other approximation is gone: 136 reads live enchantments, so `strength` arriving here is
+    Strength.CURRENT and the figure now agrees with the client.
 
     NOTE FOR THE SERVER, not applied here: 009's `burden_capacity_floor` is added inside
     EncumbranceSystem.EncumbranceCapacity, which drives the physics/movement penalty, while
@@ -848,11 +887,18 @@ PK_STATUS_NAMES = {
 }
 
 
-def _strength(raw: dict) -> int:
-    """The character's Strength VALUE (starting + ranks), which is what burden capacity uses."""
+def _strength(raw: dict, ench: list[dict]) -> int:
+    """The character's Strength as the SERVER sees it, which is what burden capacity uses.
+
+    136: this used to return base Strength, and `Player.GetEncumbranceCapacity()` uses
+    Strength.**Current**. Black Breath is buffed +35, so the page divided by 33,000 where the game
+    divided by 38,250 and reported 54% against the client's 46% — near enough to 100 between them
+    that it read as an inverted number rather than an unbuffed one.
+    """
     for row in raw["attributes"]:
         if row["type"] == 1:
-            return (row["init_Level"] or 0) + (row["level_From_C_P"] or 0)
+            base = (row["init_Level"] or 0) + (row["level_From_C_P"] or 0)
+            return enchantments.attribute_current(base, ench, 1)
 
     return 0
 
@@ -890,11 +936,12 @@ def build_public(raw: dict, dials: dict) -> dict:
     cannot appear on a public page unless somebody adds it to this literal too, on purpose.
     """
     identity = _identity(raw)
-    skills = build_skills(raw)
+    ench = raw.get("enchantments") or []
+    skills = build_skills(raw, ench)
     titles = build_titles(raw)
 
     total_xp = identity["totalXP"]
-    _, to_next_level = curves.level_progress(total_xp, identity["level"])
+    into_level, to_next_level = curves.level_progress(total_xp, identity["level"])
 
     return {
         "id": identity["id"],
@@ -906,6 +953,9 @@ def build_public(raw: dict, dials: dict) -> dict:
         "level": identity["level"],
         "totalXP": total_xp,
         "xpToNextLevel": to_next_level,
+        # 141: the in-game panels show a LEVEL progress bar above both stat tabs, so the portal
+        # needs the other half of the pair to draw one honestly rather than guess a width.
+        "xpIntoLevel": into_level,
         # Group and rank only — no XP-into-rank detail, matching "skills + true ranks" in 123.
         "skills": [
             {
@@ -928,29 +978,38 @@ def build_public(raw: dict, dials: dict) -> dict:
 def build_private(cur, raw: dict, dials: dict, now: float) -> dict:
     """The full object, for a logged-in owner looking at their own character.
 
-    ON `buffed`
-    -----------
-    Every `buffed` here equals `base`. Buffs are live enchantment state
-    (`biota_properties_enchantment_registry`), and this sheet reads a snapshot that is up to
-    `player_save_interval` (300s) old — so a "buffed" number taken from it would be a five-minute
-    old spell duration presented as current, which is worse than not showing one. The field is
-    populated rather than omitted because the mockup renders a delta ONLY when buffed differs
-    from base, so equality degrades to exactly the right thing with no front-end change, and the
-    field is there the day live buffs are worth adding.
+    ON `buffed` (rewritten by 136)
+    ------------------------------
+    `buffed` used to equal `base` always. The reasoning was that enchantments are live state and
+    this sheet reads a snapshot up to `player_save_interval` (300s) old, so a buffed number here
+    could be a stale spell presented as current.
+
+    That was the wrong call, and the cost showed up as a bug report: the page said 54% burden
+    where the game said 46%, which read as an inverted number and was only an unbuffed one. The
+    same gap ran through every attribute, vital and skill — the page was quietly disagreeing with
+    the client everywhere, and silence about it was worse than the staleness it was avoiding.
+
+    Buffs are now read and applied. The staleness concern was real but small: a spell that lapsed
+    within the save window reads as still active for a few minutes, which is a far better error
+    than being wrong about every number on the page at all times.
     """
     identity = _identity(raw)
     char = raw["char"]
 
-    skills = build_skills(raw)
+    ench = raw.get("enchantments") or []
+    skills = build_skills(raw, ench)
     titles = build_titles(raw)
 
     total_xp = identity["totalXP"]
-    _, to_next_level = curves.level_progress(total_xp, identity["level"])
+    into_level, to_next_level = curves.level_progress(total_xp, identity["level"])
 
     return {
         **identity,
         "title": next((t["name"] for t in titles if t["active"]), None),
         "xpToNextLevel": to_next_level,
+        # 141: the in-game panels show a LEVEL progress bar above both stat tabs, so the portal
+        # needs the other half of the pair to draw one honestly rather than guess a width.
+        "xpIntoLevel": into_level,
         "unassignedXP": raw["int64s"].get(INT64_AVAILABLE_EXPERIENCE, 0) or 0,
         # ISO 8601 UTC, per Contract 1's `lastLogin(ISO)` — see iso() for what emitting the raw
         # Unix double instead cost.
@@ -960,12 +1019,12 @@ def build_private(cur, raw: dict, dials: dict, now: float) -> dict:
         # Filled in by the app layer from the live status feed — the shard cannot know it.
         "online": False,
         "location": build_location(raw),
-        "attributes": build_attributes(raw, dials),
-        "vitals": build_vitals(raw),
+        "attributes": build_attributes(raw, dials, ench),
+        "vitals": build_vitals(raw, ench),
         "skills": skills,
         "skillCredits": build_skill_credits(raw, skills),
         "titles": titles,
-        "inventory": build_inventory(cur, char["id"], _strength(raw), dials),
+        "inventory": build_inventory(cur, char["id"], _strength(raw, ench), dials),
         "quests": build_quests(raw, now),
         "public": False,
     }
