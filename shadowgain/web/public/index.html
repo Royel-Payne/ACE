@@ -246,7 +246,10 @@
   .spk{width:40px;height:40px;border-radius:8px;background:#0b1119;border:1px solid var(--line);display:grid;place-items:center;position:relative;cursor:pointer}
   .spk:hover{border-color:var(--arcane-dim)} .spk.sel{border-color:var(--arcane);box-shadow:0 0 0 1px rgba(79,214,198,.2)}
   .spk .tag{position:absolute;left:2px;top:1px;font-size:8px;color:var(--gold)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;
+  /* SIX, fixed. The client draws every bag 6 wide, so auto-fill was re-flowing the grid to
+     7 or 8 by viewport width and scrambling a layout the player arranged. renderGrid was
+     already padding to a multiple of 6 - the CSS and the JS disagreed. */
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;
     padding:6px 10px 16px;max-height:300px;overflow-y:auto;overflow-x:hidden}
   .grid::-webkit-scrollbar{width:9px} .grid::-webkit-scrollbar-thumb{background:var(--arcane-dim);border-radius:5px}
   .cell{aspect-ratio:1;border-radius:8px;background:#0b1119;border:1px solid var(--line);position:relative;display:grid;place-items:center}
@@ -1026,7 +1029,11 @@ function renderGrid(c){
 
   $('#contHdr').textContent = `Contents of ${cont.name} — ${items.length}`;
   let cells=items.map(it=>`<div class="cell" data-item="${reg(it)}">${icon(it)}${it.stack>1?`<span class="stack">${it.stack>=1000?(Math.round(it.stack/100)/10)+'k':it.stack}</span>`:''}</div>`).join('');
-  const pad=Math.max(0,(Math.ceil(items.length/6)*6||6)-items.length);
+  // Draw the BAG, not just its contents. A Sack holds 24 and says so on itself; the main pack is
+  // 6 x 17 = 102. Padding to the next multiple of six made a 54-item pack look full at 54, so a
+  // player could not see how much room was left - the empty slots are information.
+  const slots = cont.slots || (Math.ceil(items.length/6)*6 || 6);
+  const pad = Math.max(0, slots - items.length);
   cells+=Array(pad).fill('<div class="cell empty"></div>').join('');
   $('#packgrid').innerHTML=cells;
 }

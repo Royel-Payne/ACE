@@ -127,6 +127,15 @@ DID_ICON = 8
 # distinguishes red/blue/yellow.
 DID_ICON_OVERLAY = 50
 
+# 158 item 4: the slot an item sits in. ACE orders every container by it and even resyncs it
+# (`Container.cs:176`), so the shard DOES store the arrangement the player made - the portal was
+# sorting alphabetically over the top of it.
+INT_PLACEMENT_POSITION = 53
+# ItemsCapacity - what the client states as "Can hold up to (24) items."
+INT_ITEMS_CAPACITY = 6
+# The main pack is not a container row, so its size is not stored anywhere: 6 x 17 in the client.
+MAIN_PACK_SLOTS = 102
+
 IID_CONTAINER = 2
 IID_WIELDER = 3
 
@@ -633,6 +642,17 @@ def build_quests(raw: dict, now: float) -> list[dict]:
     return out
 
 
+def _in_order(items: list[dict]) -> list[dict]:
+    """Container order, the way ACE sends it: by PlacementPosition.
+
+    Name is the tie-break only, for the case where placement is missing or duplicated — it keeps
+    the result stable between refreshes rather than letting equal keys shuffle.
+    """
+    return sorted(items, key=lambda i: (i.get("placement") is None,
+                                        i.get("placement") or 0,
+                                        i.get("name") or ""))
+
+
 def build_inventory(cur, character_id: int, strength: int, dials: dict,
                     ench: list[dict] | None = None) -> dict:
     """The paperdoll and the packs, with every item carrying its own examine text.
@@ -720,6 +740,8 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
 
         item = {
             "id": oid,
+            # Ordering, not decoration - see INT_PLACEMENT_POSITION.
+            "placement": i.get(INT_PLACEMENT_POSITION),
             "name": items.display_name(st.get(STRING_NAME) or "(unnamed)", i, f),
             "iconId": icon_id,
             "icon": icon_url(
@@ -779,12 +801,23 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
         if parent is not None:
             by_container.setdefault(parent, []).append(item)
 
+    focus_ids = {f["id"] for f in foci}
+
+    # `_in_order`, not by name. ACE sends every container ordered by PlacementPosition, so
+    # alphabetical was the portal inventing an arrangement over the one the player made.
     containers = [
         {
             "id": character_id,
             "name": "Main Pack",
             "icon": icon_url("/assets/icons/ui/mainpack.png"),
-            "items": sorted(by_container.get(character_id, []), key=lambda i: i["name"]),
+            # Packs and foci are EXCLUDED. ACE keeps two sequences - `!UseBackpackSlot` and
+            # `UseBackpackSlot` - each numbered from 0 (Container.cs:176), and the client draws
+            # the second as the PACKS column, not as contents. Listing them here put every pack
+            # in the grid AND in the strip, and interleaved two independent 0..N sequences, which
+            # is why placements read 0,0,1,1,6,6 instead of ascending once.
+            "items": _in_order([it for it in by_container.get(character_id, [])
+                                if it["id"] not in container_names and it["id"] not in focus_ids]),
+            "slots": MAIN_PACK_SLOTS,
         }
     ]
 
@@ -810,7 +843,9 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
                 "id": cid,
                 "name": label,
                 "icon": cicon,
-                "items": sorted(by_container.get(cid, []), key=lambda i: i["name"]),
+                "items": _in_order(by_container.get(cid, [])),
+                # Drawn to the pack's OWN size, which is what the client states on it.
+                "slots": (ints.get(cid, {}) or {}).get(INT_ITEMS_CAPACITY),
             }
         )
 
