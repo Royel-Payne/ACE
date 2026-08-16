@@ -40,6 +40,12 @@ BOOL_RETAINED = 91
 # PropertyDataId.ProcSpell - cast on strike, which the client also names under "Properties:".
 DID_PROC_SPELL = 55
 # Item levelling (cloaks and aetheria). Level is NOT stored - it is derived from total XP.
+# PropertyInt.WeaponType. Only the UNARMED value produces a suffix on the Skill line - "(Unarmed
+# Weapon)" is the ONLY parenthesised weapon class in acclient.exe, checked for both singular and
+# plural forms, so a Sword does not get "(Sword Weapon)" and inventing one would be wrong.
+INT_WEAPON_TYPE = 353
+WEAPON_TYPE_UNARMED = 1
+
 INT_ITEM_MAX_LEVEL = 319
 INT_ITEM_XP_STYLE = 320
 INT64_ITEM_TOTAL_XP = 4
@@ -1061,6 +1067,12 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if (skill := curves.enum_label("skill", ints.get(INT_WEAPON_SKILL))):
         detail["weaponSkill"] = skill
         # The client's label is "Skill", not "Attack Skill".
+        # `Skill: Heavy Weapons (Unarmed Weapon)` - the suffix names the WIELD class, which is
+        # finer than the skill: Heavy Weapons covers swords, axes and unarmed alike, and only the
+        # unarmed case is called out.
+        if ints.get(INT_WEAPON_TYPE) == WEAPON_TYPE_UNARMED:
+            skill = f"{skill} (Unarmed Weapon)"
+
         add("Skill", skill, order=10)
 
     # SPEED IS BUFFED TOO, and negative means faster: `baseSpeed + speedMod`, floored at 0
