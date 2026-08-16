@@ -268,7 +268,9 @@ def test_wield_requirement_reads_the_requirement_type_not_a_skill():
     # WieldRequirement.Level (7) ignores the skill field entirely - the difficulty IS the level.
     level_only = items.build_detail({158: 7, 159: 1, 160: 150}, {}, {}, [])
 
-    assert any("Level 150" in line for line in level_only["lines"]), level_only["lines"]
+    # 158r: written as the client writes it - "Wield requires level 150", lowercase, where a SKILL
+    # keeps its capitals ("Wield requires base Heavy Weapons 250").
+    assert any("Wield requires level 150" in line for line in level_only["lines"]), level_only["lines"]
 
 
 def test_a_weapon_reports_its_damage_and_a_robe_does_not():
