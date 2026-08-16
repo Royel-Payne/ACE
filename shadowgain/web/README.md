@@ -24,6 +24,31 @@ non-event.
 
 ---
 
+## Where this code lives (133, reversed by 156)
+
+**This repo is the single source of truth for the portal and the exporter.** Commit web changes
+here. There is no second copy to keep in step.
+
+133 moved this code into a private repo, `Royel-Payne/shadowgain-web`, to keep the portal out of a
+public fork. **That repo is now frozen.** The split was reversed for two reasons:
+
+- **Its purpose was already defeated.** The portal had been committed to this public fork since 124
+  — 23 commits — so moving new work elsewhere protected nothing that was not already published. The
+  history was deliberately never rewritten, which means it never could.
+- **It cost real work.** `web-deploy.sh` ships whichever copy it is run from, so the two drifted
+  with no conflict and no warning, and the last deploy won. 152 was built against the stale copy
+  and its deploy silently reverted 136, 137, 138 and 141 on LIVE — buffs vanished from the sheet
+  until 155 restored them. The same drift left this fork's deploy script without 143's index.html
+  guard for three weeks.
+
+One copy cannot silently revert another. That is the whole argument.
+
+> The exporter references `ACE.DatLoader` and `ACE.Entity` from `Source/`, so it only builds
+> in-tree — which is where it now is. The `AceSourceRoot` indirection 134 added for the
+> side-by-side layout is no longer needed and was not carried back.
+
+---
+
 ## Layout
 
 ```

@@ -126,6 +126,32 @@ fi
 # ---------------------------------------------------------------------------------------------
 # ship the static side
 # ---------------------------------------------------------------------------------------------
+# --- 143: refuse to ship an index.html that has lost a core definition -------------------------
+#
+# index.html is one large inline script, and twice now a structural edit to it removed a
+# neighbouring block along with its target - once caught locally, once DEPLOYED, which left the
+# live page unable to wire its own login handler. Clicking "Sign in" then did a native form
+# submit and landed on "/?", which is what Chris hit.
+#
+# There is no JS engine on this machine or the droplet, so this is not a syntax check. It is the
+# narrower guard that actually matches the failure: if a top-level definition the page cannot run
+# without has vanished, something was deleted that should not have been, and we stop.
+INDEX="$WEB/public/index.html"
+
+# Patterns include the character that FOLLOWS the name. Without it `grep "const WORN_SLOTS"`
+# happily matches `const WORN_SLOTS_ANYTHING`, so a renamed or half-deleted definition sails
+# through - which is exactly how the first version of this guard passed a file I had deliberately
+# broken to test it.
+for sym in "function renderBanner(" "function renderAttributes(" "function renderSkills("            "function renderInventory(" "function showReadout(" "function renderGrid("            "function mountModel(" "function examineHtml(" "function creditsLine("            "const WORN_SLOTS = [" "const ARMOUR_GRID = [" "const AETHERIA_ICONS = ["            "let slotsOn = false"; do
+  if ! grep -qF "$sym" "$INDEX"; then
+    echo "!! $INDEX is missing '$sym' - refusing to deploy."
+    echo "   A structural edit almost certainly deleted more than it meant to. Check git diff."
+    exit 1
+  fi
+done
+
+echo "    index.html core definitions present"
+
 echo "==> shipping front-end + assets to $WWW_DIR"
 
 # public/ holds the front-end (Cowork's) and assets/ (the exporter's output). Both are static and
