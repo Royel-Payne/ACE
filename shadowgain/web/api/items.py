@@ -621,10 +621,21 @@ def _material_names() -> dict[int, str]:
 MATERIAL_NAMES = _material_names()
 
 # Workmanship is stored 1-10 and shown as a word in game.
-WORKMANSHIP_NAMES = {
-    1: "Poor", 2: "Rough", 3: "Crude", 4: "Low", 5: "Average",
-    6: "Fine", 7: "Good", 8: "Excellent", 9: "Superb", 10: "Magnificent",
-}
+def _workmanship_names() -> dict[int, str]:
+    """Workmanship value -> the client's adjective, GENERATED not typed.
+
+    This was hand-written as 9 -> "Superb" and 6 -> "Fine". The client says "Incomparable" and
+    "Nearly flawless". Unlike almost everything else the portal shows there is no server-side
+    source for these words - the shard stores a bare number and the CLIENT supplies the adjective -
+    so they come from `tools/extract-workmanship.py`, which pulls them out of acclient.exe by
+    anchor and asserts the run before writing. See that file for why the dats were ruled out.
+    """
+    raw = json.loads((DATA_DIR / "workmanship.json").read_text(encoding="utf-8"))
+
+    return {int(k): v for k, v in raw.items()}
+
+
+WORKMANSHIP_NAMES = _workmanship_names()
 
 RESISTANCES = [
     ("Slashing", FLOAT_ARMOR_MOD_SLASH),
@@ -678,8 +689,12 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> 
         detail["burden"] = burden
         add("Burden", _fmt(burden))
 
-    if material or workmanship:
-        add("Material", " ".join(x for x in (detail.get("workmanshipName"), material) if x))
+    # The client prints `Workmanship: Incomparable (9)` on its own line and does NOT print a
+    # "Material:" line at all - the material is part of the item's NAME ("Gold Orb", "Ivory
+    # Tetsubo", "Black Opal Ring"). The portal used to fuse the two into `Material: Superb Gold`,
+    # which is a line the game never shows, built from an adjective that was also wrong.
+    if workmanship:
+        add("Workmanship", f"{detail['workmanshipName']} ({int(workmanship)})")
 
     if (armor := ints.get(INT_ARMOR_LEVEL)):
         detail["armorLevel"] = armor
@@ -816,15 +831,14 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> 
         detail["weaponSpeed"] = speed
         add("Speed", _fmt(speed))
 
-    # The bonuses, all stored as multipliers around 1.0. No descriptor words are invented for
-    # them - the client shows percentages and so does this.
+    # MULTIPLIERS around 1.0 - 1.13 is "+13%". Confirmed against ACE, which defaults each of these
+    # to 1.0 when absent (e.g. `weapon.ElementalDamageMod ?? 1.0f`).
     for label, prop, key in (
         ("Damage Bonus", FLOAT_DAMAGE_MOD, "damageMod"),
         ("Attack Bonus", FLOAT_WEAPON_OFFENSE, "attackMod"),
         ("Melee Defense Bonus", FLOAT_WEAPON_DEFENSE, "meleeDefenseMod"),
         ("Missile Defense Bonus", FLOAT_WEAPON_MISSILE_DEFENSE, "missileDefenseMod"),
         ("Magic Defense Bonus", FLOAT_WEAPON_MAGIC_DEFENSE, "magicDefenseMod"),
-        ("Mana Conversion Bonus", FLOAT_MANA_CONVERSION_MOD, "manaConversionMod"),
         ("Elemental Damage", FLOAT_ELEMENTAL_DAMAGE_MOD, "elementalDamageMod"),
         ("Slayer Bonus", FLOAT_SLAYER_DAMAGE_BONUS, "slayerDamageBonus"),
         ("Ignores Armor", FLOAT_IGNORE_ARMOR, "ignoreArmor"),
@@ -832,6 +846,21 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> 
         if (text := _pct(floats.get(prop))) is not None:
             detail[key] = floats.get(prop)
             add(label, text)
+
+    # 158: A FRACTION, NOT A MULTIPLIER, and it sat in the list above being read as one.
+    #
+    # ACE defaults it to ZERO, in both the combat path and the tinkering recipe:
+    #
+    #     var baseMod = (float)(weapon.ManaConversionMod ?? 0.0f);   // WorldObject_Weapon.cs:247
+    #     return 1.0f + baseMod * enchantmentMod;                    //  ...          .cs:259
+    #
+    # so 0.08 means +8%. Running it through the multiplier formula gave (0.08 - 1) = **-92%** on
+    # the live site - a bonus rendered as a near-total penalty, on an item whose whole purpose is
+    # that bonus. It is the one entry in that list ACE does not default to 1.0, and it had been
+    # grouped with the ones that are.
+    if (mana_conv := floats.get(FLOAT_MANA_CONVERSION_MOD)):
+        detail["manaConversionMod"] = mana_conv
+        add("Mana Conversion Bonus", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%")
 
     if (crit := floats.get(FLOAT_CRITICAL_FREQUENCY)):
         detail["criticalFrequency"] = crit
@@ -979,10 +1008,25 @@ def display_name(base_name: str, ints: dict, floats: dict) -> str:
     127 #6: salvage arrives as "Salvage (6)" because that is literally the stored name — the
     material is a separate property the client merges in on display. So "Salvage (6)" becomes
     "Steel Salvage (6)", which is what the bag actually contains.
+
+    158: the same merge applies to EVERY item carrying a material, not just salvage. The client
+    titles them "Gold Orb", "Ivory Tetsubo", "Black Opal Ring" while the shard stores "Orb",
+    "Tetsubo", "Ring" - so the portal was showing a plainer name than the game for every piece of
+    loot a player owns.
+
+    Prefixing on "material is present" is not a guess about which items qualify; it is what the
+    data already separates. Loot-generated items carry MaterialType and retail/quest ones do not -
+    Black Breath's Ring, Orb, Cloak and Poet's Shirt all have it, while Pathwarden Gauntlets and
+    the Hoary Mattekar Robe have NULL. So the items that get a prefix are exactly the ones the
+    client prefixes, with no list to maintain.
     """
     material = MATERIAL_NAMES.get(ints.get(INT_MATERIAL_TYPE))
 
-    if material and base_name.startswith("Salvage"):
-        return f"{material} {base_name}"
+    if not material:
+        return base_name
 
-    return base_name
+    # Already merged in by whoever stored it - do not produce "Gold Gold Orb".
+    if base_name.startswith(material):
+        return base_name
+
+    return f"{material} {base_name}"

@@ -109,7 +109,7 @@ public static class Program
         string datDir = null, outDir = null, itemIdFile = null;
         bool doIcons = false, doTables = false, doSizes = false;
         string modelSetup = null, modelHead = null, skinPalette = null, hairPalette = null, eyesPalette = null;
-        string heritage = null, gender = null, charSetup = null, objDescOut = null;
+        string heritage = null, gender = null, charSetup = null, objDescOut = null, findString = null;
         // Default TRUE, matching CharacterOptions2.Default, which has ShowHelm and ShowCloak set.
         // A character who has never touched the option shows both, so absence must mean shown.
         bool showHelm = true, showCloak = true;
@@ -146,6 +146,14 @@ public static class Program
                 // Emit the computed ObjDesc as JSON, for diffing against the server's `sg-objdesc`.
                 case "--objdesc-json": objDescOut = Next(args, ref i); break;
                 case "--tables": doTables = true; break;
+                // 158: find a UI string in the dat's string tables.
+                //
+                // Some words the client shows are NOT in ACE source at all - the server sends a
+                // number and the client renders the adjective. Workmanship is the one that started
+                // this: the shard stores 9, the client writes "Incomparable", and the portal had a
+                // hand-typed table saying "Superb". The strings are not plaintext in any dat, so
+                // grep cannot find them; they have to come through StringTable's unpacker.
+                case "--find-string": findString = Next(args, ref i); break;
                 default:
                     Console.Error.WriteLine($"unknown argument: {args[i]}");
                     return Usage();
@@ -155,8 +163,9 @@ public static class Program
         if (datDir == null || outDir == null)
             return Usage();
 
-        // Neither flag means both - the common case is a full refresh.
-        if (!doIcons && !doTables && !doSizes && modelSetup == null && heritage == null)
+        // Neither flag means both - the common case is a full refresh. `--find-string` is a probe
+        // and must NOT drag a full icon+table rebuild along with it.
+        if (!doIcons && !doTables && !doSizes && modelSetup == null && heritage == null && findString == null)
             doIcons = doTables = true;
 
         // The dat stores strings in codepage 1252, which .NET Framework had built in and .NET
@@ -228,6 +237,54 @@ public static class Program
         // in one shows a blank row. DatManager.Initialize does it for us on that path.
         if (!retiredSkillsAdded)
             portal.SkillTable.AddRetiredSkills();
+
+        // --find-string: locate a UI word the CLIENT renders (158). See the arg comment.
+        if (findString != null)
+        {
+            var hits = 0;
+
+            // The string tables are NOT in portal.dat - they are in client_local_English.dat, which
+            // is the whole point of there being a separate language dat. Searching portal.dat for
+            // them returns a confident "not found" for every word the client displays.
+            var langPath = Path.Combine(datDir, "client_local_English.dat");
+
+            if (!File.Exists(langPath))
+            {
+                Console.Error.WriteLine($"!! no client_local_English.dat under {datDir}");
+                return 1;
+            }
+
+            var lang = new LanguageDatDatabase(langPath);
+            Console.WriteLine($"    language dat: {lang.AllFiles.Count:N0} records, iteration {lang.Iteration}");
+
+            foreach (var id in lang.AllFiles.Keys.Where(k => (k & 0xFF000000) == 0x23000000).OrderBy(k => k))
+            {
+                var table = lang.ReadFromDat<StringTable>(id);
+
+                if (table == null)
+                    continue;
+
+                foreach (var data in table.StringTableData)
+                {
+                    var idx = data.Strings.FindIndex(
+                        s => s != null && s.Contains(findString, StringComparison.OrdinalIgnoreCase));
+
+                    if (idx < 0)
+                        continue;
+
+                    hits++;
+                    Console.WriteLine($"  table 0x{id:X8}  entry 0x{data.Id:X8}  [{idx}] of {data.Strings.Count}");
+
+                    // The whole entry, because these tables are ORDERED LISTS and the neighbours are
+                    // the rest of the scale - which is the actual thing being looked for.
+                    for (var s = 0; s < data.Strings.Count; s++)
+                        Console.WriteLine($"      [{s,2}] {data.Strings[s]}");
+                }
+            }
+
+            Console.WriteLine(hits == 0 ? $"==> \"{findString}\" not found in any string table" : $"==> {hits} hit(s)");
+            return 0;
+        }
 
         // --sizes: a census of the texture range by dimension. Added because the first hunt for
         // the attribute icons assumed they were 32x32 like item icons, found nothing, and
