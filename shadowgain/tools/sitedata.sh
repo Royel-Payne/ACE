@@ -77,6 +77,7 @@ ROWS=$(q "
 SELECT CONCAT(
   '{\"name\":\"', REPLACE(c.name,'\"','\\\\\"'), '\",',
   '\"level\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1), ',',
+  '\"skillXp\":', COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0), ',',
   '\"hours\":', ROUND(COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=125),0)/3600,1), '}'
 )
 FROM \`character\` c
@@ -118,9 +119,37 @@ WHERE c.is_Deleted=0 AND c.delete_Time=0
   -- Keep this in step with the Ascendant gate in shadowgain_bot.py - the reward and the
   -- roll are meant to answer the same question, and they have drifted apart before.
   AND c.account_Id NOT IN (SELECT accountId FROM ace_auth.account WHERE accessLevel > 0)
-ORDER BY COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) DESC,
-         COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=125),0) DESC
-LIMIT 100;")
+-- 159c: the roll reports SKILL XP, not level.
+--
+-- Chris: instead of level, maybe a tally of the xp skills have earned - shows hard work without
+-- being a gauge for competition.
+--
+-- It is the better metric for a second reason. LEVEL is exactly what the cross-lane hole inflated:
+-- fellowship and pass-up XP raise character level and touch skill XP not at all. Trees came out of
+-- that test at level 150 with 1.18B of skill XP against 10.25B of character XP. Skill XP can only
+-- come from using skills, so it measures the long road directly and cannot be handed to anyone by
+-- a fellowship.
+--
+-- Level is still selected, because the eligibility floor below uses it, and is still sent for
+-- anything that wants it - it just stops being what the page shows first.
+
+-- 159b: BY NAME, not by level.
+  --
+  -- Ordering this list by level made it a leaderboard and people played it as one. A ranked list
+  -- answers who is winning; an alphabetical one answers who walked the road, which is what the roll
+  -- is actually for. Chris, after a night of drama over it: this should be a fun and stress free
+  -- place.
+  --
+  -- The front-end #-column went with it. Numbering an alphabetical list would be meaningless and
+  -- would still read as a rank.
+  --
+  -- LIMIT raised at the same time: under the old ordering it meant the top 100, a sensible cut.
+  -- Alphabetically it would mean everyone up to about the letter M, which is not.
+  --
+  -- AND NOT A SINGLE DOUBLE QUOTE IN THIS COMMENT. See the warning thirty lines above - I wrote
+  -- seven of them here on the first attempt and bash executed the rest of the query as commands.
+  ORDER BY c.name ASC
+LIMIT 1000;")
 
 {
   printf '{"generated":"%s","characters":[' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
