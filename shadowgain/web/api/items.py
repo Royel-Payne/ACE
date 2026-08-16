@@ -902,7 +902,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # Stored per-second and negative (it drains). The game phrases it as a period.
         seconds = abs(1.0 / rate) if rate else 0
         detail["manaRateSeconds"] = round(seconds, 1)
-        add("Mana Burn", f"1 point every {seconds:.0f}s")
+        # `Mana Cost: 1 point per %d seconds.` - again the client's format string. "Mana Burn"
+        # is a phrase the game does not use anywhere.
+        add("Mana Cost", f"1 point per {seconds:.0f} seconds.")
 
     if (difficulty := ints.get(INT_DIFFICULTY)):
         detail["activationDifficulty"] = difficulty
@@ -1070,7 +1072,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     if (cleave := ints.get(INT_CLEAVING)):
         detail["cleaving"] = cleave
-        add("Cleaving", f"{cleave} targets")
+        # `Cleave: %d enemies in front arc.` - the client's own format string, found in
+        # acclient.exe. "Cleaving: 2 targets" was our phrasing for both halves of the line.
+        add("Cleave", f"{cleave} enemies in front arc.")
 
     gap()
 
@@ -1150,7 +1154,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # --- general facts that apply to anything ---------------------------------------------------
     if (effects := _flags(ints.get(INT_UI_EFFECTS), UI_EFFECT_NAMES)):
         detail["uiEffects"] = effects
-        add("Aura", ", ".join(effects))
+        # NOT PRINTED. "Aura" appears nowhere in acclient.exe - the client conveys UiEffects as
+        # the ICON's glow, not as a line of text, and this row was ours entirely. The value is kept
+        # in `detail` for anything that wants it; it just stops pretending the game says it.
+        pass
 
     # Structure is uses remaining - tinkering tools, keys, spell components all carry it, and a
     # player wants to know how many are left far more than they want most of the rest of this.
@@ -1163,7 +1170,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if (gem_count := ints.get(INT_GEM_COUNT)):
         gem = MATERIAL_NAMES.get(ints.get(INT_GEM_TYPE))
         detail["gems"] = {"count": gem_count, "type": gem}
-        add("Gems", f"{gem_count} x {gem}" if gem else _fmt(gem_count))
+        # NOT ITS OWN ROW. The client folds this into the closing sentence - ", set with 3 pieces
+        # of White Jade" - using the strings `, set with ` and `pieces of `. Held here and appended
+        # to the flavour line below.
+        detail["gemText"] = (f"{gem_count} pieces of {gem}" if gem_count != 1 else f"1 {gem}") if gem else None
 
     items_cap, cont_cap = ints.get(INT_ITEMS_CAPACITY), ints.get(INT_CONTAINERS_CAPACITY)
 
@@ -1291,7 +1301,14 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # The description reads as prose and belongs at the end, after the numbers.
     for key in ("longDesc", "use"):
         if detail.get(key):
-            lines.append(detail[key])
+            text = detail[key]
+
+            # ", set with 3 pieces of White Jade" - the client's closing clause, on the same line
+            # as the name rather than as a "Gems:" row above it.
+            if key == "longDesc" and detail.get("gemText"):
+                text = f"{text}, set with {detail['gemText']}"
+
+            lines.append(text)
 
     while lines and lines[-1] == "":
         lines.pop()
