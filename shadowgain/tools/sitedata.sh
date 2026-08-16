@@ -194,7 +194,7 @@ if [ "$UP" = true ]; then
   #
   # Reading the json file directly keeps what 129 bought - cost is O(tail), not O(file size) -
   # and does not depend on Docker's seek state at all. jq unescapes the `log` field, which is the
-  # job `docker logs` was doing for us (`>` for `>` and friends), so the greps are unchanged.
+  # job `docker logs` was doing for us (`\u003e` for `>` and friends), so the greps are unchanged.
   #
   # THE TIME FILTER IS NOT OPTIONAL. `tail -n` alone would happily parse a STALE serverstatus
   # reply from before a shutdown and report the world as live. Comparing the first 19 characters
