@@ -57,8 +57,13 @@ OUT=/var/www/shadowgain/data
 mkdir -p "$OUT"
 
 # MODE: status | roll | both. The two feeds run on different cadences - status every
-# 30s (systemd timer) because it should feel live, the roll every 5 min (cron) because
+# 15s (systemd timer) because it should feel live, the roll every 5 min (cron) because
 # it is a DB query over every character and barely changes.
+#
+# 15s, not the 30s this comment claimed until 157. The timer has said 15s since it was
+# installed - see the reasoning beside the --install block, which is Chris's and is the
+# real decision. A comment that contradicts the unit file a few hundred lines away is how
+# someone "corrects" the timer back to a number nobody chose.
 MODE="${1:-both}"
 
 q() { docker exec ace-db mysql -uroot -p"$RP" -N -B ace_shard -e "$1" 2>/dev/null; }
@@ -170,8 +175,22 @@ if [ "$UP" = true ]; then
   # Developer-tier command that ShadowgainAudit relays to Discord #audit, and putting it on a
   # 15s timer flooded that channel (125). sg-roster is in ReadOnlyNoise, which is what a command
   # meant for polling looks like. Before putting ANY console command on a timer, check that set.
-  { echo serverstatus; echo sg-roster; } | timeout -s KILL 8 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
-  sleep 2
+  # 157: 8s and 2s were 10 of this script's 13.76s, against a 15s timer - a 1.2s margin, and
+  # 129's failure was precisely runs left with no idle gap. Neither number was buying anything.
+  #
+  # `docker attach` NEVER exits on its own, so this timeout is not a limit, it is the full cost,
+  # paid every run. But all it has to do is deliver two lines of stdin; the REPLY is read from the
+  # log further down. Measured: the reply is visible **0.13s after the attach closes**, so the
+  # timeout was the entire latency. 5/5 delivery at both 1s and 2s with only a 1s wait after.
+  #
+  # 3s is triple the largest value proven to work, and still returns 5s per run. Run time drops
+  # 13.76s -> ~7.8s, so the margin against the 15s timer goes 1.2s -> 7.2s.
+  #
+  # DO NOT tune this to make the timer faster without re-measuring the whole run. The page polls
+  # every 10s, so 10s is the only interval below 15 that a human could notice - and a ~7.8s run
+  # against a 10s timer is a 78% duty cycle, which is the thin margin this change exists to remove.
+  { echo serverstatus; echo sg-roster; } | timeout -s KILL 3 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
+  sleep 1
   # `--tail` IS NOT OPTIONAL, IT IS THE WHOLE COST. 039 section E bounded this read with
   # `--since` so it would not grow with uptime - but `--since` only bounds the OUTPUT. Docker
   # still scans forward through the json log to find the window, so the call stays O(file size).
