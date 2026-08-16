@@ -596,10 +596,21 @@ function wireOnce(){
     const tile=e.target.closest('[data-item]');
     if(tile){ const it=SEL[+tile.dataset.item]; if(it){ area.querySelectorAll('.selitem').forEach(x=>x.classList.remove('selitem')); tile.classList.add('selitem'); openExamine(it); } }
   });
-  // fast custom tooltip (native title= is ~500ms and can't be styled)
-  area.addEventListener('mouseover', e=>{ const t=e.target.closest('[data-item]'); if(!t)return; const it=SEL[+t.dataset.item]; if(!it)return; ft.innerHTML=itemDetail(it); ft.style.display='block'; posTip(e); });
-  area.addEventListener('mousemove', e=>{ if(ft.style.display==='block') posTip(e); });
-  area.addEventListener('mouseout', e=>{ if(e.target.closest('[data-item]')) ft.style.display='none'; });
+  // Fast custom tooltip (native title= is ~500ms and cannot be styled).
+  //
+  // NOT BOUND AT ALL ON TOUCH, and this is the one that actually mattered. 158j gated the native
+  // `title` attributes, which was correct but addressed the wrong mechanism - THIS is the tooltip
+  // a player sees. Browsers synthesise `mouseover` from a tap, so on a phone a single tap both
+  // popped this floating card AND opened the examine panel underneath it: two overlapping readouts
+  // of the same item from one gesture, which is exactly the "crowded" Chris reported.
+  //
+  // Binding is skipped rather than the handler early-returning, so a touch device carries no
+  // pointer listeners at all.
+  if(HOVERABLE){
+    area.addEventListener('mouseover', e=>{ const t=e.target.closest('[data-item]'); if(!t)return; const it=SEL[+t.dataset.item]; if(!it)return; ft.innerHTML=itemDetail(it); ft.style.display='block'; posTip(e); });
+    area.addEventListener('mousemove', e=>{ if(ft.style.display==='block') posTip(e); });
+    area.addEventListener('mouseout', e=>{ if(e.target.closest('[data-item]')) ft.style.display='none'; });
+  }
 }
 function posTip(e){ const ft=$('#floatTip'),pad=14; const r=ft.getBoundingClientRect();
   let x=e.clientX+pad, y=e.clientY+pad;
@@ -662,7 +673,7 @@ function renderBanner(c){
     <div class="stat"><span class="n">${c.level}</span><span class="l">Level</span></div>
     <div class="stat"><span class="n sm">${fmt(c.totalXP)}</span><span class="l">Total XP</span></div>
     <div class="stat xpnext"><span class="n sm">${fmt(c.xpToNextLevel)}</span><span class="l">XP to next</span>
-      <div class="lvlbar" title="${fmt(c.xpIntoLevel||0)} of ${fmt((c.xpIntoLevel||0)+(c.xpToNextLevel||0))} into level ${c.level}"><i style="width:${levelPct(c)}%"></i></div></div>
+      <div class="lvlbar"${tip(`${fmt(c.xpIntoLevel||0)} of ${fmt((c.xpIntoLevel||0)+(c.xpToNextLevel||0))} into level ${c.level}`)}><i style="width:${levelPct(c)}%"></i></div></div>
     <div class="stat"><span class="n sm onl"><span class="dot ${c.online?'on':''}"></span>${c.online?'Online':'Offline'}</span><span class="l">${c.online?'Now':(c.lastLogin?'Last '+timeAgo(c.lastLogin):'Status')}</span></div>
     ${loc?`<div class="stat"><span class="n sm">${c.location.place}</span><span class="l">Last location</span></div>`:''}`;
 }
