@@ -30,6 +30,10 @@ INT_ITEM_USEABLE = 16
 INT_VALUE = 19
 INT_ARMOR_LEVEL = 28
 INT_MATERIAL_TYPE = 131
+# `IsEnchantable => (ResistMagic ?? 0) < 9999` (WorldObject_Weapon.cs:532). An item at or above
+# that cannot take an enchantment, so the WIELDER's aura must not be merged into its panel.
+INT_RESIST_MAGIC = 36
+UNENCHANTABLE_RESIST_MAGIC = 9999
 INT_WORKMANSHIP = 105
 INT_SPELLCRAFT = 106
 INT_CURRENT_MANA = 107
@@ -671,6 +675,13 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         lines.append(f"{label}: {value}")
 
     # --- identity ---------------------------------------------------------------------------
+    # The WIELDER's aura only reaches an item that can actually be enchanted. ACE gates it on
+    # `wo.Wielder != null && wo.IsEnchantable`, and an unenchantable item (ResistMagic >= 9999 -
+    # quest pieces, mostly) shows its BASE number in game no matter what the wielder is running.
+    # The item's OWN enchantments are not gated: if it somehow has them, they already applied.
+    enchantable = int(ints.get(INT_RESIST_MAGIC) or 0) < UNENCHANTABLE_RESIST_MAGIC
+    wielder_ench = list(ench) if (ench and enchantable) else []
+
     material = MATERIAL_NAMES.get(ints.get(INT_MATERIAL_TYPE))
     workmanship = ints.get(INT_WORKMANSHIP)
 
@@ -852,8 +863,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # ACE adds them SEPARATELY - `defenseMod + auraDefenseMod` - rather than pooling the two
         # registries. That matters: each side layers its own spells first, so a concatenated list
         # could pick a top layer across two objects that never competed.
-        if prop == FLOAT_WEAPON_DEFENSE and raw is not None and (ench or ench_item):
-            raw += enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(ench or [])
+        if prop == FLOAT_WEAPON_DEFENSE and raw is not None and (wielder_ench or ench_item):
+            raw += enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(wielder_ench)
 
         if (text := _pct(raw)) is not None:
             detail[key] = raw
@@ -875,9 +886,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # adding to it, and ACE notes they "are only effective if there is a base mod".
         # `wielderManaConvMod * weaponManaConvMod` (ResistMask.cs:127) - multiplied, not added,
         # and computed per registry for the same layering reason as above.
-        if ench or ench_item:
+        if wielder_ench or ench_item:
             mana_conv *= (enchantments.mana_conv_mod(ench_item or [])
-                          * enchantments.mana_conv_mod(ench or []))
+                          * enchantments.mana_conv_mod(wielder_ench))
 
         detail["manaConversionMod"] = mana_conv
         add("Mana Conversion Bonus", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%")
