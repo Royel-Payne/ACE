@@ -704,6 +704,9 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
     floats = props("biota_properties_float")
     strings = props("biota_properties_string")
     dids = props("biota_properties_d_i_d")
+    # 158: item BOOLS were never loaded - only the character's - which is why "Properties: Retained"
+    # could not be rendered no matter what the panel did with it. Retained is PropertyBool 91.
+    bools = props("biota_properties_bool")
 
     spells: dict[int, list[int]] = {}
 
@@ -736,7 +739,8 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
         # the character carrying it.
         wielded = row.get("wielder_id") is not None
         detail = items.build_detail(i, f, st, spells.get(oid, []),
-                                    ench if wielded else None, item_ench.get(oid), d)
+                                    ench if wielded else None, item_ench.get(oid), d,
+                                    bools.get(oid, {}))
 
         item = {
             "id": oid,

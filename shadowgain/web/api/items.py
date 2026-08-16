@@ -35,6 +35,8 @@ INT_MATERIAL_TYPE = 131
 INT_RESIST_MAGIC = 36
 # PropertyDataId.Spell - the spell an item casts when activated, kept apart from its spell book.
 DID_SPELL = 28
+# PropertyBool.Retained - the client lists it under "Properties:".
+BOOL_RETAINED = 91
 UNENCHANTABLE_RESIST_MAGIC = 9999
 INT_WORKMANSHIP = 105
 INT_SPELLCRAFT = 106
@@ -661,7 +663,7 @@ def _fmt(n) -> str:
 
 def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                  ench: list[dict] | None = None, ench_item: list[dict] | None = None,
-                 dids: dict | None = None) -> dict:
+                 dids: dict | None = None, bools: dict | None = None) -> dict:
     """The examine panel, as structured data plus ready-made lines.
 
     Both shapes on purpose: `lines` is what the tooltip renders today with no parsing, and the
@@ -686,6 +688,16 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             buffed.append(len(lines))
 
         lines.append(f"{label}: {value}")
+
+    def gap():
+        """A blank line between groups, the way the client spaces this panel.
+
+        Rendered by the front-end as a spacer div. Guarded against doubling and against leading
+        blanks, so a group that turns out to be empty - most items have no enchantments - does not
+        leave a hole where the client has none.
+        """
+        if lines and lines[-1] != "":
+            lines.append("")
 
     # --- identity ---------------------------------------------------------------------------
     # The WIELDER's aura only reaches an item that can actually be enchanted. ACE gates it on
@@ -729,6 +741,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # her Silk Baggy Pants store nothing and the client still shows "Armor Level: 200", all of it
     # from the enchantment. Testing the stored value first dropped the line entirely on exactly
     # the items where it is most worth seeing.
+    gap()
+
     armor_base = ints.get(INT_ARMOR_LEVEL) or 0
     armor_bonus = enchantments.armor_mod(ench_item or [])
 
@@ -755,6 +769,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # These come from the ITEM's own registry, like ArmorLevel: banes are cast onto the armour.
     mods = {}
     mod_keys = {}
+    mod_buffed = {}
 
     for label, prop in RESISTANCES:
         base = floats.get(prop)
@@ -789,6 +804,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
         mods[label] = round(mod, 3)
         mod_keys[label] = round(mod, 6)
+        mod_buffed[label] = bonus != 0
 
     if mods:
         detail["resistances"] = mods
@@ -819,7 +835,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             detail["protection"] = {k: round(armor_for_res * v) for k, v in mod_keys.items()}
 
             for k in mods:
-                add(k, _fmt(round(armor_for_res * mod_keys[k])))
+                # The client greens each resistance a bane raised and leaves the rest plain - which
+                # is why its Nether row is the only one in black on Black Breath's robe.
+                add(k, _fmt(round(armor_for_res * mod_keys[k])), is_buffed=mod_buffed.get(k, False))
         else:
             # Clothing with no armour of its own: the multiplier is all there is to report.
             add("Protection", ", ".join(f"{k} x{v:g}" for k, v in mods.items()))
@@ -1095,13 +1113,35 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     # Attuned cannot be given away, Bonded cannot be dropped. Both change what a player can do
     # with the item, so both are worth a line.
+    # --- properties ------------------------------------------------------------------------------
+    #
+    # The client's "Properties:" row, which the portal did not have at all. Its word list lives in
+    # acclient.exe beside the imbue names - Retained, Unenchantable, Magic Absorbing, Phantasmal -
+    # and the ones that apply here are Retained and Unenchantable.
+    #
+    # Retained is PropertyBool 91, and item BOOLS were never loaded until now: the panel could not
+    # have shown this however it was written.
+    props_list = []
+
+    if (bools or {}).get(BOOL_RETAINED):
+        detail["retained"] = True
+        props_list.append("Retained")
+
+    if int(ints.get(INT_RESIST_MAGIC) or 0) >= UNENCHANTABLE_RESIST_MAGIC:
+        detail["unenchantable"] = True
+        props_list.append("Unenchantable")
+
     if ints.get(INT_ATTUNED):
         detail["attuned"] = True
-        lines.append("Attuned")
+        props_list.append("Attuned")
 
     if ints.get(INT_BONDED):
         detail["bonded"] = True
-        lines.append("Bonded")
+        props_list.append("Bonded")
+
+    if props_list:
+        gap()
+        add("Properties", ", ".join(props_list))
 
     # --- spells ---------------------------------------------------------------------------------
     #
@@ -1151,6 +1191,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # banes are the resistance mods. Listing them is what lets a player see WHY a value is enhanced
     # rather than just that it is.
     if ench_item:
+        gap()
         table = curves.spell_table()
         seen_ids: set[int] = set()
         active = []
@@ -1184,6 +1225,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     for key in ("longDesc", "use"):
         if detail.get(key):
             lines.append(detail[key])
+
+    while lines and lines[-1] == "":
+        lines.pop()
 
     detail["lines"] = lines
     # Indices into `lines`, so the front-end colours what the game colours and nothing else.
