@@ -267,3 +267,29 @@ def armor_mod(enchantments: list[dict]) -> int:
     the wielder: Impenetrability is cast onto the armour, so it lives on the armour.
     """
     return int(additive(enchantments, INT, INT_ARMOR_LEVEL))
+
+
+INT_DAMAGE = 44
+INT_WEAPON_TIME = 49
+INT_WEAPON_AURA_DAMAGE = 360
+INT_WEAPON_AURA_SPEED = 361
+
+
+def damage_bonus(enchantments: list[dict]) -> int:
+    """`EnchantmentManager.GetDamageBonus()` — additive over Damage AND WeaponAuraDamage.
+
+    Two keys because of a quirk ACE documents in that method: Blood Drinker 1-7 are defined against
+    PropertyInt.Damage while the later ones use WeaponAuraDamage, so both have to be summed or half
+    the game's damage buffs vanish depending on which spell tier is up.
+    """
+    return int(additive(enchantments, INT, INT_DAMAGE)
+               + additive(enchantments, INT, INT_WEAPON_AURA_DAMAGE))
+
+
+def speed_mod(enchantments: list[dict]) -> int:
+    """`EnchantmentManager.GetWeaponSpeedMod()` — additive over WeaponTime AND WeaponAuraSpeed.
+
+    NEGATIVE is faster: WeaponTime counts up from 0, so Swift Killer subtracts.
+    """
+    return int(additive(enchantments, INT, INT_WEAPON_TIME)
+               + additive(enchantments, INT, INT_WEAPON_AURA_SPEED))

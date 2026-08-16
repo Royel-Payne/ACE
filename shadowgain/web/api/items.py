@@ -982,28 +982,63 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # Everything below is omitted when absent, so a robe gains nothing and a caster shows only the
     # caster-ish half of it. That is why there is no "is this a weapon" test: the properties
     # decide, which also means a weapon type nobody anticipated still renders whatever it carries.
+    # DAMAGE CARRIES ENCHANTMENTS, exactly as WeaponDefense does - `baseDamage + damageBonus +
+    # auraDamageBonus` (WeaponProfile.GetDamage). We merged one and not the other, so a Blood
+    # Drinker weapon read at its stored numbers while the game showed twenty points more.
+    #
+    # The aura half is gated on IsEnchantable; the ITEM's own bonus is not - that asymmetry is
+    # ACE's, not a simplification here.
     if (damage := ints.get(INT_DAMAGE)):
         variance = floats.get(FLOAT_DAMAGE_VARIANCE)
+
+        dmg_bonus = enchantments.damage_bonus(ench_item or [])
+
+        if wielder_ench:
+            dmg_bonus += enchantments.damage_bonus(wielder_ench)
+
+        damage = max(0, damage + dmg_bonus)
         detail["damage"] = {"max": damage, "variance": variance}
 
-        # The client quotes a RANGE, and the stored pair is max plus the fraction below it that
-        # the minimum sits - so the minimum has to be derived rather than read.
-        if variance:
-            add("Damage", f"{int(round(damage * (1 - variance)))} - {_fmt(damage)}")
-        else:
-            add("Damage", _fmt(damage))
+        # ONE DECIMAL on the minimum, and the damage TYPE on the same line - `Damage: 26.4 - 44,
+        # Bludgeoning`. The client derives the minimum from the variance rather than storing it,
+        # and rounding it to a whole number lost the .4 it prints.
+        types = _flags(ints.get(INT_DAMAGE_TYPE), DAMAGE_TYPE_NAMES)
+        suffix = f", {', '.join(types)}" if types else ""
 
-    if (types := _flags(ints.get(INT_DAMAGE_TYPE), DAMAGE_TYPE_NAMES)):
-        detail["damageTypes"] = types
-        add("Damage Type", ", ".join(types))
+        if types:
+            detail["damageTypes"] = types
+
+        if variance:
+            low = damage * (1 - variance)
+            # `:g`, not a fixed decimal count. The client prints the natural value - Chris's Cestus
+            # reads "25.38 - 54" and his Tetsubo "26.4 - 44" - so two decimals, one, or none as the
+            # arithmetic falls out. A fixed ".1f" would have written "45.0" where the game says 45.
+            add("Damage", f"{low:g} - {_fmt(damage)}{suffix}", is_buffed=dmg_bonus != 0)
+        else:
+            add("Damage", f"{_fmt(damage)}{suffix}", is_buffed=dmg_bonus != 0)
 
     if (skill := curves.enum_label("skill", ints.get(INT_WEAPON_SKILL))):
         detail["weaponSkill"] = skill
-        add("Attack Skill", skill)
+        # The client's label is "Skill", not "Attack Skill".
+        add("Skill", skill)
 
-    if (speed := ints.get(INT_WEAPON_TIME)) is not None and speed:
-        detail["weaponSpeed"] = speed
-        add("Speed", _fmt(speed))
+    # SPEED IS BUFFED TOO, and negative means faster: `baseSpeed + speedMod`, floored at 0
+    # (WeaponProfile.GetWeaponSpeed). Black Breath's Swift Killer carries -60, which takes this
+    # Tetsubo from 45 to 0 - the client reads "Very Fast (0)" where we printed 45.
+    if (speed := ints.get(INT_WEAPON_TIME)) is not None:
+        spd_mod = enchantments.speed_mod(ench_item or [])
+
+        if wielder_ench:
+            spd_mod += enchantments.speed_mod(wielder_ench)
+
+        speed = max(0, speed + spd_mod)
+
+        if speed or spd_mod:
+            detail["weaponSpeed"] = speed
+            # The descriptor word ("Very Fast") is NOT added: the four strings are in acclient.exe
+            # but only three points are known - 0 Very Fast, 15 Fast, 45 Average - which does not
+            # pin the boundaries. Same rule as the resistance ladder: measured or not at all.
+            add("Speed", _fmt(speed), is_buffed=spd_mod != 0)
 
     # MULTIPLIERS around 1.0 - 1.13 is "+13%". Confirmed against ACE, which defaults each of these
     # to 1.0 when absent (e.g. `weapon.ElementalDamageMod ?? 1.0f`).

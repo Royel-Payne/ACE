@@ -276,8 +276,11 @@ def test_a_weapon_reports_its_damage_and_a_robe_does_not():
     weapon = items.build_detail(
         {44: 60, 45: 0x10}, {22: 0.25}, {}, [])          # 60 max damage, 25% variance, Fire
 
-    assert "Damage: 45 - 60" in weapon["lines"], weapon["lines"]
-    assert "Damage Type: Fire" in weapon["lines"], weapon["lines"]
+    # 158p: the damage TYPE joins this line, the way the client writes it - "Damage: 26.4 - 44,
+    # Bludgeoning" - rather than sitting on a "Damage Type:" row the game does not have.
+    assert "Damage: 45 - 60, Fire" in weapon["lines"], weapon["lines"]
+    # No "Damage Type:" row any more - it is part of the Damage line above, as in the client.
+    assert not any(l.startswith("Damage Type:") for l in weapon["lines"]), weapon["lines"]
 
     robe = items.build_detail({28: 200}, {}, {}, [])      # armour level only
 
