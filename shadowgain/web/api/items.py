@@ -741,20 +741,88 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     #
     # Stored as multipliers around 1.0. Reported as the game reports them — a percentage away
     # from neutral — because "0.8" means nothing to a reader and "Slashing +20%" does.
+    # 158: THE BANES ARE MERGED IN HERE, and they are ADDITIVE.
+    #
+    # `EnchantmentManager.GetArmorModVsType` uses `Float | SingleStat | Additive` and SUMS - it does
+    # not multiply, which is what I assumed until the 158h oracle was pointed at it. The bane's
+    # level is carried in the value, so Bane IV contributing +0.75 and Bane VI contributing more
+    # needs no special handling; reading the stored number is the whole of it.
+    #
+    # Verified against the server for every armour piece Black Breath wears, e.g. her Pathwarden
+    # Robe: stored slashing 0.8 + 0.75 = 1.55, bludgeoning 1.0 + 0.75 = 1.75, and nether 1.0
+    # unchanged because nothing casts a Nether bane. AppraiseInfo agrees on all eight.
+    #
+    # These come from the ITEM's own registry, like ArmorLevel: banes are cast onto the armour.
     mods = {}
+    mod_keys = {}
 
     for label, prop in RESISTANCES:
-        mod = floats.get(prop)
+        base = floats.get(prop)
+        bonus = enchantments.additive(ench_item or [], enchantments.FLOAT, prop) if ench_item else 0.0
 
-        if mod is None or abs(mod - 1.0) < 0.005:
+        # A MISSING RESISTANCE IS 1.0, NOT ABSENT - `armor.GetProperty(type) ?? 1.0f`
+        # (ArmorProfile.cs). Most armour stores no ArmorModVsNether at all, and the client still
+        # prints "Nether: Average (350)" for it. Treating absent as "no row" left a hole in the
+        # middle of the list on exactly the damage type nothing ever buffs.
+        is_armour = bool(ints.get(INT_ARMOR_LEVEL) or armor_bonus)
+        mod = base if base is not None else (1.0 if (bonus or is_armour) else None)
+
+        if mod is None:
+            continue
+
+        mod += bonus
+
+        # CLAMPED TO +/-2.0, which ACE calls the "resistance clamp"
+        # (`Math.Clamp(effectiveRL, -2.0f, 2.0f)`, ArmorProfile.cs). Only one of Black Breath's six
+        # equipped items is affected - her Pathwarden Gauntlets sit at 1.3 + 0.75 = 2.05 and the
+        # server reports 2.0 - so this is a cap that bites rarely and silently, and would have gone
+        # on being wrong indefinitely without something comparing every value on every item.
+        mod = max(-2.0, min(2.0, mod))
+
+        # A mod of exactly 1.0 is still worth printing on ARMOUR, because the line reports the
+        # effective armour level rather than a deviation - the client shows Black Breath's robe as
+        # "Nether: Average (350)", the same 350 as its armour level, and dropping it left a gap
+        # where the game has a row. On clothing with no armour there is nothing to multiply, so a
+        # neutral multiplier really does say nothing and is still skipped.
+        if abs(mod - 1.0) < 0.005 and not is_armour:
             continue
 
         mods[label] = round(mod, 3)
+        mod_keys[label] = round(mod, 6)
 
     if mods:
         detail["resistances"] = mods
-        add("Protection", ", ".join(
-            f"{k} {'+' if v < 1 else '-'}{abs(round((1 - v) * 100))}%" for k, v in mods.items()))
+
+        # Named per damage type as well, so the oracle diff can check each one. The client keeps
+        # these in a separate ArmorProfile rather than in its property dictionaries, and comparing
+        # a single joined string against that would prove nothing.
+        for label, val in mod_keys.items():
+            detail["armorMod" + label.replace("Bludgeoning", "Bludgeon").replace("Slashing", "Slash")
+                                    .replace("Piercing", "Pierce").replace("Lightning", "Electric")] = val
+        # THE EFFECTIVE ARMOUR LEVEL PER DAMAGE TYPE, which is what the client shows and what the
+        # number actually means: `AL x mod`. ACE calls it the "effective RL" (ArmorProfile.cs).
+        #
+        # The percentage this replaced was only ever coherent for mods BELOW 1. Once the banes were
+        # merged in, values above 1 arrived and rendered as their own opposite - Black Breath's robe
+        # sits at the 2.0 clamp, the best protection obtainable, and the line read "Slashing -100%".
+        # That shipped for a few minutes and is the reason this is a per-type figure now.
+        #
+        # Confirmed against the client on her robe: armour level 350, slashing mod 2.0, and the game
+        # prints "Slashing: Unparalleled (700)". 350 x 2.0 = 700.
+        #
+        # The descriptor word ("Unparalleled") is NOT reproduced. It comes from a threshold table
+        # compiled into acclient.exe, not from anything the server sends, and inventing thresholds
+        # that merely look right is how the workmanship table came to be wrong.
+        armor_for_res = detail.get("armorLevel") or 0
+
+        if armor_for_res:
+            detail["protection"] = {k: round(armor_for_res * v) for k, v in mod_keys.items()}
+
+            for k in mods:
+                add(k, _fmt(round(armor_for_res * mod_keys[k])))
+        else:
+            # Clothing with no armour of its own: the multiplier is all there is to report.
+            add("Protection", ", ".join(f"{k} x{v:g}" for k, v in mods.items()))
 
     # --- magic ---------------------------------------------------------------------------------
     if (spellcraft := ints.get(INT_SPELLCRAFT)):
