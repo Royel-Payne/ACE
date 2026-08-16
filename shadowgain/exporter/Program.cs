@@ -411,9 +411,16 @@ public static class Program
             positionType = EnumMap<PositionType>(),
             weenieType = EnumMap<WeenieType>(),
             equipMask = EnumMap<EquipMask>(),
+
+            // 158: materials were a HAND-TYPED table in items.py, and wrong from id 56 upward.
+            // ACE's enum carries CATEGORY markers - Metal (56), Stone (65), Wood (72) - which the
+            // hand-typed list omitted, so every metal, stone and wood name shifted by one: a Gold
+            // Orb (60) was reported as Iron. 20 wrong, 5 missing, and completely silent, because a
+            // plausible material name looks exactly like a correct one.
+            materialType = EnumMap<MaterialType>(),
         });
 
-        Console.WriteLine("    enums.json        skill/heritage/gender/pk/sac/attr/title/position/weenie/equip");
+        Console.WriteLine("    enums.json        skill/heritage/gender/pk/sac/attr/title/position/weenie/equip/material");
 
         // --- attribute icon map ------------------------------------------------------------
         // Written next to the tables so the API can serve icon paths without the front-end

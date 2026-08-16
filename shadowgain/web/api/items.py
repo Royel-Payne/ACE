@@ -12,7 +12,12 @@ selecting and then reducing to a single coarse slot name.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from . import curves
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # --- property ids ----------------------------------------------------------------------------
 
@@ -594,21 +599,26 @@ def slot_name(wielded_location: int | None, item_type: int | None = None) -> str
 
 # --- examine text ------------------------------------------------------------------------------
 
-MATERIAL_NAMES = {
-    1: "Ceramic", 2: "Porcelain", 4: "Linen", 5: "Satin", 6: "Silk", 7: "Velvet", 8: "Wool",
-    10: "Agate", 11: "Amber", 12: "Amethyst", 13: "Aquamarine", 14: "Azurite", 15: "Black Garnet",
-    16: "Black Opal", 17: "Bloodstone", 18: "Carnelian", 19: "Citrine", 20: "Diamond",
-    21: "Emerald", 22: "Fire Opal", 23: "Green Garnet", 24: "Green Jade", 25: "Hematite",
-    26: "Imperial Topaz", 27: "Jet", 28: "Lapis Lazuli", 29: "Lavender Jade", 30: "Malachite",
-    31: "Moonstone", 32: "Onyx", 33: "Opal", 34: "Peridot", 35: "Red Garnet", 36: "Red Jade",
-    37: "Rose Quartz", 38: "Ruby", 39: "Sapphire", 40: "Smoky Quartz", 41: "Sunstone",
-    42: "Tiger Eye", 43: "Tourmaline", 44: "Turquoise", 45: "White Jade", 46: "White Quartz",
-    47: "White Sapphire", 48: "Yellow Garnet", 49: "Yellow Topaz", 50: "Zircon", 51: "Ivory",
-    52: "Leather", 53: "Armoredillo Hide", 54: "Gromnie Hide", 55: "Reed Shark Hide",
-    56: "Brass", 57: "Bronze", 58: "Copper", 59: "Gold", 60: "Iron", 61: "Pyreal", 62: "Silver",
-    63: "Steel", 64: "Alabaster", 65: "Granite", 66: "Marble", 67: "Obsidian", 68: "Sandstone",
-    69: "Serpentine", 70: "Ebony", 71: "Mahogany", 72: "Oak", 73: "Pine", 74: "Teak",
-}
+def _material_names() -> dict[int, str]:
+    """Material id -> name, READ FROM THE GENERATED ENUM rather than typed here.
+
+    This was a hand-written table of 72 entries and it was WRONG from id 56 upward. ACE's
+    MaterialType enum carries CATEGORY markers - Metal (56), Stone (65), Wood (72) - that a human
+    transcribing a list of materials naturally skips, and skipping them shifts every following
+    name by one. A Gold Orb (60) came out as Iron; 20 names were wrong and 5 were missing.
+
+    Nothing about that was visible. A wrong material name is still a material name, so it reads as
+    data rather than as a bug, which is why it survived from 127 to 158. The same failure mode as
+    the hand-mapped ids in 152 - and the same fix: the exporter already reflects the real enum
+    into data/enums.json, so there is no second copy to rot.
+    """
+    raw = json.loads((DATA_DIR / "enums.json").read_text(encoding="utf-8"))["materialType"]
+
+    # `label` is the spaced form ("Black Opal"); `name` is the C# identifier ("BlackOpal").
+    return {int(value): entry["label"] for value, entry in raw.items()}
+
+
+MATERIAL_NAMES = _material_names()
 
 # Workmanship is stored 1-10 and shown as a word in game.
 WORKMANSHIP_NAMES = {

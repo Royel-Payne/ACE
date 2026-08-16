@@ -4580,5 +4580,319 @@
       "name": "Clothing",
       "label": "Clothing"
     }
+  },
+  "materialType": {
+    "0": {
+      "name": "Unknown",
+      "label": "Unknown"
+    },
+    "1": {
+      "name": "Ceramic",
+      "label": "Ceramic"
+    },
+    "2": {
+      "name": "Porcelain",
+      "label": "Porcelain"
+    },
+    "3": {
+      "name": "Cloth",
+      "label": "Cloth"
+    },
+    "4": {
+      "name": "Linen",
+      "label": "Linen"
+    },
+    "5": {
+      "name": "Satin",
+      "label": "Satin"
+    },
+    "6": {
+      "name": "Silk",
+      "label": "Silk"
+    },
+    "7": {
+      "name": "Velvet",
+      "label": "Velvet"
+    },
+    "8": {
+      "name": "Wool",
+      "label": "Wool"
+    },
+    "9": {
+      "name": "Gem",
+      "label": "Gem"
+    },
+    "10": {
+      "name": "Agate",
+      "label": "Agate"
+    },
+    "11": {
+      "name": "Amber",
+      "label": "Amber"
+    },
+    "12": {
+      "name": "Amethyst",
+      "label": "Amethyst"
+    },
+    "13": {
+      "name": "Aquamarine",
+      "label": "Aquamarine"
+    },
+    "14": {
+      "name": "Azurite",
+      "label": "Azurite"
+    },
+    "15": {
+      "name": "BlackGarnet",
+      "label": "Black Garnet"
+    },
+    "16": {
+      "name": "BlackOpal",
+      "label": "Black Opal"
+    },
+    "17": {
+      "name": "Bloodstone",
+      "label": "Bloodstone"
+    },
+    "18": {
+      "name": "Carnelian",
+      "label": "Carnelian"
+    },
+    "19": {
+      "name": "Citrine",
+      "label": "Citrine"
+    },
+    "20": {
+      "name": "Diamond",
+      "label": "Diamond"
+    },
+    "21": {
+      "name": "Emerald",
+      "label": "Emerald"
+    },
+    "22": {
+      "name": "FireOpal",
+      "label": "Fire Opal"
+    },
+    "23": {
+      "name": "GreenGarnet",
+      "label": "Green Garnet"
+    },
+    "24": {
+      "name": "GreenJade",
+      "label": "Green Jade"
+    },
+    "25": {
+      "name": "Hematite",
+      "label": "Hematite"
+    },
+    "26": {
+      "name": "ImperialTopaz",
+      "label": "Imperial Topaz"
+    },
+    "27": {
+      "name": "Jet",
+      "label": "Jet"
+    },
+    "28": {
+      "name": "LapisLazuli",
+      "label": "Lapis Lazuli"
+    },
+    "29": {
+      "name": "LavenderJade",
+      "label": "Lavender Jade"
+    },
+    "30": {
+      "name": "Malachite",
+      "label": "Malachite"
+    },
+    "31": {
+      "name": "Moonstone",
+      "label": "Moonstone"
+    },
+    "32": {
+      "name": "Onyx",
+      "label": "Onyx"
+    },
+    "33": {
+      "name": "Opal",
+      "label": "Opal"
+    },
+    "34": {
+      "name": "Peridot",
+      "label": "Peridot"
+    },
+    "35": {
+      "name": "RedGarnet",
+      "label": "Red Garnet"
+    },
+    "36": {
+      "name": "RedJade",
+      "label": "Red Jade"
+    },
+    "37": {
+      "name": "RoseQuartz",
+      "label": "Rose Quartz"
+    },
+    "38": {
+      "name": "Ruby",
+      "label": "Ruby"
+    },
+    "39": {
+      "name": "Sapphire",
+      "label": "Sapphire"
+    },
+    "40": {
+      "name": "SmokeyQuartz",
+      "label": "Smokey Quartz"
+    },
+    "41": {
+      "name": "Sunstone",
+      "label": "Sunstone"
+    },
+    "42": {
+      "name": "TigerEye",
+      "label": "Tiger Eye"
+    },
+    "43": {
+      "name": "Tourmaline",
+      "label": "Tourmaline"
+    },
+    "44": {
+      "name": "Turquoise",
+      "label": "Turquoise"
+    },
+    "45": {
+      "name": "WhiteJade",
+      "label": "White Jade"
+    },
+    "46": {
+      "name": "WhiteQuartz",
+      "label": "White Quartz"
+    },
+    "47": {
+      "name": "WhiteSapphire",
+      "label": "White Sapphire"
+    },
+    "48": {
+      "name": "YellowGarnet",
+      "label": "Yellow Garnet"
+    },
+    "49": {
+      "name": "YellowTopaz",
+      "label": "Yellow Topaz"
+    },
+    "50": {
+      "name": "Zircon",
+      "label": "Zircon"
+    },
+    "51": {
+      "name": "Ivory",
+      "label": "Ivory"
+    },
+    "52": {
+      "name": "Leather",
+      "label": "Leather"
+    },
+    "53": {
+      "name": "ArmoredilloHide",
+      "label": "Armoredillo Hide"
+    },
+    "54": {
+      "name": "GromnieHide",
+      "label": "Gromnie Hide"
+    },
+    "55": {
+      "name": "ReedSharkHide",
+      "label": "Reed Shark Hide"
+    },
+    "56": {
+      "name": "Metal",
+      "label": "Metal"
+    },
+    "57": {
+      "name": "Brass",
+      "label": "Brass"
+    },
+    "58": {
+      "name": "Bronze",
+      "label": "Bronze"
+    },
+    "59": {
+      "name": "Copper",
+      "label": "Copper"
+    },
+    "60": {
+      "name": "Gold",
+      "label": "Gold"
+    },
+    "61": {
+      "name": "Iron",
+      "label": "Iron"
+    },
+    "62": {
+      "name": "Pyreal",
+      "label": "Pyreal"
+    },
+    "63": {
+      "name": "Silver",
+      "label": "Silver"
+    },
+    "64": {
+      "name": "Steel",
+      "label": "Steel"
+    },
+    "65": {
+      "name": "Stone",
+      "label": "Stone"
+    },
+    "66": {
+      "name": "Alabaster",
+      "label": "Alabaster"
+    },
+    "67": {
+      "name": "Granite",
+      "label": "Granite"
+    },
+    "68": {
+      "name": "Marble",
+      "label": "Marble"
+    },
+    "69": {
+      "name": "Obsidian",
+      "label": "Obsidian"
+    },
+    "70": {
+      "name": "Sandstone",
+      "label": "Sandstone"
+    },
+    "71": {
+      "name": "Serpentine",
+      "label": "Serpentine"
+    },
+    "72": {
+      "name": "Wood",
+      "label": "Wood"
+    },
+    "73": {
+      "name": "Ebony",
+      "label": "Ebony"
+    },
+    "74": {
+      "name": "Mahogany",
+      "label": "Mahogany"
+    },
+    "75": {
+      "name": "Oak",
+      "label": "Oak"
+    },
+    "76": {
+      "name": "Pine",
+      "label": "Pine"
+    },
+    "77": {
+      "name": "Teak",
+      "label": "Teak"
+    }
   }
 }
