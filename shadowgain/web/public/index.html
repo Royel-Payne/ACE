@@ -463,6 +463,22 @@ function icon(o){ return o && o.icon
   ? `<img class="ico" src="${o.icon}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ico',style:'background:linear-gradient(180deg,${PAL[o.cat]||'#6b7a8d'},${shade(PAL[o.cat]||'#6b7a8d')})',textContent:'${((o.label||o.name||'?')[0]||'?').replace(/'/g,'')}'}))">`
   : tile(o&&o.cat,(o&&(o.label||o.name))||'?'); }
 const marker = m => m==='hard' ? '<span class="d" title="hard path">&dagger;</span> ' : '';
+
+/* 158 item 2: native tooltips exist for a POINTER, and half this page is tiles.
+ *
+ * On a touch screen there is no hover, so a `title` either never appears or appears on a long
+ * press that the user was trying to use for something else - while the tap they DID make already
+ * opens the full panel. So on touch the tooltip is pure clutter over a control that already works.
+ *
+ * Gated on `(hover: hover)` rather than on width, deliberately. A tablet is touch-only at any
+ * width and a narrow desktop window still has a mouse; width answers a different question. A
+ * native tooltip cannot be suppressed with CSS either, so it has to not be emitted at all.
+ *
+ * Buttons keep theirs - "Sign out", "Close" - because those are labels for an unlabelled icon
+ * rather than a preview of something a tap would reveal.
+ */
+const HOVERABLE = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+const tip = s => HOVERABLE ? ` title="${s}"` : '';
 function timeAgo(iso){ if(!iso) return ''; const d=(Date.now()-new Date(iso))/36e5; if(isNaN(d)) return ''; if(d<1)return Math.max(1,Math.round(d*60))+'m ago'; if(d<24)return Math.round(d)+'h ago'; return Math.round(d/24)+'d ago'; }
 function untilTime(iso){ if(!iso) return null; const d=(new Date(iso)-Date.now())/36e5; if(isNaN(d)||d<=0) return null; if(d<1)return Math.round(d*60)+'m'; if(d<24)return Math.round(d)+'h'; return Math.round(d/24)+'d'; }
 
@@ -858,15 +874,30 @@ function showReadout(o, kind){
  * distinguishes them only by a Left/Right bit. Filling in the order found matches what a player
  * sees in game, where the side bit does NOT decide which box an item appears in.
  */
+// EquipMask bits for the paired slots, from ACE's own enum (see api/data/enums.json).
+const WRIST_LEFT = 0x00010000, WRIST_RIGHT = 0x00020000;
+const FINGER_LEFT = 0x00040000, FINGER_RIGHT = 0x00080000;
+
 const WORN_SLOTS = [
   ['neck',    'Neck',     '1/1', 0],
   ['trinket', 'Trinket',  '1/2', 0],
-  ['wrist',   'Bracelet', '1/3', 0],
-  ['finger',  'Ring',     '1/4', 0],
+  // The 4th field is the EquipMask BIT for paired slots, not an occurrence index.
+  //
+  // It used to be 0 or 1 - "whichever the query returned first" - which is not a side at all, so
+  // which wrist a bracelet appeared on depended on row order. The shard knows: WristWearLeft and
+  // FingerWearLeft are distinct bits from their Right counterparts.
+  //
+  // AND THE COLUMNS ARE MIRRORED, WHICH IS CORRECT. A paperdoll shows a character FACING the
+  // viewer, so their left hand is on your right. Black Breath wears one bracelet, on her LEFT
+  // wrist, and the client draws it on the RIGHT of the panel - which is exactly what Chris
+  // reported as "in-game items on the right side show up on the left side" while we were putting
+  // Left in the left column. So LEFT bits go in the RIGHT column here, deliberately.
+  ['wrist',   'Bracelet', '1/3', WRIST_RIGHT],
+  ['finger',  'Ring',     '1/4', FINGER_RIGHT],
   ['shield',  'Shield',   '1/5', 0],
 
-  ['wrist',   'Bracelet', '5/3', 1],
-  ['finger',  'Ring',     '5/4', 1],
+  ['wrist',   'Bracelet', '5/3', WRIST_LEFT],
+  ['finger',  'Ring',     '5/4', FINGER_LEFT],
   ['weapon',  'Weapon',   '5/5', 0],
 
   ['cloak',   'Cloak',    '6/2', 0],
@@ -918,8 +949,8 @@ function reg(it){ if(!it) return -1; SEL.push(it); return SEL.length-1; }
 
 function slotBox(cls, label, cell, item){
   const at = `style="grid-area:${cell.split('/')[1]}/${cell.split('/')[0]}"`;
-  if(!item) return `<div class="${cls} empty" ${at} title="${label} (empty)"><span class="tag">${label}</span></div>`;
-  return `<div class="${cls} fill" ${at} data-item="${reg(item)}" title="${label} — ${item.name}">${icon(item)}</div>`;
+  if(!item) return `<div class="${cls} empty" ${at}${tip(`${label} (empty)`)}><span class="tag">${label}</span></div>`;
+  return `<div class="${cls} fill" ${at} data-item="${reg(item)}"${tip(`${label} — ${item.name}`)}>${icon(item)}</div>`;
 }
 function renderInventory(c){
   SEL=[];
@@ -936,7 +967,17 @@ function renderInventory(c){
   else { $('#burdenWrap').style.display=''; $('#burdenPct').textContent=burden+'%'; $('#burdenBar').style.width=Math.min(100,burden)+'%'; }
 
   const shown=new Set();
-  const pick=(k,n)=>{ const it=(bySlot[k]||[])[n]; if(it) shown.add(it); return it; };
+  // `n` is an EquipMask BIT for the paired slots and an index everywhere else. When a bit is
+  // given, the item is chosen by the side the shard recorded rather than by row order; the
+  // fallback keeps single-sided slots (neck, shield, ammo) working unchanged.
+  const pick=(k,n)=>{
+    const list = bySlot[k]||[];
+    const it = n > 1
+      ? list.find(o => (o.wieldedLocation||0) & n)
+      : list[n];
+    if(it) shown.add(it);
+    return it;
+  };
 
   const frame = WORN_SLOTS.map(([k,label,cell,n])=>{
     // The single held-weapon box: melee first, then wand/caster, matching the client.
@@ -953,8 +994,8 @@ function renderInventory(c){
     // An empty sigil slot shows its own art dimmed, the way the client marks the slot - it says
     // "aetheria goes here" without pretending something is equipped.
     return it
-      ? `<div class="eslot aeth fill ${cc}" data-item="${reg(it)}" title="Aetheria — ${it.name}">${icon(it)}</div>`
-      : `<div class="eslot aeth empty ${cc}" title="Aetheria (${cc}) — not set"><img class="ico ghost" src="/assets/icons/item/${iconId}.png" alt="" loading="lazy"></div>`;
+      ? `<div class="eslot aeth fill ${cc}" data-item="${reg(it)}"${tip(`Aetheria — ${it.name}`)}>${icon(it)}</div>`
+      : `<div class="eslot aeth empty ${cc}"${tip(`Aetheria (${cc}) — not set`)}><img class="ico ghost" src="/assets/icons/item/${iconId}.png" alt="" loading="lazy"></div>`;
   }).join('');
 
   // The armour grid takes the first item covering each area, but SKIPS the clothing layer - a
@@ -985,7 +1026,7 @@ function renderInventory(c){
   const spare = worn.filter(it=>!shown.has(it) && !(it.coverage||[]).length);
   $('#otherbar').innerHTML = spare.length
     ? `<div class="jewline"><div class="jgroup"><span class="lbl">Other</span><div class="jrow">${
-        spare.map(o=>`<div class="islot" data-item="${reg(o)}" title="${o.name}">${icon(o)}</div>`).join('')
+        spare.map(o=>`<div class="islot" data-item="${reg(o)}"${tip(`${o.name}`)}>${icon(o)}</div>`).join('')
       }</div></div></div>`
     : '';
 
@@ -993,7 +1034,7 @@ function renderInventory(c){
   if(curCont>=conts.length) curCont=0;
   $('#sidepacks').innerHTML = conts.length>1
     ? `<span class="lbl">Packs (${conts.length})</span>` + conts.map((p,i)=>
-        `<div class="spk ${i===curCont?'sel':''}" data-cont="${i}" title="${p.name} (${(p.items||[]).length})">${icon(p)}</div>`).join('')
+        `<div class="spk ${i===curCont?'sel':''}" data-cont="${i}"${tip(`${p.name} (${(p.items||[]).length})`)}>${icon(p)}</div>`).join('')
     : '';
 
   SEL_BASE = SEL.length;
