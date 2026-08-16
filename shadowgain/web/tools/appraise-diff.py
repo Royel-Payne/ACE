@@ -44,14 +44,14 @@ MAPPING = [
     ("armorLevel", "propertiesInt", "ArmorLevel", 0),
     ("workmanship", "propertiesInt", "ItemWorkmanship", 0),
     ("spellcraft", "propertiesInt", "ItemSpellcraft", 0),
-    ("currentMana", "propertiesInt", "ItemCurMana", 0),
-    ("maxMana", "propertiesInt", "ItemMaxMana", 0),
-    ("difficulty", "propertiesInt", "ItemDifficulty", 0),
+    ("mana.current", "propertiesInt", "ItemCurMana", 0),
+    ("mana.max", "propertiesInt", "ItemMaxMana", 0),
+    ("activationDifficulty", "propertiesInt", "ItemDifficulty", 0),
     ("manaCost", "propertiesInt", "ItemManaCost", 0),
     ("damage", "propertiesInt", "Damage", 0),
     ("weaponSpeed", "propertiesInt", "WeaponTime", 0),
     ("cleaving", "propertiesInt", "Cleaving", 0),
-    ("materialType", "propertiesInt", "MaterialType", 0),
+    # MaterialType is compared as the NAME the portal renders, not the id - see _resolve().
 
     ("damageMod", "propertiesFloat", "DamageMod", 1e-6),
     ("attackMod", "propertiesFloat", "WeaponOffense", 1e-6),
@@ -132,9 +132,18 @@ def main(argv: list[str]) -> int:
 
     for key, bucket, prop, tol in MAPPING:
         server = (oracle.get(bucket) or {}).get(prop)
-        web = detail.get(key)
+        web = detail
+
+        for part in key.split("."):
+            web = (web or {}).get(part) if isinstance(web, dict) else None
 
         if server is None and web is None:
+            continue
+
+        # ZERO AND ABSENT ARE THE SAME THING HERE. The portal omits a value of 0 rather than
+        # printing "Value: 0", and AppraiseInfo sends the 0. That is a presentation choice on both
+        # sides, not a disagreement about the number.
+        if (server or 0) == 0 and web is None:
             continue
 
         checked += 1
@@ -151,14 +160,29 @@ def main(argv: list[str]) -> int:
 
     # The spell list, which is its own class of bug: the cast-on-use spell is a DataId rather than a
     # spell-book row, so a naive port drops it.
-    game_spells = sorted(oracle.get("spellBook") or [])
+    # SpellBook carries TWO lists in one. AppraiseInfo appends the item's ACTIVE ENCHANTMENTS to
+    # the same array as its innate spells, ORed with 0x80000000 to distinguish them
+    # (AppraiseInfo.cs:502) - so comparing the raw array against the portal's spell list reports a
+    # difference that is really the enchantment block. Split them and check each against the field
+    # that actually holds it.
+    ENCHANTMENT_MASK = 0x8000_0000
+
+    raw = oracle.get("spellBook") or []
+    game_spells = sorted(s for s in raw if not s & ENCHANTMENT_MASK)
+    game_ench = sorted(s & ~ENCHANTMENT_MASK for s in raw if s & ENCHANTMENT_MASK)
+
     web_spells = sorted(s["id"] for s in (detail.get("spells") or []))
+    web_ench = sorted(e["id"] for e in (detail.get("enchantments") or []))
 
     if game_spells != web_spells:
         print(f"  {'SpellBook':<22} DIFFERS    game={game_spells} web={web_spells}")
         problems += 1
 
-    checked += 1
+    if game_ench != web_ench:
+        print(f"  {'Enchantments':<22} DIFFERS    game={game_ench} web={web_ench}")
+        problems += 1
+
+    checked += 2
 
     print()
 

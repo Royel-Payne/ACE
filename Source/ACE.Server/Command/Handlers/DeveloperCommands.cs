@@ -164,34 +164,41 @@ namespace ACE.Server.Command.Handlers
         /// Wielder and its EnchantmentManager, neither of which exists for a character not in memory.
         /// Read-only: it builds the same structure the examine handler builds and writes it to disk.
         /// </summary>
-        [CommandHandler("sg-appraise", AccessLevel.Developer, CommandHandlerFlag.RequiresWorld, 1,
-            "(Shadowgain) Dump the AppraiseInfo the client is sent for one item, as JSON.",
-            "<item name>   (searches everything you are wearing and carrying)")]
+        [CommandHandler("sg-appraise", AccessLevel.Developer, CommandHandlerFlag.None, 0,
+            "(Shadowgain) Dump the AppraiseInfo the client is sent for a character's items, as JSON.",
+            "[character name]  (defaults to yourself; dumps everything they have EQUIPPED)")]
         public static void HandleShadowgainAppraise(Session session, params string[] parameters)
         {
-            var player = session?.Player;
+            // Takes a CHARACTER NAME and runs from the console, exactly like sg-objdesc.
+            //
+            // The first version required a player session and an item name, which made it
+            // unrunnable from anywhere except an in-game client - i.e. unusable by the only party
+            // that wanted it. An oracle that a human has to type is not an oracle, it is a chore.
+            // Dumping every equipped item in one pass also removes the ambiguity of parsing a
+            // character name and an item name out of one argument string.
+            var name = parameters?.Length > 0 ? string.Join(" ", parameters) : session?.Player?.Name;
 
-            if (player == null)
-                return;
-
-            var wanted = string.Join(" ", parameters ?? Array.Empty<string>()).Trim();
-
-            if (string.IsNullOrWhiteSpace(wanted))
+            if (string.IsNullOrWhiteSpace(name))
             {
-                CommandHandlerHelper.WriteOutputInfo(session, "Usage: sg-appraise <item name>", ChatMessageType.Broadcast);
+                CommandHandlerHelper.WriteOutputInfo(session, "Usage: sg-appraise <character name>", ChatMessageType.Broadcast);
                 return;
             }
 
-            // Substring, case-insensitive, first match wins. The stored name is the BARE one - "Orb",
-            // "Tetsubo" - because the client composes the material into what a player actually reads
-            // ("Gold Orb"). Requiring the displayed name would fail on every piece of loot.
-            var matches = player.GetAllPossessions()
-                .Where(o => (o.Name ?? "").IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0)
-                .ToList();
+            var player = PlayerManager.GetOnlinePlayer(name);
+
+            if (player == null)
+            {
+                CommandHandlerHelper.WriteOutputInfo(session, $"{name} is not online.", ChatMessageType.Broadcast);
+                return;
+            }
+
+            // EQUIPPED only. Enchantment merging is the whole reason this exists, and AppraiseInfo
+            // consults `wo.Wielder` - so an item in a pack cannot show the behaviour being checked.
+            var matches = player.EquippedObjects.Values.ToList();
 
             if (matches.Count == 0)
             {
-                CommandHandlerHelper.WriteOutputInfo(session, $"No item matching \"{wanted}\".", ChatMessageType.Broadcast);
+                CommandHandlerHelper.WriteOutputInfo(session, $"{name} has nothing equipped.", ChatMessageType.Broadcast);
                 return;
             }
 
@@ -218,6 +225,47 @@ namespace ACE.Server.Command.Handlers
                     propertiesString = info.PropertiesString?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
                     propertiesDid = info.PropertiesDID?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
                     spellBook = info.SpellBook,
+
+                    // The PROFILES, which are where half of this panel actually lives.
+                    //
+                    // The first version of this dump missed them, and the diff came back clean
+                    // BECAUSE it did - neither side had a resistance to compare, so the check
+                    // passed by comparing nothing. AppraiseInfo does not put armour resistances in
+                    // PropertiesFloat at all: they go in ArmorProfile, computed through
+                    // `GetImpenBaneKey` + the item's enchantments, which is exactly the bane
+                    // arithmetic this oracle exists to check.
+                    armorProfile = info.ArmorProfile == null ? null : new
+                    {
+                        slashing = info.ArmorProfile.SlashingProtection,
+                        piercing = info.ArmorProfile.PiercingProtection,
+                        bludgeoning = info.ArmorProfile.BludgeoningProtection,
+                        cold = info.ArmorProfile.ColdProtection,
+                        fire = info.ArmorProfile.FireProtection,
+                        acid = info.ArmorProfile.AcidProtection,
+                        nether = info.ArmorProfile.NetherProtection,
+                        lightning = info.ArmorProfile.LightningProtection,
+                    },
+
+                    weaponProfile = info.WeaponProfile == null ? null : new
+                    {
+                        damageType = info.WeaponProfile.DamageType.ToString(),
+                        weaponTime = info.WeaponProfile.WeaponTime,
+                        weaponSkill = info.WeaponProfile.WeaponSkill.ToString(),
+                        damage = info.WeaponProfile.Damage,
+                        damageVariance = info.WeaponProfile.DamageVariance,
+                        damageMod = info.WeaponProfile.DamageMod,
+                        weaponLength = info.WeaponProfile.WeaponLength,
+                        maxVelocity = info.WeaponProfile.MaxVelocity,
+                        weaponOffense = info.WeaponProfile.WeaponOffense,
+                        weaponDefense = info.WeaponProfile.WeaponDefense,
+                    },
+
+                    // The masks say which fields the CLIENT paints as enhanced. Worth having beside
+                    // the numbers: 158g had to infer "is this buffed" from the arithmetic, and this
+                    // is the server stating it outright.
+                    armorHighlight = info.ArmorHighlight.ToString(),
+                    weaponHighlight = info.WeaponHighlight.ToString(),
+                    resistHighlight = info.ResistHighlight.ToString(),
                 };
 
                 var json = System.Text.Json.JsonSerializer.Serialize(dump,

@@ -1071,6 +1071,39 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             lines.append("Spell Descriptions:")
             lines.extend(f"~ {s['name']}: {s['desc']}" for s in described)
 
+    # --- enchantments currently ON the item ------------------------------------------------------
+    #
+    # The client's own "Enchantments:" block, and the last thing missing from this panel. Found via
+    # the 158h oracle rather than by eye: AppraiseInfo puts the item's ACTIVE enchantments into the
+    # same SpellBook list as its innate spells, ORed with 0x80000000 to tell them apart
+    # (AppraiseInfo.cs:502). Diffing against it showed eight ids we were not rendering at all -
+    # Impenetrability and the seven banes, which is every buff on every piece of armour.
+    #
+    # These are the SOURCE of the numbers merged above: Impenetrability is the +200 armour, the
+    # banes are the resistance mods. Listing them is what lets a player see WHY a value is enhanced
+    # rather than just that it is.
+    if ench_item:
+        table = curves.spell_table()
+        seen_ids: set[int] = set()
+        active = []
+
+        for e in ench_item:
+            sid = int(e.get("spell") or 0)
+
+            # One line per spell, not per row: a spell that modifies several stats writes a row per
+            # stat, and the client names the spell once.
+            if not sid or sid in seen_ids:
+                continue
+
+            seen_ids.add(sid)
+            meta = table.get(sid) or {}
+            active.append({"id": sid, "name": meta.get("name") or f"Spell {sid}", "desc": meta.get("desc")})
+
+        if active:
+            detail["enchantments"] = active
+            lines.append("Enchantments:")
+            lines.extend(f"~ {a['name']}: {a['desc']}" if a["desc"] else f"~ {a['name']}" for a in active)
+
     # --- flavour ---------------------------------------------------------------------------------
     for key, prop in (("use", STRING_USE), ("shortDesc", STRING_SHORT_DESC),
                       ("longDesc", STRING_LONG_DESC)):
