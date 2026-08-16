@@ -197,6 +197,28 @@ namespace ACE.Server.Managers
             WorldManager.EnqueueAction(new ActionEventDelegate(() => DoPassXP(vassalNode, amount, direct)));
         }
 
+        /// <summary>
+        /// Shadowgain 159: how much of a vassal's pass-up reaches their patron, given their LANES.
+        /// Mirrors Fellowship.CrossLaneScale and reads the same dial - one rule, two paths.
+        /// </summary>
+        private static double CrossLaneScale(IPlayer vassal, IPlayer patron)
+        {
+            if (vassal == null || patron == null || vassal == patron)
+                return 1.0;
+
+            // IPlayer, not Player, because pass-up deliberately works for an OFFLINE patron - the
+            // amount is banked in AllegianceXPCached until they next log in. Reading the stored
+            // property covers both cases; `Player.IsMasochist` would only cover one, and the
+            // offline half is where an unattended allegiance quietly accumulates.
+            var vassalHard = !(vassal.GetProperty(PropertyBool.ShadowgainForfeitedMarker) ?? false);
+            var patronHard = !(patron.GetProperty(PropertyBool.ShadowgainForfeitedMarker) ?? false);
+
+            if (vassalHard == patronHard)
+                return 1.0;
+
+            return Math.Clamp(PropertyManager.GetDouble("cross_lane_share_scale").Item, 0.0, 1.0);
+        }
+
         private static void DoPassXP(AllegianceNode vassalNode, ulong amount, bool direct)
         {
             // http://asheron.wikia.com/wiki/Allegiance_Experience
@@ -282,6 +304,26 @@ namespace ACE.Server.Managers
 
             var generatedAmount = (ulong)(amount * generated);
             var passupAmount = (ulong)(amount * passup);
+
+            // Shadowgain 159: pass-up does not cross the lanes either.
+            //
+            // This one is FREE, and that is the point. Pass-up XP is MINTED, not deducted - the
+            // note above calls it "Percentage of XP passed to the patron THROUGH the vassal's
+            // earned XP", and the vassal keeps every point they earned. So declining to hand a
+            // hard-lane patron a share of a fast-lane vassal's grind (or the reverse) costs
+            // nobody anything: it is not destroyed, it is never created. At 25-90% of the
+            // vassal's earnings it is also the larger of the two leaks.
+            //
+            // Applied HERE and not at the UpdateXpAllegiance call site, deliberately: that method
+            // also runs AwardLoyaltyUse on the VASSAL, and the vassal's Loyalty must keep training
+            // on what they pass up whether or not the patron is allowed to receive it.
+            var laneScale = CrossLaneScale(vassal, patron);
+
+            if (laneScale != 1.0)
+            {
+                generatedAmount = (ulong)Math.Round(generatedAmount * laneScale);
+                passupAmount = (ulong)Math.Round(passupAmount * laneScale);
+            }
 
             /*Console.WriteLine("---");
             Console.WriteLine("AllegianceManager.PassXP(" + amount + ")");

@@ -499,6 +499,33 @@ namespace ACE.Server.Entity
         /// <param name="amount">The input amount of XP</param>
         /// <param name="xpType">The type of XP (quest XP is handled differently)</param>
         /// <param name="player">The fellowship member who originated the XP</param>
+        /// <summary>
+        /// Shadowgain 159: how much of one member's earnings reach another, given their LANES.
+        ///
+        /// The two paths are meant to be separate. Fellowship sharing was letting them bleed into
+        /// each other, and the even-share path makes that severe rather than marginal: it does not
+        /// divide the XP up, it scales it and hands EVERY member the whole scaled amount, so three
+        /// fellows at 0.6 put 1.8x the XP into the group. A hard-lane character sitting in a
+        /// fellowship with two fast-lane earners receives 1.2x their combined output for nothing.
+        ///
+        /// The level-range rule that would normally bound this is switched OFF above
+        /// `fellowship_even_share_level` (50), which is precisely where it matters - Chris's test
+        /// was 212/171/142, a 70-level spread sharing evenly.
+        ///
+        /// Attribution is free here: SplitXp already grants once per member per EARNER, so each
+        /// share has exactly one source and one destination to compare.
+        /// </summary>
+        private static double CrossLaneScale(Player earner, Player receiver)
+        {
+            if (earner == null || receiver == null || earner == receiver)
+                return 1.0;
+
+            if (earner.IsMasochist == receiver.IsMasochist)
+                return 1.0;
+
+            return Math.Clamp(PropertyManager.GetDouble("cross_lane_share_scale").Item, 0.0, 1.0);
+        }
+
         public void SplitXp(ulong amount, XpType xpType, ShareType shareType, Player player)
         {
             // https://asheron.fandom.com/wiki/Announcements_-_2002/02_-_Fever_Dreams#Letter_to_the_Players_1
@@ -516,7 +543,7 @@ namespace ACE.Server.Entity
                 {
                     var fellowXpType = player == member ? XpType.Quest : XpType.Fellowship;
 
-                    member.GrantXP(perAmount, fellowXpType, shareType);
+                    member.GrantXP((long)Math.Round(perAmount * CrossLaneScale(player, member)), fellowXpType, shareType);
                 }
             }
 
@@ -532,7 +559,7 @@ namespace ACE.Server.Entity
 
                     var fellowXpType = player == member ? xpType : XpType.Fellowship;
 
-                    member.GrantXP((long)shareAmount, fellowXpType, shareType);
+                    member.GrantXP((long)Math.Round(shareAmount * CrossLaneScale(player, member)), fellowXpType, shareType);
                 }
 
                 return;
@@ -552,7 +579,7 @@ namespace ACE.Server.Entity
 
                     var fellowXpType = player == member ? xpType : XpType.Fellowship;
 
-                    member.GrantXP((long)playerTotal, fellowXpType, shareType);
+                    member.GrantXP((long)Math.Round(playerTotal * CrossLaneScale(player, member)), fellowXpType, shareType);
                 }
             }
         }
