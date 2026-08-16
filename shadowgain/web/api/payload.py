@@ -707,6 +707,9 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
     # 158: item BOOLS were never loaded - only the character's - which is why "Properties: Retained"
     # could not be rendered no matter what the panel did with it. Retained is PropertyBool 91.
     bools = props("biota_properties_bool")
+    # 158: item INT64s were never loaded either - ItemTotalXp and ItemBaseXp live here, which is why
+    # a cloak's "Item Level: 1 / 3" and "Item XP:" lines could not be rendered at all.
+    int64s = props("biota_properties_int64")
 
     spells: dict[int, list[int]] = {}
 
@@ -740,7 +743,7 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
         wielded = row.get("wielder_id") is not None
         detail = items.build_detail(i, f, st, spells.get(oid, []),
                                     ench if wielded else None, item_ench.get(oid), d,
-                                    bools.get(oid, {}))
+                                    bools.get(oid, {}), int64s.get(oid, {}))
 
         item = {
             "id": oid,

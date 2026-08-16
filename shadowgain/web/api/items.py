@@ -39,6 +39,68 @@ DID_SPELL = 28
 BOOL_RETAINED = 91
 # PropertyDataId.ProcSpell - cast on strike, which the client also names under "Properties:".
 DID_PROC_SPELL = 55
+# Item levelling (cloaks and aetheria). Level is NOT stored - it is derived from total XP.
+INT_ITEM_MAX_LEVEL = 319
+INT_ITEM_XP_STYLE = 320
+INT64_ITEM_TOTAL_XP = 4
+INT64_ITEM_BASE_XP = 5
+
+# ItemXpStyle: Undef, Fixed, ScalesWithLevel, FixedPlusBase - implicit 0..3.
+XP_STYLE_FIXED = 1
+XP_STYLE_SCALES = 2
+XP_STYLE_FIXED_PLUS_BASE = 3
+
+
+def item_level_to_total_xp(item_level_: int, base_xp: int, max_level: int, style: int) -> int:
+    """`ExperienceSystem.ItemLevelToTotalXP`, ported - total XP required to BE a given level."""
+    if item_level_ < 1:
+        return 0
+
+    item_level_ = min(item_level_, max_level) if max_level else item_level_
+
+    if item_level_ == 1:
+        return base_xp
+
+    if style == XP_STYLE_FIXED:
+        return item_level_ * base_xp
+
+    level_xp = total = base_xp
+
+    for _ in range(item_level_ - 1, 0, -1):
+        level_xp *= 2
+        total += level_xp
+
+    return total
+
+
+def item_level(total_xp: int, base_xp: int, max_level: int, style: int) -> int:
+    """`ExperienceSystem.ItemTotalXPToLevel`, ported.
+
+    The client shows "Item Level: 1 / 3" on a levelling cloak, and the level is not a stored
+    property - ACE derives it from ItemTotalXp every time it is asked. Ported rather than
+    approximated because the ScalesWithLevel curve doubles each step, so a guess is wrong fast.
+    """
+    if not base_xp or total_xp is None:
+        return 0
+
+    level = 0
+
+    if style == XP_STYLE_FIXED:
+        level = int(total_xp // base_xp)
+
+    elif style == XP_STYLE_FIXED_PLUS_BASE:
+        level = 1 if base_xp <= total_xp < base_xp * 3 else int((total_xp - base_xp) // base_xp)
+
+    else:
+        # ScalesWithLevel, and the default in ACE's own switch.
+        level_xp, remain = base_xp, total_xp
+
+        while remain >= level_xp:
+            level += 1
+            remain -= level_xp
+            level_xp *= 2
+
+    return min(level, max_level) if max_level else level
 UNENCHANTABLE_RESIST_MAGIC = 9999
 INT_WORKMANSHIP = 105
 INT_SPELLCRAFT = 106
@@ -99,11 +161,22 @@ def _flags(value: int | None, table) -> list[str]:
 
 
 def _pct(mod: float | None, places: int = 0) -> str | None:
-    """A multiplier around 1.0 rendered the way the game phrases it: a signed percentage."""
+    """A multiplier around 1.0 rendered the way the game phrases it: a signed percentage.
+
+    `places` is not a style choice - the client's own format strings differ per field:
+
+        Bonus to Attack Skill: %s%d%%.    <- %d, so an INTEGER percent
+        Bonus to Melee Defense: %s.       <- preformatted, and the panel reads "+14.0%"
+
+    So attack takes 0 and the three defences take 1, which is why the argument exists at all.
+    """
     if mod is None or abs(mod - 1.0) < 0.0005:
         return None
 
-    return f"{'+' if mod > 1 else ''}{round((mod - 1) * 100, places):g}%"
+    value = round((mod - 1) * 100, places)
+    text = f"{value:.{places}f}" if places else f"{value:g}"
+
+    return f"{'+' if mod > 1 else ''}{text}%"
 # 138: these were 158 and 159, BOTH OFF BY ONE. 158 is WieldRequirements (how to read the other
 # two), 159 is WieldSkillType, 160 is WieldDifficulty. Unlike the gem constants, these WERE being
 # read - so every "Wield Requirement" line on the site quoted a requirement TYPE as a skill and a
@@ -581,7 +654,8 @@ def _fmt(n) -> str:
 
 def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                  ench: list[dict] | None = None, ench_item: list[dict] | None = None,
-                 dids: dict | None = None, bools: dict | None = None) -> dict:
+                 dids: dict | None = None, bools: dict | None = None,
+                 int64s: dict | None = None) -> dict:
     """The examine panel, as structured data plus ready-made lines.
 
     Both shapes on purpose: `lines` is what the tooltip renders today with no parsing, and the
@@ -905,6 +979,33 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if act_parts:
         sentence("Activation requires " + ", ".join(act_parts), order=20)
 
+    # `Item Level: %d / %d` and `Item XP: %s / %s` - both the client's format strings. A levelling
+    # cloak shows them under its wield requirement.
+    max_level = ints.get(INT_ITEM_MAX_LEVEL)
+
+    if max_level:
+        total_xp = int((int64s or {}).get(INT64_ITEM_TOTAL_XP) or 0)
+        base_xp = int((int64s or {}).get(INT64_ITEM_BASE_XP) or 0)
+        style = ints.get(INT_ITEM_XP_STYLE) or 0
+
+        lvl = item_level(total_xp, base_xp, max_level, style)
+        detail["itemLevel"] = {"level": lvl, "max": max_level}
+        add("Item Level", f"{lvl} / {max_level}", order=30)
+
+        if base_xp:
+            # THE DENOMINATOR IS THE NEXT LEVEL, NOT THE MAXIMUM, and the difference is not subtle:
+            # Chris's cloak reads "1,189,917,806 / 3,000,000,000" in game, where the total needed
+            # for its max level 3 is 7,000,000,000. 3,000,000,000 is exactly the threshold for
+            # level 2 - so the line is progress toward the NEXT level, capped at the last one.
+            #
+            # Summing the whole curve gave 7B and looked plausible, which is how it would have
+            # stayed wrong.
+            nxt = min(lvl + 1, max_level)
+            need = item_level_to_total_xp(nxt, base_xp, max_level, style)
+
+            detail["itemXp"] = {"total": total_xp, "next": need, "nextLevel": nxt}
+            add("Item XP", f"{_fmt(total_xp)} / {_fmt(need)}", order=31)
+
     if (mana_cost := ints.get(INT_ITEM_MANA_COST)):
         detail["manaCost"] = mana_cost
         add("Mana Cost", _fmt(mana_cost))
@@ -987,15 +1088,15 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     #
     # MULTIPLIERS around 1.0 - 1.13 is "+13%". Confirmed against ACE, which defaults each of these
     # to 1.0 when absent (e.g. `weapon.ElementalDamageMod ?? 1.0f`).
-    for label, prop, key in (
-        ("Damage Modifier", FLOAT_DAMAGE_MOD, "damageMod"),
-        ("Bonus to Attack Skill", FLOAT_WEAPON_OFFENSE, "attackMod"),
-        ("Bonus to Melee Defense", FLOAT_WEAPON_DEFENSE, "meleeDefenseMod"),
-        ("Bonus to Missile Defense", FLOAT_WEAPON_MISSILE_DEFENSE, "missileDefenseMod"),
-        ("Bonus to Magic Defense", FLOAT_WEAPON_MAGIC_DEFENSE, "magicDefenseMod"),
-        ("Elemental Damage Bonus", FLOAT_ELEMENTAL_DAMAGE_MOD, "elementalDamageMod"),
-        ("Slayer Bonus", FLOAT_SLAYER_DAMAGE_BONUS, "slayerDamageBonus"),
-        ("Ignores Armor", FLOAT_IGNORE_ARMOR, "ignoreArmor"),
+    for label, prop, key, places in (
+        ("Damage Modifier", FLOAT_DAMAGE_MOD, "damageMod", 0),
+        ("Bonus to Attack Skill", FLOAT_WEAPON_OFFENSE, "attackMod", 0),
+        ("Bonus to Melee Defense", FLOAT_WEAPON_DEFENSE, "meleeDefenseMod", 1),
+        ("Bonus to Missile Defense", FLOAT_WEAPON_MISSILE_DEFENSE, "missileDefenseMod", 1),
+        ("Bonus to Magic Defense", FLOAT_WEAPON_MAGIC_DEFENSE, "magicDefenseMod", 1),
+        ("Elemental Damage Bonus", FLOAT_ELEMENTAL_DAMAGE_MOD, "elementalDamageMod", 0),
+        ("Slayer Bonus", FLOAT_SLAYER_DAMAGE_BONUS, "slayerDamageBonus", 0),
+        ("Ignores Armor", FLOAT_IGNORE_ARMOR, "ignoreArmor", 0),
     ):
         raw = floats.get(prop)
 
@@ -1011,7 +1112,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             bonus = enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(wielder_ench)
             raw += bonus
 
-        if (text := _pct(raw)) is not None:
+        if (text := _pct(raw, places)) is not None:
             detail[key] = raw
             add(label, text, is_buffed=bonus != 0)
 
@@ -1320,10 +1421,21 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         if detail.get(key):
             text = detail[key]
 
-            # ", set with 3 pieces of White Jade" - the client's closing clause, on the same line
-            # as the name rather than as a "Gems:" row above it.
-            if key == "longDesc" and detail.get("gemText"):
-                text = f"{text}, set with {detail['gemText']}"
+            if key == "longDesc":
+                # THE COMPOSED NAME. The client writes this line as workmanship + material + the
+                # stored description: "Incomparable Pyreal Frost Cestus of Blood Drinker". The
+                # shard holds only the tail, and the two words in front are the same ones already
+                # shown above as Workmanship and folded into the item's name - so the sentence is
+                # assembled rather than stored, exactly as the client assembles it.
+                prefix = " ".join(x for x in (detail.get("workmanshipName"), material) if x)
+
+                if prefix and not text.startswith(prefix):
+                    text = f"{prefix} {text}"
+
+                # ", set with 3 pieces of White Jade" - the client's closing clause, on the same
+                # line as the name rather than as a "Gems:" row above it.
+                if detail.get("gemText"):
+                    text = f"{text}, set with {detail['gemText']}"
 
             sentence(text)
 
