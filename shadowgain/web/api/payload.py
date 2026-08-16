@@ -757,6 +757,10 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
             # instead of parsing sentences back apart.
             "detail": detail,
             "desc": detail["lines"],
+            # Which of those lines are genuinely above base, so the page colours what the game
+            # colours. Previously the front-end guessed from the label and was wrong on every
+            # unbuffed weapon.
+            "descBuffed": detail.get("buffedLines") or [],
         }
 
         # 127 #4: Aetheria are identified by an icon OVERLAY rather than a different icon, so the
@@ -772,7 +776,7 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
         total_burden += int(i.get(items.INT_ENCUMBRANCE) or 0)
 
         if row["weenie_Type"] == 21 and row["container_id"] == character_id:
-            container_names[oid] = (item["name"], item["icon"])
+            container_names[oid] = (item["name"], item["icon"], item.get("placement"))
 
         # A focus occupies a pack slot and holds nothing (AC wiki, Spell Components#Foci), so it
         # belongs in the pack BAR rather than loose in the main grid where it looked like cargo.
@@ -826,12 +830,23 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
     # when a name actually repeats, so the common single-Sack case stays clean.
     name_counts: dict[str, int] = {}
 
-    for cname, _ in container_names.values():
+    for cname, _, _ in container_names.values():
         name_counts[cname] = name_counts.get(cname, 0) + 1
 
     seen: dict[str, int] = {}
 
-    for cid, (cname, cicon) in sorted(container_names.items(), key=lambda kv: (kv[1][0], kv[0])):
+    # ORDERED BY PlacementPosition, not by name. ACE runs a second sequence for `UseBackpackSlot`
+    # items - `sidPackItems ... OrderBy(wo => wo.PlacementPosition)` (Container.cs:179) - so the
+    # pack BAR has an arrangement the player chose, exactly as the grid does. Sorting it
+    # alphabetically put "Pack" before "Sack" regardless of where they actually sit.
+    #
+    # The numbering below still uses the name, so a player with two "Pack"s sees "Pack 1"/"Pack 2"
+    # in the order they carry them rather than in an order invented here.
+    def _pack_key(kv):
+        _cid, (_cname, _cicon, pos) = kv
+        return (pos is None, pos or 0, _cid)
+
+    for cid, (cname, cicon, _pos) in sorted(container_names.items(), key=_pack_key):
         label = cname
 
         if name_counts[cname] > 1:
@@ -851,10 +866,13 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
 
     burden = _burden(total_burden, strength, dials)
 
-    # Foci come after the packs. The game lets a player arrange their slots by hand and the shard
-    # stores no order for that, so any order here is our choice rather than theirs - packs first,
-    # then foci by name, is at least stable between refreshes.
-    for focus in sorted(foci, key=lambda f: f["name"]):
+    # Foci come after the packs, and in PlacementPosition order like everything else.
+    #
+    # The note that used to sit here said the shard "stores no order for that, so any order here is
+    # our choice rather than theirs". That was wrong, and it is worth recording as wrong: the order
+    # is in PropertyInt 53 and ACE resyncs it on every load. Believing it absent is what left both
+    # the grid and this bar sorted alphabetically.
+    for focus in _in_order(foci):
         containers.append(
             {
                 "id": focus["id"],

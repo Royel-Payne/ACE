@@ -596,10 +596,15 @@ function itemDetail(it){
   const bits=[]; if(it.stack>1) bits.push('&times;'+fmt(it.stack)); if(it.slot&&it.slot!=='other') bits.push(it.slot[0].toUpperCase()+it.slot.slice(1));
   return `<div class="h">${icon(it)}<span class="nm">${it.name||'Unknown item'}</span></div>${bits.length?`<div class="sub">${bits.join(' &middot; ')}</div>`:''}<div class="pend">Click for full details</div>`;
 }
-// green highlight for the stat lines the game colours (armor level, resists, damage, quality words)
-function hlLine(l){
-  return /^(Armor Level|Damage|Slashing|Piercing|Bludgeoning|Fire|Cold|Acid|Electric|Nether|Melee Defense|Missile Defense|Magic Defense)\b/i.test(l)
-    ? `<span class="g">${l}</span>` : l;
+// Green means ENHANCED ABOVE BASE, the same as it does in the client.
+//
+// This used to be a regex on the LABEL, so any line starting "Armor Level" or "Melee Defense" went
+// green whether or not anything had buffed it - an untouched weapon sitting in a pack advertised a
+// bonus it did not have, and a genuinely buffed one looked identical to it. The backend now says
+// which line indices are actually above base (`descBuffed`), because it is the only side that can:
+// the answer is enchantment arithmetic, not the word at the start of the string.
+function hlLine(l, isBuffed){
+  return isBuffed ? `<span class="g">${l}</span>` : l;
 }
 // the full item examine window (left card overlay). Renders the backend's full description when it
 // ships (127); until then, what we have + a note.
@@ -607,7 +612,8 @@ function examineHtml(it){
   let body;
   if(it.desc){
     const lines = Array.isArray(it.desc) ? it.desc : String(it.desc).split('\n');
-    body = lines.map(l=> l.trim()==='' ? '<div class="sp"></div>' : `<div class="ln">${hlLine(l)}</div>`).join('');
+    const buffed = new Set(it.descBuffed || []);
+    body = lines.map((l,i)=> l.trim()==='' ? '<div class="sp"></div>' : `<div class="ln">${hlLine(l, buffed.has(i))}</div>`).join('');
   } else {
     const bits=[]; if(it.stack>1) bits.push(`<div class="ln">Quantity: ${fmt(it.stack)}</div>`);
     if(it.slot&&it.slot!=='other') bits.push(`<div class="ln">Slot: ${it.slot[0].toUpperCase()+it.slot.slice(1)}</div>`);

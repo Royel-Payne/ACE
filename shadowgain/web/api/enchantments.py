@@ -35,6 +35,7 @@ from . import curves, db
 
 ATTRIBUTE = 0x0000001
 SECOND_ATT = 0x0000002          # vitals
+INT = 0x0000004                 # a PropertyInt on an ITEM, e.g. ArmorLevel
 FLOAT = 0x0000008               # a PropertyFloat on an ITEM, e.g. WeaponDefense
 SKILL = 0x0000010
 SINGLE_STAT = 0x0001000
@@ -254,3 +255,15 @@ def mana_conv_mod(enchantments: list[dict]) -> float:
     base mod"* — a 1.7x aura on an item with no ManaConversionMod is still nothing.
     """
     return multiplier(enchantments, FLOAT, FLOAT_MANA_CONVERSION_MOD)
+
+
+INT_ARMOR_LEVEL = 28
+
+
+def armor_mod(enchantments: list[dict]) -> int:
+    """`EnchantmentManager.GetArmorMod()` — additive over ArmorLevel, from the ITEM's own rows.
+
+    AppraiseInfo takes this from the item alone (`wo.EnchantmentManager.GetArmorMod()`), NOT from
+    the wielder: Impenetrability is cast onto the armour, so it lives on the armour.
+    """
+    return int(additive(enchantments, INT, INT_ARMOR_LEVEL))

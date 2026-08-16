@@ -672,9 +672,19 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     detail: dict = {}
     lines: list[str] = []
 
-    def add(label: str, value):
+    # 158: which lines are ACTUALLY enhanced. The front-end used to colour by label regex - any
+    # line starting "Armor Level"/"Damage"/"Melee Defense" went green whether or not a buff was on
+    # it - so an untouched weapon in a pack advertised a bonus it did not have. In game the colour
+    # means "above base", so it has to be driven by the arithmetic, not by the word.
+    buffed: list[int] = []
+
+    def add(label: str, value, is_buffed: bool = False):
         if value is None:
             return
+
+        if is_buffed:
+            buffed.append(len(lines))
+
         lines.append(f"{label}: {value}")
 
     # --- identity ---------------------------------------------------------------------------
@@ -711,9 +721,21 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if workmanship:
         add("Workmanship", f"{detail['workmanshipName']} ({int(workmanship)})")
 
-    if (armor := ints.get(INT_ARMOR_LEVEL)):
-        detail["armorLevel"] = armor
-        add("Armor Level", _fmt(armor))
+    # `PropertiesInt[ArmorLevel] += wo.EnchantmentManager.GetArmorMod()` (AppraiseInfo.cs:408).
+    # Impenetrability VI is cast ONTO the armour, so it sits in the item's own registry and the
+    # wielder's is not consulted. Black Breath's robe stores 150 and the client shows 350.
+    #
+    # The bonus is computed BEFORE the emptiness test, because CLOTHING has no armour of its own -
+    # her Silk Baggy Pants store nothing and the client still shows "Armor Level: 200", all of it
+    # from the enchantment. Testing the stored value first dropped the line entirely on exactly
+    # the items where it is most worth seeing.
+    armor_base = ints.get(INT_ARMOR_LEVEL) or 0
+    armor_bonus = enchantments.armor_mod(ench_item or [])
+
+    if armor_base or armor_bonus:
+        detail["armorLevel"] = armor_base + armor_bonus
+        detail["armorLevelBase"] = armor_base
+        add("Armor Level", _fmt(armor_base + armor_bonus), is_buffed=armor_bonus != 0)
 
     # --- protection ---------------------------------------------------------------------------
     #
@@ -866,12 +888,15 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # ACE adds them SEPARATELY - `defenseMod + auraDefenseMod` - rather than pooling the two
         # registries. That matters: each side layers its own spells first, so a concatenated list
         # could pick a top layer across two objects that never competed.
+        bonus = 0.0
+
         if prop == FLOAT_WEAPON_DEFENSE and raw is not None and (wielder_ench or ench_item):
-            raw += enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(wielder_ench)
+            bonus = enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(wielder_ench)
+            raw += bonus
 
         if (text := _pct(raw)) is not None:
             detail[key] = raw
-            add(label, text)
+            add(label, text, is_buffed=bonus != 0)
 
     # 158: A FRACTION, NOT A MULTIPLIER, and it sat in the list above being read as one.
     #
@@ -889,12 +914,16 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # adding to it, and ACE notes they "are only effective if there is a base mod".
         # `wielderManaConvMod * weaponManaConvMod` (ResistMask.cs:127) - multiplied, not added,
         # and computed per registry for the same layering reason as above.
+        mc_mod = 1.0
+
         if wielder_ench or ench_item:
-            mana_conv *= (enchantments.mana_conv_mod(ench_item or [])
-                          * enchantments.mana_conv_mod(wielder_ench))
+            mc_mod = (enchantments.mana_conv_mod(ench_item or [])
+                      * enchantments.mana_conv_mod(wielder_ench))
+            mana_conv *= mc_mod
 
         detail["manaConversionMod"] = mana_conv
-        add("Mana Conversion Bonus", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%")
+        add("Mana Conversion Bonus", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%",
+            is_buffed=mc_mod != 1.0)
 
     if (crit := floats.get(FLOAT_CRITICAL_FREQUENCY)):
         detail["criticalFrequency"] = crit
@@ -1056,6 +1085,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             lines.append(detail[key])
 
     detail["lines"] = lines
+    # Indices into `lines`, so the front-end colours what the game colours and nothing else.
+    detail["buffedLines"] = buffed
 
     return detail
 
