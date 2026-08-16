@@ -43,6 +43,39 @@ DID_PROC_SPELL = 55
 # PropertyInt.WeaponType. Only the UNARMED value produces a suffix on the Skill line - "(Unarmed
 # Weapon)" is the ONLY parenthesised weapon class in acclient.exe, checked for both singular and
 # plural forms, so a Sword does not get "(Sword Weapon)" and inventing one would be wrong.
+# The client's word for a weapon's speed, and the thresholds it uses.
+#
+# The five WORDS are the client's, extracted from acclient.exe: Very Fast, Fast, Average, Slow,
+# Very Slow. The THRESHOLDS come from a reference table Chris supplied - a SECONDARY source, not the
+# binary, so it was tested rather than trusted:
+#
+#   * all FIVE points verified against Chris's own in-game panels agree
+#     (0 Very Fast, 15 Fast, 20 Fast, 45 Average, 60 Slow)
+#   * 52 of 58 speed/word pairs harvested from the wiki's weapon pages agree
+#   * the 6 that disagree are entries the WIKI CONTRADICTS ITSELF ON - Mace 30 appears as both
+#     Average and Fast, Sword 40 as both Average and Slow - and in every case the table sides with
+#     the entry that agrees. It resolves the contradictions rather than adding to them.
+#
+# Lower is faster. The published ranges leave gaps (11-14, 31-34, 76-79); the boundaries below close
+# them at the top of each band, which is the only part of this NOT evidenced - speeds observed in
+# the wild are multiples of 5, so no real weapon has been seen in a gap.
+SPEED_WORDS = [
+    (10, "Very Fast"),
+    (34, "Fast"),
+    (49, "Average"),
+    (75, "Slow"),
+    (None, "Very Slow"),
+]
+
+
+def speed_word(weapon_time: int) -> str:
+    for ceiling, word in SPEED_WORDS:
+        if ceiling is None or weapon_time <= ceiling:
+            return word
+
+    return SPEED_WORDS[-1][1]
+
+
 INT_WEAPON_TYPE = 353
 WEAPON_TYPE_UNARMED = 1
 
@@ -1088,10 +1121,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
         if speed or spd_mod:
             detail["weaponSpeed"] = speed
-            # The descriptor word ("Very Fast") is NOT added: the four strings are in acclient.exe
-            # but only three points are known - 0 Very Fast, 15 Fast, 45 Average - which does not
-            # pin the boundaries. Same rule as the resistance ladder: measured or not at all.
-            add("Speed", _fmt(speed), is_buffed=spd_mod != 0, order=30)
+            detail["weaponSpeedWord"] = speed_word(speed)
+            # `Speed: Very Fast (0)` - word then value, the same shape as workmanship and the
+            # resistances.
+            add("Speed", f"{speed_word(speed)} ({_fmt(speed)})", is_buffed=spd_mod != 0, order=30)
 
     # THESE LABELS ARE THE CLIENT'S, extracted rather than chosen (158). acclient.exe carries them
     # as format strings - "Bonus to Attack Skill: %s", "Damage Modifier: %s", "Elemental Damage
