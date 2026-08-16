@@ -185,18 +185,47 @@ if [ "$UP" = true ]; then
   #
   # 4000 lines is ~40s of a busy log, so the reply we just asked for cannot scroll past before we
   # read it; every parse below still takes `tail -1`, so extra history is harmless.
-  SS=$(timeout -s KILL 10 docker logs --since "$T0" --tail 4000 ace-server 2>&1 || true)
+  # 157: `docker logs --tail` STOPPED WORKING, and took the public honour roll offline with it.
+  #
+  # 154 capped this log with logrotate + copytruncate. Docker survives the truncation for WRITING
+  # - it appends from offset 0 again, no sparse file, verified - but `--tail` seeks backwards from
+  # a stale offset and returns NOTHING. Silently, exit 0. Every field below came back empty and
+  # status.json said OFFLINE with 14 people playing: 129's exact symptom from the opposite cause.
+  #
+  # Reading the json file directly keeps what 129 bought - cost is O(tail), not O(file size) -
+  # and does not depend on Docker's seek state at all. jq unescapes the `log` field, which is the
+  # job `docker logs` was doing for us (`>` for `>` and friends), so the greps are unchanged.
+  #
+  # THE TIME FILTER IS NOT OPTIONAL. `tail -n` alone would happily parse a STALE serverstatus
+  # reply from before a shutdown and report the world as live. Comparing the first 19 characters
+  # matches T0's format; comparing the whole RFC3339 string would NOT, because '.' sorts before
+  # 'Z', so every sub-second stamp would test as older than a whole-second T0.
+  #
+  # `fromjson?` rather than plain `fromjson`: a partially-written last line is normal on a file
+  # being appended to, and one unparseable line must not empty the whole read.
+  LOGF=$(docker inspect --format '{{.LogPath}}' ace-server 2>/dev/null || true)
+  if [ -n "$LOGF" ] && [ -r "$LOGF" ]; then
+    SS=$(tail -n 4000 "$LOGF" 2>/dev/null \
+         | jq -R -r --arg t0 "$T0" 'fromjson? | select(.time[0:19] >= $t0) | .log' 2>/dev/null || true)
+  else
+    # Fallback for any host where the log file is not readable from here. Same call 129 landed on.
+    SS=$(timeout -s KILL 10 docker logs --since "$T0" --tail 4000 ace-server 2>&1 || true)
+  fi
 
-  N=$(printf '%s' "$SS" | grep -oE '[0-9]+ players online' | tail -1 | grep -oE '^[0-9]+' || true)
+  # `[0-9,]` and `tr -d ','`, NOT `[0-9]`: ACE thousand-separates these, so once the shard passed
+  # a thousand objects `Total Server Objects: 2,779` matched as **2** and `Creatures: 1,534` as
+  # **1**. Pre-existing and independent of the read above - it was simply invisible while the
+  # numbers were small, and would have been reported as fact the moment the read started working.
+  N=$(printf '%s' "$SS" | grep -oE '[0-9,]+ players online' | tail -1 | grep -oE '^[0-9,]+' | tr -d ',' || true)
   if [ -n "$N" ]; then ONLINE=$N; SERVING=true; fi
 
-  L=$(printf '%s' "$SS" | grep -oE 'Landblocks: [0-9]+ active' | tail -1 | grep -oE '[0-9]+' || true)
+  L=$(printf '%s' "$SS" | grep -oE 'Landblocks: [0-9,]+ active' | tail -1 | grep -oE '[0-9,]+' | tr -d ',' || true)
   [ -n "$L" ] && LANDBLOCKS=$L
 
-  O=$(printf '%s' "$SS" | grep -oE 'Total Server Objects: [0-9]+' | tail -1 | grep -oE '[0-9]+$' || true)
+  O=$(printf '%s' "$SS" | grep -oE 'Total Server Objects: [0-9,]+' | tail -1 | grep -oE '[0-9,]+$' | tr -d ',' || true)
   [ -n "$O" ] && OBJECTS=$O
 
-  C=$(printf '%s' "$SS" | grep -oE 'Creatures: [0-9]+' | tail -1 | grep -oE '[0-9]+$' || true)
+  C=$(printf '%s' "$SS" | grep -oE 'Creatures: [0-9,]+' | tail -1 | grep -oE '[0-9,]+$' | tr -d ',' || true)
   [ -n "$C" ] && CREATURES=$C
 
   # The online character NAMES, for the logged-in panel's own-characters dot.
