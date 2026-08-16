@@ -903,7 +903,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     gap()
 
-    group("requirements")
+    group("magic")
 
     # --- magic ---------------------------------------------------------------------------------
     if (spellcraft := ints.get(INT_SPELLCRAFT)):
@@ -1046,8 +1046,11 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             add("Item XP", f"{_fmt(total_xp)} / {_fmt(need)}", order=31)
 
     if (mana_cost := ints.get(INT_ITEM_MANA_COST)):
+        # NOT PRINTED. This is the raw ItemManaCost, and the panel already carries the client's own
+        # form a few lines up - "Mana Cost: 1 point per 15 seconds." Emitting both put TWO "Mana
+        # Cost" rows on the Gold Orb, the second one a bare 300 that the game never shows.
+        # Chris: "Mana cost: 300 <-- invented".
         detail["manaCost"] = mana_cost
-        add("Mana Cost", _fmt(mana_cost))
 
     gap()
 
@@ -1185,8 +1188,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             mana_conv *= mc_mod
 
         detail["manaConversionMod"] = mana_conv
+        group("magic")
         add("Bonus to Mana Conversion", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%",
-            is_buffed=mc_mod != 1.0)
+            is_buffed=mc_mod != 1.0, order=5)
+        group("combat")
 
     if (crit := floats.get(FLOAT_CRITICAL_FREQUENCY)):
         detail["criticalFrequency"] = crit
@@ -1200,7 +1205,11 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["cleaving"] = cleave
         # `Cleave: %d enemies in front arc.` - the client's own format string, found in
         # acclient.exe. "Cleaving: 2 targets" was our phrasing for both halves of the line.
+        # Its own block: the Ivory Tetsubo panel puts a blank either side of it, between the
+        # spell list and Properties - it is not part of the combat stats above.
+        group("cleave")
         add("Cleave", f"{cleave} enemies in front arc.")
+        group("combat")
 
     gap()
 
@@ -1310,7 +1319,21 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # NOT ITS OWN ROW. The client folds this into the closing sentence - ", set with 3 pieces
         # of White Jade" - using the strings `, set with ` and `pieces of `. Held here and appended
         # to the flavour line below.
-        detail["gemText"] = (f"{gem_count} pieces of {gem}" if gem_count != 1 else f"1 {gem}") if gem else None
+        # "set with 8 Rubies" but "set with 3 pieces of White Jade" and "set with 1 Emerald".
+        #
+        # `Rubies` is the ONLY gem plural in acclient.exe - no Emeralds, no Jades - and it sits
+        # immediately beside the `pieces of ` string. Ruby is the irregular (y -> ies) that needs a
+        # literal; the rest the client either counts as one or measures in pieces. Evidenced for
+        # Ruby, White Jade and Emerald; anything else follows the "pieces of" form, which is a
+        # guess for regular plurals and is the next thing to correct if a counter-example appears.
+        if not gem:
+            detail["gemText"] = None
+        elif gem_count == 1:
+            detail["gemText"] = f"1 {gem}"
+        elif gem == "Ruby":
+            detail["gemText"] = f"{gem_count} Rubies"
+        else:
+            detail["gemText"] = f"{gem_count} pieces of {gem}"
 
     items_cap, cont_cap = ints.get(INT_ITEMS_CAPACITY), ints.get(INT_CONTAINERS_CAPACITY)
 
@@ -1500,8 +1523,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         "set",            # "Set: Weave of Melee Defense" - its own block on a cloak
         "combat",         # skill, damage, speed, the bonuses, cleave
         "spells",         # the spell NAMES
+        "cleave",         # "Cleave: 2 enemies in front arc." - its own block on a weapon
         "properties",     # Retained, Unenchantable, Cast on Strike, imbues
-        "requirements",   # wield / activation sentences, spellcraft, mana, mana cost
+        "requirements",   # the wield / activation sentences
+        "magic",          # mana conversion, spellcraft, mana, mana cost
         "descriptions",   # Spell Descriptions block
         "enchantments",   # what is currently ON the item
         "flavour",        # the composed name and any prose
