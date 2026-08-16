@@ -35,6 +35,7 @@ from . import curves, db
 
 ATTRIBUTE = 0x0000001
 SECOND_ATT = 0x0000002          # vitals
+FLOAT = 0x0000008               # a PropertyFloat on an ITEM, e.g. WeaponDefense
 SKILL = 0x0000010
 SINGLE_STAT = 0x0001000
 MULTIPLE_STAT = 0x0002000
@@ -96,6 +97,53 @@ def load(cur, character_id: int) -> list[dict]:
         )
 
     return live
+
+
+def load_many(cur, object_ids: list[int]) -> dict[int, list[dict]]:
+    """The same rows, for many objects at once — ITEMS carry their own enchantments (158).
+
+    An item's buffs live on the ITEM, not on the character wielding it, and `AppraiseInfo` reads
+    both: `item + wielder` for the defense mods, `item * wielder` for mana conversion. Loading
+    them per item would be one query per row of inventory, so this is the bulk form.
+    """
+    if not object_ids:
+        return {}
+
+    marks = ",".join(["%s"] * len(object_ids))
+
+    rows = db.fetch_all(
+        cur,
+        f"""
+        SELECT object_Id, spell_Id, spell_Category, power_Level, start_Time, duration,
+               stat_Mod_Type, stat_Mod_Key, stat_Mod_Value
+        FROM biota_properties_enchantment_registry
+        WHERE object_Id IN ({marks})
+        """,
+        tuple(object_ids),
+    )
+
+    out: dict[int, list[dict]] = {}
+
+    for r in rows:
+        duration = float(r["duration"] or 0)
+        start = float(r["start_Time"] or 0)
+
+        if not is_live(duration, start):
+            continue
+
+        out.setdefault(int(r["object_Id"]), []).append(
+            {
+                "spell": r["spell_Id"],
+                "category": r["spell_Category"],
+                "power": r["power_Level"] or 0,
+                "start": start,
+                "type": int(r["stat_Mod_Type"] or 0),
+                "key": int(r["stat_Mod_Key"] or 0),
+                "value": float(r["stat_Mod_Value"] or 0),
+            }
+        )
+
+    return out
 
 
 def _top_layer(enchantments: list[dict], want: int, key: int) -> list[dict]:
@@ -171,3 +219,38 @@ def skill_current(base: int, enchantments: list[dict], skill_id: int) -> int:
     add = additive(enchantments, SKILL, skill_id)
 
     return max(0, curves._round_away(base * mult + add))
+
+
+# --- item stats the client shows BUFFED (158) --------------------------------------------------
+#
+# `AppraiseInfo` does not send the stored value. It merges enchantments from the item AND from the
+# wielder before the client ever sees a number, which is why a stored WeaponDefense of 1.17 was
+# displayed in game as +32.0%.
+#
+# THE TYPE FLAG IS WHAT MAKES THIS WORK, and it is easy to miss. Black Breath buffed carries TWO
+# rows keyed 29:
+#
+#   type 0x2009008  key 169  +0.15   Float  -> WeaponAuraDefense, belongs here
+#   type 0x2009010  key  29  +40     Skill  -> the Melee Defense SKILL, does not
+#
+# Matching on the key alone would add 40 to a multiplier and report +4017%. `FLOAT` is the filter
+# that separates them.
+
+FLOAT_WEAPON_DEFENSE = 29
+FLOAT_WEAPON_AURA_DEFENSE = 169
+FLOAT_MANA_CONVERSION_MOD = 144
+
+
+def defense_mod(enchantments: list[dict]) -> float:
+    """`EnchantmentManager.GetDefenseMod()` — additive over WeaponDefense AND WeaponAuraDefense."""
+    return (additive(enchantments, FLOAT, FLOAT_WEAPON_DEFENSE)
+            + additive(enchantments, FLOAT, FLOAT_WEAPON_AURA_DEFENSE))
+
+
+def mana_conv_mod(enchantments: list[dict]) -> float:
+    """`EnchantmentManager.GetManaConvMod()` — MULTIPLICATIVE, unlike the defense mods above.
+
+    ACE's own comment: *"enchantments are multiplicative, so they are only effective if there is a
+    base mod"* — a 1.7x aura on an item with no ManaConversionMod is still nothing.
+    """
+    return multiplier(enchantments, FLOAT, FLOAT_MANA_CONVERSION_MOD)

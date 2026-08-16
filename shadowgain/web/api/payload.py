@@ -633,7 +633,8 @@ def build_quests(raw: dict, now: float) -> list[dict]:
     return out
 
 
-def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
+def build_inventory(cur, character_id: int, strength: int, dials: dict,
+                    ench: list[dict] | None = None) -> dict:
     """The paperdoll and the packs, with every item carrying its own examine text.
 
     Two queries instead of one join-per-property. The first finds the objects; the second pulls
@@ -697,6 +698,10 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
     by_container: dict[int, list[dict]] = {}
     container_names: dict[int, tuple[str, str]] = {}
     foci: list[dict] = []
+    # An item's own buffs live on the ITEM, and AppraiseInfo reads them alongside the wielder's.
+    # One bulk query rather than one per row.
+    item_ench = enchantments.load_many(cur, ids)
+
     total_burden = 0
 
     for row in rows:
@@ -705,7 +710,13 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict) -> dict:
 
         icon_id = d.get(DID_ICON)
         stack = int(i.get(INT_STACK_SIZE) or 1)
-        detail = items.build_detail(i, f, st, spells.get(oid, []))
+        # 158: the wielder's enchantments go in, because AppraiseInfo merges them BEFORE the
+        # client is sent a number - a stored WeaponDefense of 1.17 displays as +32.0% while a
+        # +0.15 aura is up. Only WIELDED items are affected; nothing in a pack is enchanted by
+        # the character carrying it.
+        wielded = row.get("wielder_id") is not None
+        detail = items.build_detail(i, f, st, spells.get(oid, []),
+                                    ench if wielded else None, item_ench.get(oid))
 
         item = {
             "id": oid,
@@ -1024,7 +1035,7 @@ def build_private(cur, raw: dict, dials: dict, now: float) -> dict:
         "skills": skills,
         "skillCredits": build_skill_credits(raw, skills),
         "titles": titles,
-        "inventory": build_inventory(cur, char["id"], _strength(raw, ench), dials),
+        "inventory": build_inventory(cur, char["id"], _strength(raw, ench), dials, ench),
         "quests": build_quests(raw, now),
         "public": False,
     }

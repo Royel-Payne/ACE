@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from . import curves
+from . import curves, enchantments
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 
@@ -653,7 +653,8 @@ def _fmt(n) -> str:
     return f"{int(n):,}"
 
 
-def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> dict:
+def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
+                 ench: list[dict] | None = None, ench_item: list[dict] | None = None) -> dict:
     """The examine panel, as structured data plus ready-made lines.
 
     Both shapes on purpose: `lines` is what the tooltip renders today with no parsing, and the
@@ -843,8 +844,19 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> 
         ("Slayer Bonus", FLOAT_SLAYER_DAMAGE_BONUS, "slayerDamageBonus"),
         ("Ignores Armor", FLOAT_IGNORE_ARMOR, "ignoreArmor"),
     ):
-        if (text := _pct(floats.get(prop))) is not None:
-            detail[key] = floats.get(prop)
+        raw = floats.get(prop)
+
+        # 158: AppraiseInfo adds the ITEM's and the WIELDER's defense mods before the client sees
+        # the number, so the stored 1.17 renders in game as +32.0% while a +0.15 aura is up. Only
+        # WeaponDefense gets this - it is the one AppraiseInfo modifies in that block.
+        # ACE adds them SEPARATELY - `defenseMod + auraDefenseMod` - rather than pooling the two
+        # registries. That matters: each side layers its own spells first, so a concatenated list
+        # could pick a top layer across two objects that never competed.
+        if prop == FLOAT_WEAPON_DEFENSE and raw is not None and (ench or ench_item):
+            raw += enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(ench or [])
+
+        if (text := _pct(raw)) is not None:
+            detail[key] = raw
             add(label, text)
 
     # 158: A FRACTION, NOT A MULTIPLIER, and it sat in the list above being read as one.
@@ -859,6 +871,14 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int]) -> 
     # that bonus. It is the one entry in that list ACE does not default to 1.0, and it had been
     # grouped with the ones that are.
     if (mana_conv := floats.get(FLOAT_MANA_CONVERSION_MOD)):
+        # Multiplicative here, not additive - hermetic link / void scale the base bonus rather than
+        # adding to it, and ACE notes they "are only effective if there is a base mod".
+        # `wielderManaConvMod * weaponManaConvMod` (ResistMask.cs:127) - multiplied, not added,
+        # and computed per registry for the same layering reason as above.
+        if ench or ench_item:
+            mana_conv *= (enchantments.mana_conv_mod(ench_item or [])
+                          * enchantments.mana_conv_mod(ench or []))
+
         detail["manaConversionMod"] = mana_conv
         add("Mana Conversion Bonus", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%")
 
