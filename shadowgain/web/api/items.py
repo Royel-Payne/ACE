@@ -885,6 +885,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             # Clothing with no armour of its own: the multiplier is all there is to report.
             add("Protection", ", ".join(f"{k} x{v:g}" for k, v in mods.items()))
 
+    gap()
+
     # --- magic ---------------------------------------------------------------------------------
     if (spellcraft := ints.get(INT_SPELLCRAFT)):
         detail["spellcraft"] = spellcraft
@@ -905,6 +907,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if (difficulty := ints.get(INT_DIFFICULTY)):
         detail["activationDifficulty"] = difficulty
         add("Difficulty", _fmt(difficulty))
+
+    gap()
 
     # --- requirements (138) ---------------------------------------------------------------------
     #
@@ -964,6 +968,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if (mana_cost := ints.get(INT_ITEM_MANA_COST)):
         detail["manaCost"] = mana_cost
         add("Mana Cost", _fmt(mana_cost))
+
+    gap()
 
     # --- weapons (137) --------------------------------------------------------------------------
     #
@@ -1066,6 +1072,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["cleaving"] = cleave
         add("Cleaving", f"{cleave} targets")
 
+    gap()
+
     # --- missile weapons, which had nothing of their own --------------------------------------
     if (rng := ints.get(INT_WEAPON_RANGE)):
         detail["weaponRange"] = rng
@@ -1101,6 +1109,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["imbues"] = sorted(set(imbues))
         add("Imbued", ", ".join(sorted(set(imbues))))
 
+    gap()
+
     # --- armour and clothing -------------------------------------------------------------------
     if (armor_types := _flags(ints.get(INT_ARMOR_TYPE), ARMOR_TYPE_NAMES)):
         detail["armorType"] = armor_types
@@ -1110,6 +1120,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["equipmentSet"] = equip_set
         add("Set", equip_set)
 
+    # NO gap: this block emits nothing for armour or weapons, and a spacer in front of a block
+    # that produces no lines still lands - separating "Armor Type" from "Aura", which belong
+    # together. gap() cannot know a block will be empty, so blocks that are usually empty do not
+    # get one.
     # --- food, potions and salvage --------------------------------------------------------------
     boost_vital = curves.enum_label("attribute2nd", ints.get(INT_BOOSTER_ENUM))
     boost = ints.get(INT_BOOST_VALUE)
@@ -1130,6 +1144,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["unique"] = True
         lines.append("Unique")
 
+    # NO gap here on purpose: "Armor Type: Cloth" and "Aura: Magical" are both one-line facts about
+    # the item itself, and separating them produced two one-line islands where the client has a
+    # single small block. A spacer is only worth a line when it divides groups, not entries.
     # --- general facts that apply to anything ---------------------------------------------------
     if (effects := _flags(ints.get(INT_UI_EFFECTS), UI_EFFECT_NAMES)):
         detail["uiEffects"] = effects
@@ -1186,6 +1203,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         gap()
         add("Properties", ", ".join(props_list))
 
+    gap()
+
     # --- spells ---------------------------------------------------------------------------------
     #
     # THE CAST-ON-USE SPELL IS NOT IN THE SPELL BOOK. An item's `PropertyDataId.Spell` (28) is the
@@ -1219,6 +1238,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         described = [s for s in named if s.get("desc")]
 
         if described:
+            # The client keeps the NAMES and the DESCRIPTIONS as two blocks, not one - see any
+            # weapon panel, where the requirements sit between them.
+            gap()
             lines.append("Spell Descriptions:")
             lines.extend(f"~ {s['name']}: {s['desc']}" for s in described)
 
@@ -1255,6 +1277,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             detail["enchantments"] = active
             lines.append("Enchantments:")
             lines.extend(f"~ {a['name']}: {a['desc']}" if a["desc"] else f"~ {a['name']}" for a in active)
+
+    gap()
 
     # --- flavour ---------------------------------------------------------------------------------
     for key, prop in (("use", STRING_USE), ("shortDesc", STRING_SHORT_DESC),
