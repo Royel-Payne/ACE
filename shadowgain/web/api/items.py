@@ -37,6 +37,8 @@ INT_RESIST_MAGIC = 36
 DID_SPELL = 28
 # PropertyBool.Retained - the client lists it under "Properties:".
 BOOL_RETAINED = 91
+# PropertyDataId.ProcSpell - cast on strike, which the client also names under "Properties:".
+DID_PROC_SPELL = 55
 UNENCHANTABLE_RESIST_MAGIC = 9999
 INT_WORKMANSHIP = 105
 INT_SPELLCRAFT = 106
@@ -304,148 +306,25 @@ CREATURE_TYPE_NAMES = {
     101: "Anekshay",
 }
 
-EQUIPMENT_SET_NAMES = {
-    1: "Test",
-    2: "Test2",
-    3: "Unknown3",
-    4: "Carraidas Benediction",
-    5: "Noble Relic",
-    6: "Ancient Relic",
-    7: "Alduressa Relic",
-    8: "Ninja",
-    9: "Empyrean Rings",
-    10: "Arm Mind Heart",
-    11: "Armor Perfect Light",
-    12: "Armor Perfect Light2",
-    13: "Soldiers",
-    14: "Adepts",
-    15: "Archers",
-    16: "Defenders",
-    17: "Tinkers",
-    18: "Crafters",
-    19: "Hearty",
-    20: "Dexterous",
-    21: "Wise",
-    22: "Swift",
-    23: "Hardened",
-    24: "Reinforced",
-    25: "Interlocking",
-    26: "Flameproof",
-    27: "Acidproof",
-    28: "Coldproof",
-    29: "Lightningproof",
-    30: "Society Armor",
-    31: "Colosseum Clothing",
-    32: "Graveyard Clothing",
-    33: "Olthoi Clothing",
-    34: "Noobie Armor",
-    35: "Aetheria Defense",
-    36: "Aetheria Destruction",
-    37: "Aetheria Fury",
-    38: "Aetheria Growth",
-    39: "Aetheria Vigor",
-    40: "Rare Damage Resistance",
-    41: "Rare Damage Boost",
-    42: "Olthoi Armor DRed",
-    43: "Olthoi Armor CRat",
-    44: "Olthoi Armor CRed",
-    45: "Olthoi Armor DRat",
-    46: "Alduressa Relic Upgrade",
-    47: "Ancient Relic Upgrade",
-    48: "Noble Relic Upgrade",
-    49: "Cloak Alchemy",
-    50: "Cloak Arcane Lore",
-    51: "Cloak Armor Tinkering",
-    52: "Cloak Assess Person",
-    53: "Cloak Light Weapons",
-    54: "Cloak Missile Weapons",
-    55: "Cloak Cooking",
-    56: "Cloak Creature Enchantment",
-    57: "Cloak Crossbow",
-    58: "Cloak Finesse Weapons",
-    59: "Cloak Deception",
-    60: "Cloak Fletching",
-    61: "Cloak Healing",
-    62: "Cloak Item Enchantment",
-    63: "Cloak Item Tinkering",
-    64: "Cloak Leadership",
-    65: "Cloak Life Magic",
-    66: "Cloak Loyalty",
-    67: "Cloak Mace",
-    68: "Cloak Magic Defense",
-    69: "Cloak Magic Item Tinkering",
-    70: "Cloak Mana Conversion",
-    71: "Cloak Melee Defense",
-    72: "Cloak Missile Defense",
-    73: "Cloak Salvaging",
-    74: "Cloak Spear",
-    75: "Cloak Staff",
-    76: "Cloak Heavy Weapons",
-    77: "Cloak Thrown Weapon",
-    78: "Cloak Two Handed Combat",
-    79: "Cloak Unarmed Combat",
-    80: "Cloak Void Magic",
-    81: "Cloak War Magic",
-    82: "Cloak Weapon Tinkering",
-    83: "Cloak Assess Creature",
-    84: "Cloak Dirty Fighting",
-    85: "Cloak Dual Wield",
-    86: "Cloak Recklessness",
-    87: "Cloak Shield",
-    88: "Cloak Sneak Attack",
-    89: "Ninja_New",
-    90: "Cloak Summoning",
-    91: "Shrouded Soul",
-    92: "Darkened Mind",
-    93: "Clouded Spirit",
-    94: "Minor Stinging Shrouded Soul",
-    95: "Minor Sparking Shrouded Soul",
-    96: "Minor Smoldering Shrouded Soul",
-    97: "Minor Shivering Shrouded Soul",
-    98: "Minor Stinging Darkened Mind",
-    99: "Minor Sparking Darkened Mind",
-    100: "Minor Smoldering Darkened Mind",
-    101: "Minor Shivering Darkened Mind",
-    102: "Minor Stinging Clouded Spirit",
-    103: "Minor Sparking Clouded Spirit",
-    104: "Minor Smoldering Clouded Spirit",
-    105: "Minor Shivering Clouded Spirit",
-    106: "Major Stinging Shrouded Soul",
-    107: "Major Sparking Shrouded Soul",
-    108: "Major Smoldering Shrouded Soul",
-    109: "Major Shivering Shrouded Soul",
-    110: "Major Stinging Darkened Mind",
-    111: "Major Sparking Darkened Mind",
-    112: "Major Smoldering Darkened Mind",
-    113: "Major Shivering Darkened Mind",
-    114: "Major Stinging Clouded Spirit",
-    115: "Major Sparking Clouded Spirit",
-    116: "Major Smoldering Clouded Spirit",
-    117: "Major Shivering Clouded Spirit",
-    118: "Blackfire Stinging Shrouded Soul",
-    119: "Blackfire Sparking Shrouded Soul",
-    120: "Blackfire Smoldering Shrouded Soul",
-    121: "Blackfire Shivering Shrouded Soul",
-    122: "Blackfire Stinging Darkened Mind",
-    123: "Blackfire Sparking Darkened Mind",
-    124: "Blackfire Smoldering Darkened Mind",
-    125: "Blackfire Shivering Darkened Mind",
-    126: "Blackfire Stinging Clouded Spirit",
-    127: "Blackfire Sparking Clouded Spirit",
-    128: "Blackfire Smoldering Clouded Spirit",
-    129: "Blackfire Shivering Clouded Spirit",
-    130: "Shimmering Shadows Set",
-    131: "Brown Society Locket",
-    132: "Yellow Society Locket",
-    133: "Red Society Band",
-    134: "Green Society Band",
-    135: "Purple Society Band",
-    136: "Blue Society Band",
-    137: "Gauntlet Garb",
-    138: "Paragon Missile",
-    139: "Paragon Caster",
-    140: "Paragon Melee",
-}
+def _equipment_set_names() -> dict[int, str]:
+    """Set id -> the CLIENT's name, for every one that could be confirmed against acclient.exe.
+
+    ACE's enum calls set 71 `CloakMeleeDefense` and this file used to render that as "Cloak Melee
+    Defense". The client calls it "Weave of Melee Defense" - the same class of invention as the
+    workmanship words, and Chris spotted it on his Silk Cloak.
+
+    `tools/extract-equipment-sets.py` proposes the name each enum entry would have and keeps it only
+    if that exact string is in the binary, so 93 of 141 are confirmed. The rest - Test, Unknown3,
+    and identifiers that differ from their display form - fall back to the spaced identifier below,
+    which is a guess and is marked as one rather than dressed up.
+    """
+    raw = json.loads((DATA_DIR / "equipment-sets.json").read_text(encoding="utf-8"))
+
+    return {int(k): v for k, v in raw.items()}
+
+
+EQUIPMENT_SET_NAMES = _equipment_set_names()
+
 
 
 FLOAT_MANA_RATE = 5
@@ -881,9 +760,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                 # bracket in its format string.
                 add(k, f"{resistance_word(mod_keys[k])}  ({_fmt(round(armor_for_res * mod_keys[k]))})",
                     is_buffed=mod_buffed.get(k, False))
-        else:
-            # Clothing with no armour of its own: the multiplier is all there is to report.
-            add("Protection", ", ".join(f"{k} x{v:g}" for k, v in mods.items()))
+        # NOTHING for an item with no armour level. A cloak carries ArmorModVs floats but no
+        # ArmorLevel, and the client prints no resistance rows for one at all - there is nothing to
+        # multiply, so the figures describe nothing. The portal used to emit "Protection: Slashing
+        # x0.8, ..." here, which is a row the game does not have built from numbers it does not use.
 
     gap()
 
@@ -907,8 +787,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         add("Mana Cost", f"1 point per {seconds:.0f} seconds.")
 
     if (difficulty := ints.get(INT_DIFFICULTY)):
+        # Held, not printed: it is half of the "Activation requires" sentence assembled below.
         detail["activationDifficulty"] = difficulty
-        add("Difficulty", _fmt(difficulty))
 
     gap()
 
@@ -941,7 +821,18 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             what = WIELD_REQUIREMENT_NAMES.get(kind)
 
         reqs.append({"type": WIELD_REQUIREMENT_NAMES.get(kind), "of": what, "level": difficulty})
-        add("Wield Requirement", f"{what} {_fmt(difficulty)}" if what else _fmt(difficulty))
+        # `Wield requires %s %d` is the client's format, and it reads as a SENTENCE rather than a
+        # labelled row - "Wield requires base Two Handed Combat 325", "Wield requires level 90".
+        # "base" appears for the raw-skill kinds, which is what distinguishes a requirement on your
+        # unbuffed skill from one on your current.
+        base = "base " if kind in (2, 4, 6) else ""
+
+        # "Wield requires level 90" - lowercase, where a SKILL keeps its capitals ("base Two Handed
+        # Combat 325"). The client distinguishes the two and so does this.
+        if what == "Level":
+            what = "level"
+        lines.append(f"Wield requires {base}{what} {_fmt(difficulty)}" if what
+                     else f"Wield requires {_fmt(difficulty)}")
 
     if reqs:
         detail["wieldRequirements"] = reqs
@@ -963,9 +854,25 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["allegianceRankLimit"] = rank
         add("Requires Allegiance Rank", _fmt(rank))
 
-    if (skill_limit := ints.get(INT_ITEM_SKILL_LEVEL_LIMIT)):
+    # `Activation requires Arcane Lore: 129, Two Handed Combat: 253` - ONE sentence, where the
+    # portal printed "Difficulty: 129" and "Activation Skill Level: 253" as two labelled rows and
+    # named neither of the skills involved. The Arcane Lore figure is the item's ItemDifficulty,
+    # and the second clause names the item's own required skill.
+    #
+    # `Activation requires ` and `Arcane Lore: %d` are both the client's strings.
+    skill_limit = ints.get(INT_ITEM_SKILL_LEVEL_LIMIT)
+    act_skill = curves.enum_label("skill", ints.get(INT_USE_REQUIRES_SKILL)) or detail.get("weaponSkill")
+    act_parts = []
+
+    if detail.get("activationDifficulty"):
+        act_parts.append(f"Arcane Lore: {_fmt(detail['activationDifficulty'])}")
+
+    if skill_limit:
         detail["activationSkillLevel"] = skill_limit
-        add("Activation Skill Level", _fmt(skill_limit))
+        act_parts.append(f"{act_skill}: {_fmt(skill_limit)}" if act_skill else _fmt(skill_limit))
+
+    if act_parts:
+        lines.append("Activation requires " + ", ".join(act_parts))
 
     if (mana_cost := ints.get(INT_ITEM_MANA_COST)):
         detail["manaCost"] = mana_cost
@@ -1155,7 +1062,9 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["armorType"] = armor_types
         add("Armor Type", ", ".join(armor_types))
 
-    if (equip_set := EQUIPMENT_SET_NAMES.get(ints.get(INT_EQUIPMENT_SET_ID))):
+    set_id = ints.get(INT_EQUIPMENT_SET_ID)
+
+    if (equip_set := EQUIPMENT_SET_NAMES.get(set_id)):
         detail["equipmentSet"] = equip_set
         add("Set", equip_set)
 
@@ -1236,6 +1145,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["unenchantable"] = True
         props_list.append("Unenchantable")
 
+    # `Cast on Strike` - the client's own string, and it follows from having a ProcSpell.
+    if (dids or {}).get(DID_PROC_SPELL):
+        props_list.append("Cast on Strike")
+
     if ints.get(INT_ATTUNED):
         detail["attuned"] = True
         props_list.append("Attuned")
@@ -1260,6 +1173,15 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     if dids and (cast := dids.get(DID_SPELL)):
         spell_ids.append(int(cast))
+
+    # ProcSpell (DataId 55) - the spell an item casts ON STRIKE rather than on use. AppraiseInfo
+    # adds it to the same SpellBook list, and without it Chris's Silk Cloak listed no spells at all
+    # while the client showed "Eye of the Storm".
+    if dids and (proc := dids.get(DID_PROC_SPELL)):
+        detail["procSpell"] = int(proc)
+
+        if int(proc) not in spell_ids:
+            spell_ids.append(int(proc))
 
     spell_ids += [s for s in (spells or []) if s not in spell_ids]
 
