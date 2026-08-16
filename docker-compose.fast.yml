@@ -36,3 +36,23 @@ services:
     #
     # No added crash-loop risk - upstream's on-failure already had unlimited retries.
     restart: unless-stopped
+
+    # Shadowgain 154/159: cap this container's log, and keep `docker logs --tail` working.
+    #
+    # ace-server emits ~27 MB/hour of [PROFICIENCY]/[ATTRIBUTE] award telemetry - the
+    # instrumentation the balance passes are read from, so the volume is WANTED. Without a cap it
+    # reached 548 MB (129) and then 572 MB again (154).
+    #
+    # 154 capped the DISK with host-side logrotate, which needs no restart and survives container
+    # recreates. But `copytruncate` leaves Docker's own `--tail` seeking from a stale offset, so
+    # `docker logs --tail N` silently returns NOTHING - which is what took the public honour roll
+    # offline in 157, because sitedata-gen.sh read the status feed that way.
+    #
+    # Native rotation is the proper fix and rotates without truncating, so `--tail` keeps working.
+    # It can only be set at container CREATE time, which is why this sat unapplied through two
+    # deploys that each recreated the container and each forgot it.
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
