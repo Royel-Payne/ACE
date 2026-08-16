@@ -148,6 +148,103 @@ namespace ACE.Server.Command.Handlers
         }
 
         /// <summary>
+        /// Shadowgain 158: emit the EXACT AppraiseInfo the client receives for one item, as JSON.
+        ///
+        /// Same argument as sg-objdesc below, one panel over. my.shadowgain.com rebuilds the examine
+        /// window from the shard, which makes it a second implementation of AppraiseInfo - and that
+        /// class does not hand the client stored values. It MERGES enchantments first: the item's own
+        /// and the wielder's, added for some properties and multiplied for others.
+        ///
+        /// Chasing that by eye found real bugs and kept finding more - a bonus printed as -92%, armour
+        /// 200 points light on every piece, a spell missing from the list, green highlighting on items
+        /// with no buff at all. Each was found from a screenshot, one panel at a time, which is a slow
+        /// way to be wrong. This is the oracle instead: dump what the client is actually sent and diff.
+        ///
+        /// ONLINE CHARACTERS ONLY, for the same reason as sg-objdesc - AppraiseInfo walks the item's
+        /// Wielder and its EnchantmentManager, neither of which exists for a character not in memory.
+        /// Read-only: it builds the same structure the examine handler builds and writes it to disk.
+        /// </summary>
+        [CommandHandler("sg-appraise", AccessLevel.Developer, CommandHandlerFlag.RequiresWorld, 1,
+            "(Shadowgain) Dump the AppraiseInfo the client is sent for one item, as JSON.",
+            "<item name>   (searches everything you are wearing and carrying)")]
+        public static void HandleShadowgainAppraise(Session session, params string[] parameters)
+        {
+            var player = session?.Player;
+
+            if (player == null)
+                return;
+
+            var wanted = string.Join(" ", parameters ?? Array.Empty<string>()).Trim();
+
+            if (string.IsNullOrWhiteSpace(wanted))
+            {
+                CommandHandlerHelper.WriteOutputInfo(session, "Usage: sg-appraise <item name>", ChatMessageType.Broadcast);
+                return;
+            }
+
+            // Substring, case-insensitive, first match wins. The stored name is the BARE one - "Orb",
+            // "Tetsubo" - because the client composes the material into what a player actually reads
+            // ("Gold Orb"). Requiring the displayed name would fail on every piece of loot.
+            var matches = player.GetAllPossessions()
+                .Where(o => (o.Name ?? "").IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                CommandHandlerHelper.WriteOutputInfo(session, $"No item matching \"{wanted}\".", ChatMessageType.Broadcast);
+                return;
+            }
+
+            foreach (var wo in matches)
+            {
+                var info = new ACE.Server.Network.Structure.AppraiseInfo(wo, player);
+
+                var dump = new
+                {
+                    item = wo.Name,
+                    id = wo.Guid.Full,
+                    weenieType = wo.WeenieType.ToString(),
+                    wielded = wo.Wielder != null,
+                    wieldedLocation = wo.CurrentWieldedLocation?.ToString(),
+                    enchantable = wo.IsEnchantable,
+                    success = info.Success,
+                    // Keyed by NAME, not by the raw id. The whole point is a human-readable diff
+                    // against the portal's own field names, and a file of bare integers would need
+                    // the enum to hand every time it was read.
+                    propertiesInt = info.PropertiesInt?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    propertiesInt64 = info.PropertiesInt64?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    propertiesBool = info.PropertiesBool?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    propertiesFloat = info.PropertiesFloat?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    propertiesString = info.PropertiesString?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    propertiesDid = info.PropertiesDID?.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    spellBook = info.SpellBook,
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(dump,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+                var safe = new string((wo.Name ?? "item").Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
+                var file = $"sg-appraise-{safe}-{wo.Guid.Full}.json";
+
+                try
+                {
+                    var path = System.IO.Path.Combine(System.Environment.CurrentDirectory, file);
+                    System.IO.File.WriteAllText(path, json);
+                    CommandHandlerHelper.WriteOutputInfo(session, $"Wrote {file}", ChatMessageType.Broadcast);
+                }
+                catch (Exception ex)
+                {
+                    // Same fallback as sg-objdesc: the DATA is the point, so if the disk refuses,
+                    // put it somewhere it can still be read rather than losing it.
+                    log.Info($"[SG-APPRAISE] {wo.Name} ({wo.Guid.Full})\n{json}");
+                    CommandHandlerHelper.WriteOutputInfo(session,
+                        $"Could not write {file} ({ex.Message}) - dumped to the server log instead.",
+                        ChatMessageType.Broadcast);
+                }
+            }
+        }
+
+        /// <summary>
         /// Shadowgain 152: emit the EXACT ObjDesc the client receives, as JSON.
         ///
         /// This exists to be a GROUND TRUTH, not a feature. my.shadowgain.com builds its 3D model
