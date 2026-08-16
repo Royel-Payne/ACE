@@ -590,32 +590,45 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     armour level should show no armour row, not "Armor: —".
     """
     detail: dict = {}
-    lines: list[str] = []
+    # 158: lines are collected into NAMED GROUPS and emitted in the client's order at the end,
+    # rather than in whatever order the code happens to compute them.
+    #
+    # The blocks below grew by accretion, so the panel read magic-then-requirements-then-combat
+    # while the game reads combat-then-spells-then-requirements. Reordering the CODE to fix that
+    # would mean moving blocks that depend on each other's locals (armour bonus, resistance mods),
+    # which is a lot of risk for a presentation change. Naming the groups instead makes the order a
+    # single reviewable list - PANEL_ORDER below - and leaves the computation where it is.
+    #
+    # `buffed` is recorded per group and resolved to line indices once at the end, because the
+    # index of a line is not known until the groups are concatenated.
+    groups: dict[str, list[tuple[str, bool]]] = {}
+    current = ["identity"]
 
-    # 158: which lines are ACTUALLY enhanced. The front-end used to colour by label regex - any
-    # line starting "Armor Level"/"Damage"/"Melee Defense" went green whether or not a buff was on
-    # it - so an untouched weapon in a pack advertised a bonus it did not have. In game the colour
-    # means "above base", so it has to be driven by the arithmetic, not by the word.
-    buffed: list[int] = []
+    def group(name: str):
+        current[0] = name
 
-    def add(label: str, value, is_buffed: bool = False):
+    # `order` sorts WITHIN a group, for the two places the client's sequence differs from the order
+    # the code computes things: it prints Skill before Damage, and the wield/activation sentences
+    # before Spellcraft/Mana. Default 100 means "wherever it was added", which is right everywhere
+    # else. Sorting is stable, so equal keys keep insertion order.
+    def add(label: str, value, is_buffed: bool = False, order: int = 100):
         if value is None:
             return
 
-        if is_buffed:
-            buffed.append(len(lines))
+        groups.setdefault(current[0], []).append((f"{label}: {value}", is_buffed, order))
 
-        lines.append(f"{label}: {value}")
+    def sentence(text: str, is_buffed: bool = False, order: int = 100):
+        """A line the client writes as a SENTENCE rather than `Label: value`.
+
+        NOT called `raw`: that name is already a local inside the bonus loop below, which shadowed
+        this function and turned every call into `NoneType is not callable`. Shipped that way for
+        about a minute.
+        """
+        groups.setdefault(current[0], []).append((text, is_buffed, order))
 
     def gap():
-        """A blank line between groups, the way the client spaces this panel.
-
-        Rendered by the front-end as a spacer div. Guarded against doubling and against leading
-        blanks, so a group that turns out to be empty - most items have no enchantments - does not
-        leave a hole where the client has none.
-        """
-        if lines and lines[-1] != "":
-            lines.append("")
+        """Retained as a no-op: spacing now comes from the group boundaries."""
+        return
 
     # --- identity ---------------------------------------------------------------------------
     # The WIELDER's aura only reaches an item that can actually be enchanted. ACE gates it on
@@ -634,6 +647,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     if workmanship:
         detail["workmanship"] = workmanship
         detail["workmanshipName"] = WORKMANSHIP_NAMES.get(int(workmanship), str(workmanship))
+
+    group("identity")
 
     # --- the physical facts ------------------------------------------------------------------
     if (value := ints.get(INT_VALUE)):
@@ -661,13 +676,21 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # the items where it is most worth seeing.
     gap()
 
+    # Armour level heads the ARMOUR block, not the identity block: the client prints it directly
+    # above the per-type resistances it scales, and separated from Value/Burden by a blank.
+    group("armour")
+
     armor_base = ints.get(INT_ARMOR_LEVEL) or 0
     armor_bonus = enchantments.armor_mod(ench_item or [])
 
     if armor_base or armor_bonus:
         detail["armorLevel"] = armor_base + armor_bonus
         detail["armorLevelBase"] = armor_base
-        add("Armor Level", _fmt(armor_base + armor_bonus), is_buffed=armor_bonus != 0)
+        add("Armor Level", _fmt(armor_base + armor_bonus), is_buffed=armor_bonus != 0, order=10)
+
+    group("identity")
+
+    group("armour")
 
     # --- protection ---------------------------------------------------------------------------
     #
@@ -767,6 +790,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     gap()
 
+    group("requirements")
+
     # --- magic ---------------------------------------------------------------------------------
     if (spellcraft := ints.get(INT_SPELLCRAFT)):
         detail["spellcraft"] = spellcraft
@@ -791,6 +816,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["activationDifficulty"] = difficulty
 
     gap()
+
+    group("requirements")
 
     # --- requirements (138) ---------------------------------------------------------------------
     #
@@ -831,8 +858,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # Combat 325"). The client distinguishes the two and so does this.
         if what == "Level":
             what = "level"
-        lines.append(f"Wield requires {base}{what} {_fmt(difficulty)}" if what
-                     else f"Wield requires {_fmt(difficulty)}")
+        sentence(f"Wield requires {base}{what} {_fmt(difficulty)}" if what
+                 else f"Wield requires {_fmt(difficulty)}", order=10)
 
     if reqs:
         detail["wieldRequirements"] = reqs
@@ -852,7 +879,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     if (rank := ints.get(INT_ITEM_ALLEGIANCE_RANK_LIMIT)):
         detail["allegianceRankLimit"] = rank
-        add("Requires Allegiance Rank", _fmt(rank))
+        add("Allegiance Rank", _fmt(rank))
 
     # `Activation requires Arcane Lore: 129, Two Handed Combat: 253` - ONE sentence, where the
     # portal printed "Difficulty: 129" and "Activation Skill Level: 253" as two labelled rows and
@@ -861,7 +888,11 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     #
     # `Activation requires ` and `Arcane Lore: %d` are both the client's strings.
     skill_limit = ints.get(INT_ITEM_SKILL_LEVEL_LIMIT)
-    act_skill = curves.enum_label("skill", ints.get(INT_USE_REQUIRES_SKILL)) or detail.get("weaponSkill")
+    # From the PROPERTY, not from `detail`: the weapon block sets `weaponSkill` and it runs after
+    # this one, so reading detail here produced "Activation requires Arcane Lore: 134, 256" with the
+    # skill name missing. Group ordering changed the output order, not the computation order.
+    act_skill = (curves.enum_label("skill", ints.get(INT_USE_REQUIRES_SKILL))
+                 or curves.enum_label("skill", ints.get(INT_WEAPON_SKILL)))
     act_parts = []
 
     if detail.get("activationDifficulty"):
@@ -872,13 +903,15 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         act_parts.append(f"{act_skill}: {_fmt(skill_limit)}" if act_skill else _fmt(skill_limit))
 
     if act_parts:
-        lines.append("Activation requires " + ", ".join(act_parts))
+        sentence("Activation requires " + ", ".join(act_parts), order=20)
 
     if (mana_cost := ints.get(INT_ITEM_MANA_COST)):
         detail["manaCost"] = mana_cost
         add("Mana Cost", _fmt(mana_cost))
 
     gap()
+
+    group("combat")
 
     # --- weapons (137) --------------------------------------------------------------------------
     #
@@ -920,14 +953,14 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             # `:g`, not a fixed decimal count. The client prints the natural value - Chris's Cestus
             # reads "25.38 - 54" and his Tetsubo "26.4 - 44" - so two decimals, one, or none as the
             # arithmetic falls out. A fixed ".1f" would have written "45.0" where the game says 45.
-            add("Damage", f"{low:g} - {_fmt(damage)}{suffix}", is_buffed=dmg_bonus != 0)
+            add("Damage", f"{low:g} - {_fmt(damage)}{suffix}", is_buffed=dmg_bonus != 0, order=20)
         else:
-            add("Damage", f"{_fmt(damage)}{suffix}", is_buffed=dmg_bonus != 0)
+            add("Damage", f"{_fmt(damage)}{suffix}", is_buffed=dmg_bonus != 0, order=20)
 
     if (skill := curves.enum_label("skill", ints.get(INT_WEAPON_SKILL))):
         detail["weaponSkill"] = skill
         # The client's label is "Skill", not "Attack Skill".
-        add("Skill", skill)
+        add("Skill", skill, order=10)
 
     # SPEED IS BUFFED TOO, and negative means faster: `baseSpeed + speedMod`, floored at 0
     # (WeaponProfile.GetWeaponSpeed). Black Breath's Swift Killer carries -60, which takes this
@@ -945,17 +978,22 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             # The descriptor word ("Very Fast") is NOT added: the four strings are in acclient.exe
             # but only three points are known - 0 Very Fast, 15 Fast, 45 Average - which does not
             # pin the boundaries. Same rule as the resistance ladder: measured or not at all.
-            add("Speed", _fmt(speed), is_buffed=spd_mod != 0)
+            add("Speed", _fmt(speed), is_buffed=spd_mod != 0, order=30)
 
+    # THESE LABELS ARE THE CLIENT'S, extracted rather than chosen (158). acclient.exe carries them
+    # as format strings - "Bonus to Attack Skill: %s", "Damage Modifier: %s", "Elemental Damage
+    # Bonus: %d" - so the wording is checkable instead of a matter of taste. Chris: "Several strings
+    # are close, but off by a bit."
+    #
     # MULTIPLIERS around 1.0 - 1.13 is "+13%". Confirmed against ACE, which defaults each of these
     # to 1.0 when absent (e.g. `weapon.ElementalDamageMod ?? 1.0f`).
     for label, prop, key in (
-        ("Damage Bonus", FLOAT_DAMAGE_MOD, "damageMod"),
-        ("Attack Bonus", FLOAT_WEAPON_OFFENSE, "attackMod"),
-        ("Melee Defense Bonus", FLOAT_WEAPON_DEFENSE, "meleeDefenseMod"),
-        ("Missile Defense Bonus", FLOAT_WEAPON_MISSILE_DEFENSE, "missileDefenseMod"),
-        ("Magic Defense Bonus", FLOAT_WEAPON_MAGIC_DEFENSE, "magicDefenseMod"),
-        ("Elemental Damage", FLOAT_ELEMENTAL_DAMAGE_MOD, "elementalDamageMod"),
+        ("Damage Modifier", FLOAT_DAMAGE_MOD, "damageMod"),
+        ("Bonus to Attack Skill", FLOAT_WEAPON_OFFENSE, "attackMod"),
+        ("Bonus to Melee Defense", FLOAT_WEAPON_DEFENSE, "meleeDefenseMod"),
+        ("Bonus to Missile Defense", FLOAT_WEAPON_MISSILE_DEFENSE, "missileDefenseMod"),
+        ("Bonus to Magic Defense", FLOAT_WEAPON_MAGIC_DEFENSE, "magicDefenseMod"),
+        ("Elemental Damage Bonus", FLOAT_ELEMENTAL_DAMAGE_MOD, "elementalDamageMod"),
         ("Slayer Bonus", FLOAT_SLAYER_DAMAGE_BONUS, "slayerDamageBonus"),
         ("Ignores Armor", FLOAT_IGNORE_ARMOR, "ignoreArmor"),
     ):
@@ -1001,7 +1039,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             mana_conv *= mc_mod
 
         detail["manaConversionMod"] = mana_conv
-        add("Mana Conversion Bonus", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%",
+        add("Bonus to Mana Conversion", f"{'+' if mana_conv > 0 else ''}{round(mana_conv * 100, 1):g}%",
             is_buffed=mc_mod != 1.0)
 
     if (crit := floats.get(FLOAT_CRITICAL_FREQUENCY)):
@@ -1019,6 +1057,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         add("Cleave", f"{cleave} enemies in front arc.")
 
     gap()
+
+    group("combat")
 
     # --- missile weapons, which had nothing of their own --------------------------------------
     if (rng := ints.get(INT_WEAPON_RANGE)):
@@ -1044,7 +1084,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     if rend_type and rend:
         detail["resistanceRending"] = {"types": rend_type, "modifier": rend}
-        add("Resistance Rending", f"{', '.join(rend_type)} x{round(rend, 2):g}")
+        add("Resistance Cleaving", f"{', '.join(rend_type)} x{round(rend, 2):g}")
 
     imbues = []
 
@@ -1057,10 +1097,13 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     gap()
 
+    group("coverage")
+
     # --- armour and clothing -------------------------------------------------------------------
     if (armor_types := _flags(ints.get(INT_ARMOR_TYPE), ARMOR_TYPE_NAMES)):
+        # NOT PRINTED. "Armor Type" appears NOWHERE in acclient.exe - the row was ours. Kept in
+        # `detail` for anything that wants it, but it no longer claims to be something the game says.
         detail["armorType"] = armor_types
-        add("Armor Type", ", ".join(armor_types))
 
     set_id = ints.get(INT_EQUIPMENT_SET_ID)
 
@@ -1072,6 +1115,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # that produces no lines still lands - separating "Armor Type" from "Aura", which belong
     # together. gap() cannot know a block will be empty, so blocks that are usually empty do not
     # get one.
+    group("properties")
+
     # --- food, potions and salvage --------------------------------------------------------------
     boost_vital = curves.enum_label("attribute2nd", ints.get(INT_BOOSTER_ENUM))
     boost = ints.get(INT_BOOST_VALUE)
@@ -1090,11 +1135,13 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     if ints.get(INT_UNIQUE):
         detail["unique"] = True
-        lines.append("Unique")
+        sentence("Unique")
 
     # NO gap here on purpose: "Armor Type: Cloth" and "Aura: Magical" are both one-line facts about
     # the item itself, and separating them produced two one-line islands where the client has a
     # single small block. A spacer is only worth a line when it divides groups, not entries.
+    group("set")
+
     # --- general facts that apply to anything ---------------------------------------------------
     if (effects := _flags(ints.get(INT_UI_EFFECTS), UI_EFFECT_NAMES)):
         detail["uiEffects"] = effects
@@ -1109,7 +1156,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     if max_structure:
         detail["structure"] = {"current": structure or 0, "max": max_structure}
-        add("Uses", f"{_fmt(structure or 0)} / {_fmt(max_structure)}")
+        add("Number of uses remaining", f"{_fmt(structure or 0)} / {_fmt(max_structure)}")
 
     if (gem_count := ints.get(INT_GEM_COUNT)):
         gem = MATERIAL_NAMES.get(ints.get(INT_GEM_TYPE))
@@ -1127,6 +1174,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     # Attuned cannot be given away, Bonded cannot be dropped. Both change what a player can do
     # with the item, so both are worth a line.
+    group("properties")
+
     # --- properties ------------------------------------------------------------------------------
     #
     # The client's "Properties:" row, which the portal did not have at all. Its word list lives in
@@ -1163,6 +1212,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     gap()
 
+    group("spells")
+
     # --- spells ---------------------------------------------------------------------------------
     #
     # THE CAST-ON-USE SPELL IS NOT IN THE SPELL BOOK. An item's `PropertyDataId.Spell` (28) is the
@@ -1198,7 +1249,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             })
 
         detail["spells"] = named
-        lines.append("Spells: " + ", ".join(s["name"] for s in named))
+        sentence("Spells: " + ", ".join(s["name"] for s in named))
 
         # The client prints these under their own heading, one per spell, prefixed with "~". They
         # are most of what its panel actually says - the portal listed the names and stopped.
@@ -1208,8 +1259,13 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             # The client keeps the NAMES and the DESCRIPTIONS as two blocks, not one - see any
             # weapon panel, where the requirements sit between them.
             gap()
-            lines.append("Spell Descriptions:")
-            lines.extend(f"~ {s['name']}: {s['desc']}" for s in described)
+            group("descriptions")
+            sentence("Spell Descriptions:")
+
+            for s in described:
+                sentence(f"~ {s['name']}: {s['desc']}")
+
+    group("enchantments")
 
     # --- enchantments currently ON the item ------------------------------------------------------
     #
@@ -1242,10 +1298,14 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
         if active:
             detail["enchantments"] = active
-            lines.append("Enchantments:")
-            lines.extend(f"~ {a['name']}: {a['desc']}" if a["desc"] else f"~ {a['name']}" for a in active)
+            sentence("Enchantments:")
+
+            for a in active:
+                sentence(f"~ {a['name']}: {a['desc']}" if a["desc"] else f"~ {a['name']}")
 
     gap()
+
+    group("flavour")
 
     # --- flavour ---------------------------------------------------------------------------------
     for key, prop in (("use", STRING_USE), ("shortDesc", STRING_SHORT_DESC),
@@ -1265,10 +1325,66 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             if key == "longDesc" and detail.get("gemText"):
                 text = f"{text}, set with {detail['gemText']}"
 
+            sentence(text)
+
+    # THE PANEL, in the order the client prints it.
+    #
+    # Taken from Chris's in-game screenshots, which are the only source for this - field order lives
+    # in the client's rendering code, not in any string or anything the server sends. One list per
+    # panel rather than one decision per field, so a future correction is an edit here.
+    #
+    # A weapon reads: identity, combat, spells, cleave, properties, requirements+magic, spell
+    # descriptions, flavour. Armour reads: identity, coverage, armour, properties, enchantments.
+    # Both are covered by one order because groups that produce nothing cost nothing.
+    PANEL_ORDER = [
+        "identity",       # value, burden, workmanship
+        "coverage",       # what it covers / armour type
+        "armour",         # armour level and the per-type resistances
+        "set",            # "Set: Weave of Melee Defense" - its own block on a cloak
+        "combat",         # skill, damage, speed, the bonuses, cleave
+        "spells",         # the spell NAMES
+        "properties",     # Retained, Unenchantable, Cast on Strike, imbues
+        "requirements",   # wield / activation sentences, spellcraft, mana, mana cost
+        "descriptions",   # Spell Descriptions block
+        "enchantments",   # what is currently ON the item
+        "flavour",        # the composed name and any prose
+    ]
+
+    lines: list[str] = []
+    buffed: list[int] = []
+
+    for name in PANEL_ORDER:
+        entries = groups.get(name)
+
+        if not entries:
+            continue
+
+        if lines:
+            lines.append("")
+
+            # DOUBLE blank before the enchantment block. The client sets it apart from the rest of
+            # the panel more than it sets any other group apart, and Chris asked for it by name:
+            # "There's a double line spacing before 'Enchantments' that we're missing".
+            if name == "enchantments":
+                lines.append("")
+
+        for text, is_buff, _ in sorted(entries, key=lambda e: e[2]):
+            if is_buff:
+                buffed.append(len(lines))
+
             lines.append(text)
 
-    while lines and lines[-1] == "":
-        lines.pop()
+    # Anything a block emitted before naming its group - there should be none, but a stray write
+    # must not vanish silently.
+    for name, entries in groups.items():
+        if name in PANEL_ORDER:
+            continue
+
+        for text, is_buff, _ in sorted(entries, key=lambda e: e[2]):
+            if is_buff:
+                buffed.append(len(lines))
+
+            lines.append(text)
 
     detail["lines"] = lines
     # Indices into `lines`, so the front-end colours what the game colours and nothing else.
