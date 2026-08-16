@@ -716,7 +716,7 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
         # the character carrying it.
         wielded = row.get("wielder_id") is not None
         detail = items.build_detail(i, f, st, spells.get(oid, []),
-                                    ench if wielded else None, item_ench.get(oid))
+                                    ench if wielded else None, item_ench.get(oid), d)
 
         item = {
             "id": oid,

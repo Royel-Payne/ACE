@@ -33,6 +33,8 @@ INT_MATERIAL_TYPE = 131
 # `IsEnchantable => (ResistMagic ?? 0) < 9999` (WorldObject_Weapon.cs:532). An item at or above
 # that cannot take an enchantment, so the WIELDER's aura must not be merged into its panel.
 INT_RESIST_MAGIC = 36
+# PropertyDataId.Spell - the spell an item casts when activated, kept apart from its spell book.
+DID_SPELL = 28
 UNENCHANTABLE_RESIST_MAGIC = 9999
 INT_WORKMANSHIP = 105
 INT_SPELLCRAFT = 106
@@ -658,7 +660,8 @@ def _fmt(n) -> str:
 
 
 def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
-                 ench: list[dict] | None = None, ench_item: list[dict] | None = None) -> dict:
+                 ench: list[dict] | None = None, ench_item: list[dict] | None = None,
+                 dids: dict | None = None) -> dict:
     """The examine panel, as structured data plus ready-made lines.
 
     Both shapes on purpose: `lines` is what the tooltip renders today with no parsing, and the
@@ -1004,16 +1007,40 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         lines.append("Bonded")
 
     # --- spells ---------------------------------------------------------------------------------
-    if spells:
+    #
+    # THE CAST-ON-USE SPELL IS NOT IN THE SPELL BOOK. An item's `PropertyDataId.Spell` (28) is the
+    # one it casts when activated, and the client lists it FIRST, ahead of the book. The Gold Orb's
+    # book holds four rows while the game shows five - the missing one, "Mana Boost Other VI", is
+    # the orb's whole purpose and was the only spell a player would actually cast from it.
+    spell_ids = []
+
+    if dids and (cast := dids.get(DID_SPELL)):
+        spell_ids.append(int(cast))
+
+    spell_ids += [s for s in (spells or []) if s not in spell_ids]
+
+    if spell_ids:
         table = curves.spell_table()
         named = []
 
-        for spell_id in spells:
-            meta = table.get(spell_id)
-            named.append({"id": spell_id, "name": (meta or {}).get("name") or f"Spell {spell_id}"})
+        for spell_id in spell_ids:
+            meta = table.get(spell_id) or {}
+            named.append({
+                "id": spell_id,
+                "name": meta.get("name") or f"Spell {spell_id}",
+                "desc": meta.get("desc"),
+            })
 
         detail["spells"] = named
         lines.append("Spells: " + ", ".join(s["name"] for s in named))
+
+        # The client prints these under their own heading, one per spell, prefixed with "~". They
+        # are most of what its panel actually says - the portal listed the names and stopped.
+        described = [s for s in named if s.get("desc")]
+
+        if described:
+            lines.append("Spell Descriptions:")
+            lines.extend(f"~ {s['name']}: {s['desc']}" for s in described)
 
     # --- flavour ---------------------------------------------------------------------------------
     for key, prop in (("use", STRING_USE), ("shortDesc", STRING_SHORT_DESC),
