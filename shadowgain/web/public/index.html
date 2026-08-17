@@ -541,8 +541,109 @@ async function selectCharacter(id, chars){
     CHAR = await api('/character/'+id).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
   }catch(e){ $('#charArea').innerHTML='<div class="loading">Could not load this character.</div>'; return; }
   mountSheet();
+  scheduleRefresh(id, chars);
+}
+
+function scheduleRefresh(id, chars){
+  if(refreshTimer) clearTimeout(refreshTimer);
   // re-fetch on the cache cadence so an idle tab stays reasonably fresh
-  refreshTimer = setTimeout(()=>selectCharacter(id, chars), (CHAR.cacheSeconds||300)*1000);
+  refreshTimer = setTimeout(()=>refreshCharacter(id, chars), (CHAR&&CHAR.cacheSeconds||300)*1000);
+}
+
+/* 162 - THE REFRESH USED TO BE selectCharacter, WHICH IS THE USER'S CLICK.
+ *
+ * That blanked #charArea to "Loading...", refetched, and ran mountSheet - rebuilding the sheet
+ * from its template. Every five minutes the tab reset to Attributes, the selected row and its
+ * readout cleared, both panes scrolled to the top, the examine panel closed and the 3D model was
+ * remounted. Chris: "I'll be looking at a skill and the page refresh resets the view."
+ *
+ * The rest of this file already knows better - the pack click and the Slots toggle both go out of
+ * their way NOT to re-render, because a re-render detaches the live WebGL canvas. The refresh was
+ * the one path still doing it.
+ *
+ * So: fetch quietly, and only touch the DOM if something actually changed. A character who is
+ * standing still produces an identical payload and now costs nothing at all - no flicker, no
+ * scroll jump, nothing. A character who is earning XP re-renders the panes, and the view is put
+ * back afterwards.
+ *
+ * A FAILED REFRESH LEAVES THE SHEET ALONE. selectCharacter replaces it with "Could not load this
+ * character", which is right when a click produced nothing and quite wrong when a background poll
+ * missed - it would throw away a perfectly good sheet because the network blinked.
+ */
+async function refreshCharacter(id, chars){
+  let next;
+
+  try{
+    next = await api('/character/'+id).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
+  }catch(e){ scheduleRefresh(id, chars); return; }
+
+  const changed = JSON.stringify(next) !== JSON.stringify(CHAR);
+  const wornBefore = equippedIds(CHAR);
+  CHAR = next;
+
+  if(changed){
+    const view = captureView();
+    renderBanner(CHAR); renderAttributes(CHAR); renderSkills(CHAR);
+    renderTitles(CHAR); renderQuests(CHAR); renderInventory(CHAR);
+    // The model is rebuilt ONLY when the equipment behind it changed. Remounting is a visible
+    // flash and a WebGL context, and a levelling character produces neither new gear nor a new
+    // silhouette - so tying it to the payload changing at all would flash it every XP tick.
+    if(equippedIds(CHAR) !== wornBefore) mountModel(CHAR.id);
+    restoreView(view);
+  }
+
+  scheduleRefresh(id, chars);
+}
+
+function equippedIds(c){
+  return ((c&&c.inventory&&c.inventory.equipped)||[]).map(i=>i.id).join(',');
+}
+
+/* What the player was looking at, so the re-render can put it back. */
+function captureView(){
+  const area=$('#charArea'); if(!area) return null;
+  const row=area.querySelector('.row.sel');
+  const tile=area.querySelector('.selitem');
+  const ex=$('#examine');
+  const scroll={};
+  area.querySelectorAll('.tabpane').forEach(p=>{ if(p.id) scroll[p.id]=p.scrollTop; });
+  return {
+    key: row ? row.dataset.key : null,
+    kind: row ? row.dataset.kind : null,
+    // By ITEM ID, not by the SEL index - renderInventory rebuilds SEL from scratch, so an index
+    // captured before the re-render points at whatever happens to land in that slot after it.
+    itemId: tile ? ((SEL[+tile.dataset.item]||{}).id ?? null) : null,
+    examineOpen: !!(ex && !ex.classList.contains('hidden')),
+    scroll,
+  };
+}
+
+function restoreView(v){
+  if(!v) return;
+  const area=$('#charArea');
+
+  Object.entries(v.scroll).forEach(([id,top])=>{ const p=document.getElementById(id); if(p) p.scrollTop=top; });
+
+  if(v.key){
+    const row=area.querySelector(`.row[data-key="${CSS.escape(v.key)}"][data-kind="${v.kind}"]`);
+    const arr = v.kind==='attr' ? CHAR.attributes : v.kind==='vital' ? CHAR.vitals : CHAR.skills;
+    const o=(arr||[]).find(x=>x.key===v.key);
+
+    // Re-read from the NEW payload, so the readout updates rather than freezing at the old number
+    // - the whole point of refreshing while a skill is open is to watch it move.
+    if(row && o){ row.classList.add('sel'); showReadout(o, v.kind); }
+    else defaultReadout();   // the row is gone; do not leave its readout behind
+  }
+
+  if(v.itemId!=null){
+    const idx=SEL.findIndex(x=>x && x.id===v.itemId);
+
+    if(idx>=0){
+      area.querySelector(`[data-item="${idx}"]`)?.classList.add('selitem');
+      if(v.examineOpen) openExamine(SEL[idx]);
+    }
+    else if(v.examineOpen) closeExamine();   // examined item is no longer carried
+  }
 }
 
 /* ---------- sheet ---------- */
