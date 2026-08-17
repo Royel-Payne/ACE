@@ -228,6 +228,47 @@ namespace ACE.Server.WorldObjects
                 if (this is Creature creature)
                     targetCreature.EmoteManager.OnResistSpell(creature);
             }
+            else if (targetPlayer != null && casterCreature != null && caster != target)
+            {
+                // Shadowgain 168: THE ROLL IS THE USE, not the result.
+                //
+                // Until now Magic Defense trained only on a SUCCESSFUL resist, which makes it a
+                // skill that only grows once it already works. `MagicDefenseCheck` is the standard
+                // 0.03 logistic, so measured against a typical 224-skill caster on LIVE:
+                //
+                //     MagicDefense  50 -> resists  0.5%  (one award per 186 casts)
+                //     MagicDefense 150 -> resists  9.8%  (one per 10)
+                //     MagicDefense 250 -> resists 68.6%  (one per 1.5)
+                //
+                // A 130x swing in gain rate across the range, on top of casters being scarce
+                // because players avoid that content. Over nine hours exactly FOUR of 37 characters
+                // gained any Magic Defense at all, and the one visibly grinding it (Dread) was
+                // being paid for one attempt in fifteen.
+                //
+                // Failing the roll is still using the skill, so it pays a fraction. This is
+                // self-targeting - a player who resists 62% of spells gains ~6% more, one who
+                // resists 6.6% gains ~2.4x - so it lifts the floor and leaves the ceiling, which
+                // is what keeps the retail balance at the top intact.
+                //
+                // Everything else is deliberately shared with the success path: same difficulty
+                // (the CASTER's magic skill, external, so no self-reference), the same ratio clamps
+                // and floor, and the same PvP gate inside Proficiency. Only the weight differs.
+                var onFailure = PropertyManager.GetDouble("magic_defense_gain_on_failure").Item;
+
+                if (onFailure > 0.0)
+                {
+                    targetPlayer.SetCurrentAttacker(casterCreature);
+
+                    Proficiency.OnSuccessUse(targetPlayer, targetPlayer.GetCreatureSkill(Skill.MagicDefense),
+                        magicSkill, onFailure, opponent: casterCreature);
+
+                    // Attributes follow the skill, exactly as on the resist path (022): Magic
+                    // Defense is the one skill the dat gives Self as a primary, and gating the
+                    // attribute differently from the skill is how Self starved the first time.
+                    if (Proficiency.AllowsUsageGain(targetPlayer, casterCreature))
+                        targetPlayer.AwardAttributesForSkill(Skill.MagicDefense, magicSkill, onFailure);
+                }
+            }
 
             if (player != null && player.DebugDamage.HasFlag(Creature.DebugDamageType.Attacker))
             {

@@ -107,6 +107,10 @@ namespace ACE.Server.WorldObjects
                             // this is a player taking damage
                             targetPlayer.TakeDamage(this, damageEvent);
 
+                            // Shadowgain 168: the mirror of the OnEvade call further down. Ships
+                            // disabled for melee - see OnDefenseFailed.
+                            targetPlayer.OnDefenseFailed(this, CombatType.Melee);
+
                             if (damageEvent.ShieldMod != 1.0f)
                             {
                                 var shieldSkill = targetPlayer.GetCreatureSkill(Skill.Shield);

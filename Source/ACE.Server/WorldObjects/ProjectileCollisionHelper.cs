@@ -58,6 +58,12 @@ namespace ACE.Server.WorldObjects
                         {
                             targetPlayer.TakeDamage(sourceCreature, damageEvent);
 
+                            // Shadowgain 168: the mirror of the OnEvade call in the else below.
+                            // Missile Defense is the rarest of the three defences to train - 1,000
+                            // awards against Melee Defense's 154,437 - for the same reason casters
+                            // are avoided: the content is riskier and paid no more for it.
+                            targetPlayer.OnDefenseFailed(sourceCreature, CombatType.Missile);
+
                             // blood splatter?
 
                             if (damageEvent.ShieldMod != 1.0f)

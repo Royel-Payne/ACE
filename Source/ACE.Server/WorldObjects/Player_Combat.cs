@@ -305,6 +305,44 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 168: called when a player FAILS to avoid an attack - the mirror of OnEvade.
+        ///
+        /// Same reasoning as the failed-resist path in WorldObject_Magic: the roll is the use. A
+        /// defence that pays only on success trains slowest for whoever needs it most, because the
+        /// odds of success ARE the skill. Everything except the weight is shared with OnEvade -
+        /// same skill selection, same difficulty (the ATTACKER's weapon skill, external, so no
+        /// self-reference), same clamps and the same PvP gate inside Proficiency.
+        ///
+        /// MELEE SHIPS AT 0 and this is the whole reason the dials are per-defence: Melee Defense
+        /// earns 154,437 awards to Magic Defense's 4,037 over the same window, because melee mobs
+        /// swing constantly and melee content is what players pick. Paying it on hits taken as well
+        /// would inflate the one defence that was never behind.
+        /// </summary>
+        public void OnDefenseFailed(WorldObject attacker, CombatType attackType)
+        {
+            var dial = attackType == CombatType.Missile
+                ? "missile_defense_gain_on_failure"
+                : "melee_defense_gain_on_failure";
+
+            var onFailure = PropertyManager.GetDouble(dial).Item;
+
+            if (onFailure <= 0.0)
+                return;
+
+            if (UnderLifestoneProtection)
+                return;
+
+            if (attacker is not Creature creatureAttacker)
+                return;
+
+            var defenseSkillType = attackType == CombatType.Missile ? Skill.MissileDefense : Skill.MeleeDefense;
+            var defenseSkill = GetCreatureSkill(defenseSkillType);
+            var difficulty = creatureAttacker.GetCreatureSkill(creatureAttacker.GetCurrentWeaponSkill()).Current;
+
+            Proficiency.OnSuccessUse(this, defenseSkill, difficulty, onFailure, opponent: attacker);
+        }
+
+        /// <summary>
         /// Called when player successfully avoids an attack
         /// </summary>
         public override void OnEvade(WorldObject attacker, CombatType attackType)

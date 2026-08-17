@@ -597,17 +597,31 @@ namespace ACE.Server.WorldObjects
         ///
         /// The secondary gets attribute_gain_overlap_factor (0.25) of a full award.
         /// </summary>
-        public void AwardAttributesForSkill(Skill skill, uint difficulty)
+        /// <param name="weight">
+        /// Shadowgain 168: scales BOTH halves, for callers paying a partial award - currently the
+        /// failed-resist path for Magic Defense. At the default 1.0 the behaviour is unchanged.
+        ///
+        /// It cannot simply be forwarded as `weightOverride`, and that is a trap worth naming:
+        /// downstream, `weightOverride` is an ELSE-IF against `isSecondary`, so passing the weight
+        /// raw would pay the secondary the weight (0.10) INSTEAD of the overlap factor (0.25)
+        /// rather than on top of it - quietly paying Focus four times what it should, on the very
+        /// path that exists to stop Self starving.
+        /// </param>
+        public void AwardAttributesForSkill(Skill skill, uint difficulty, double weight = 1.0)
         {
             var (primary, secondary) = GetSkillAttributeFormula(skill);
 
             if (primary == PropertyAttribute.Undef)
                 return;
 
-            AwardAttributeUsageXP(primary, difficulty);
+            // 0.0 means "no override" downstream, which is what keeps the full-award path identical.
+            var partial = weight < 1.0;
+            var overlap = PropertyManager.GetDouble("attribute_gain_overlap_factor").Item;
+
+            AwardAttributeUsageXP(primary, difficulty, false, partial ? weight : 0.0);
 
             if (secondary != PropertyAttribute.Undef && secondary != primary)
-                AwardAttributeUsageXP(secondary, difficulty, true);
+                AwardAttributeUsageXP(secondary, difficulty, true, partial ? overlap * weight : 0.0);
         }
 
         /// <summary>
