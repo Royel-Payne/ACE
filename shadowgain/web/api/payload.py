@@ -706,7 +706,25 @@ def build_inventory(cur, character_id: int, strength: int, dials: dict,
     dids = props("biota_properties_d_i_d")
     # 158: item BOOLS were never loaded - only the character's - which is why "Properties: Retained"
     # could not be rendered no matter what the panel did with it. Retained is PropertyBool 91.
-    bools = props("biota_properties_bool")
+    #
+    # 164: AND THEY HAVE TO GO THROUGH `as_bool`, WHICH THEY DID NOT.
+    #
+    # `biota_properties_bool.value` is a BIT(1), and PyMySQL hands it back as b'\x00' / b'\x01'.
+    # Both are non-empty bytes, so both are TRUTHY - `db.as_bool` exists precisely because of this
+    # and carries the warning in its docstring, and this call site did not use it.
+    #
+    # Every consequence was a line that read as a fact about the item:
+    #
+    #   * "Properties: Retained" appeared on everything carrying the row, false included. Chris's
+    #     Pathwarden Trinket stores Retained = 0 and the game shows no Properties line at all.
+    #   * "Dyeable" the same, from 161 - his Silk Cloak is not dyeable and we said it was.
+    #   * "This item cannot be sold." could NEVER appear, because `not b'\x00'` is False. That
+    #     feature shipped in 161 and had never once rendered.
+    #
+    # The tests passed throughout because they build rows as Python ints, which is the one
+    # representation the database never returns. 164 adds bytes-valued cases for that reason.
+    bools = {oid: {t: db.as_bool(v) for t, v in row.items()}
+             for oid, row in props("biota_properties_bool").items()}
     # 158: item INT64s were never loaded either - ItemTotalXp and ItemBaseXp live here, which is why
     # a cloak's "Item Level: 1 / 3" and "Item XP:" lines could not be rendered at all.
     int64s = props("biota_properties_int64")

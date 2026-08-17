@@ -801,6 +801,35 @@ def _fmt(n) -> str:
     return f"{int(n):,}"
 
 
+def flag(bools: dict | None, prop: int):
+    """One PropertyBool, as a real bool - or None when the item has no row for it.
+
+    164: DEFENCE IN DEPTH, at the point where being wrong is visible. `payload` converts these at
+    the boundary now, which is the right place for it; this exists because the failure mode is a
+    confident sentence about someone's item rather than an exception.
+
+    MySQL BIT(1) arrives from PyMySQL as b'\\x00' / b'\\x01' and BOTH are truthy, so a raw `.get()`
+    reads every stored `false` as `true`. That put "Properties: Retained" on trinkets that are not
+    retained and "Dyeable" on a cloak that is not, and - in the other direction, because
+    `not b'\\x00'` is False - meant "This item cannot be sold." could never render at all.
+
+    None is preserved rather than folded to False: an ABSENT IsSellable row means the item is
+    sellable, which is the opposite of a stored false, and the caller has to be able to tell.
+    """
+    if bools is None:
+        return None
+
+    value = bools.get(prop)
+
+    if value is None:
+        return None
+
+    if isinstance(value, (bytes, bytearray)):
+        return value not in (b"\x00", b"")
+
+    return bool(value)
+
+
 def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                  ench: list[dict] | None = None, ench_item: list[dict] | None = None,
                  dids: dict | None = None, bools: dict | None = None,
@@ -1541,7 +1570,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # have shown this however it was written.
     props_list = []
 
-    if (bools or {}).get(BOOL_RETAINED):
+    if flag(bools, BOOL_RETAINED):
         detail["retained"] = True
         props_list.append("Retained")
 
@@ -1563,7 +1592,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
     # 161: Chris's Silk Baggy Pants show `Properties: Dyeable` in game and had NO Properties line
     # here at all - Dyeable was the only word that applied and we did not read it.
-    if (bools or {}).get(BOOL_DYABLE):
+    if flag(bools, BOOL_DYABLE):
         detail["dyeable"] = True
         props_list.append("Dyeable")
 
@@ -1583,7 +1612,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     #
     # `is not None` matters: an absent row means the item IS sellable, and `.get()` returning None
     # would otherwise read as false and put this sentence on almost every item in the game.
-    sellable = (bools or {}).get(BOOL_IS_SELLABLE)
+    sellable = flag(bools, BOOL_IS_SELLABLE)
 
     if sellable is not None and not sellable:
         detail["sellable"] = False
@@ -1780,6 +1809,27 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # whenever `magic` appears would silently join it to whatever happened to precede it.
     CONTIGUOUS = {("requirements", "magic")}
 
+    # 164: TWO BLANK LINES BEFORE THESE, UNLESS THEY FOLLOW THE BLOCK THAT ABSORBS ONE.
+    #
+    # Chris found it on cloaks and trinkets, and guessed those slots were a late addition with a
+    # different format. It is not slot-specific - it is about which block came before, and five
+    # client panels agree on the rule:
+    #
+    #   item      before "Spells:"   before "Spell Descriptions:"   armour block?   magic block?
+    #   Pants     single             single                         yes             yes
+    #   Ring      DOUBLE             single                         no              yes
+    #   Trinket   DOUBLE             single                         no              yes
+    #   Cloak     DOUBLE             DOUBLE                         no              NO
+    #
+    # So the armour block and the magic block each swallow one of the two blanks. Anything without
+    # armour - a ring, a trinket, a cloak - shows the gap before its spells; a cloak has no
+    # Spellcraft/Mana either, so it shows the second one before the descriptions too. Armour was
+    # simply the first thing we got right, which is why this went unnoticed until now.
+    #
+    # Keyed on the PRECEDING group rather than on the item, so it needs no notion of "is this a
+    # cloak" - the same reason `is_weaponlike` reads properties instead of slots.
+    DOUBLE_UNLESS_AFTER = {"spells": "armour", "descriptions": "magic"}
+
     lines: list[str] = []
     buffed: list[int] = []
     previous: str | None = None
@@ -1796,7 +1846,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             # DOUBLE blank before the enchantment block. The client sets it apart from the rest of
             # the panel more than it sets any other group apart, and Chris asked for it by name:
             # "There's a double line spacing before 'Enchantments' that we're missing".
-            if name == "enchantments":
+            if name == "enchantments" or DOUBLE_UNLESS_AFTER.get(name, previous) != previous:
                 lines.append("")
 
         for text, is_buff, _ in sorted(entries, key=lambda e: e[2]):

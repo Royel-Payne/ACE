@@ -23,7 +23,8 @@ from . import items
 def _lines(**kw) -> list[str]:
     ints = kw.pop("ints", {})
     floats = kw.pop("floats", {})
-    return items.build_detail(ints, floats, {}, [], **kw)["lines"]
+    spells = kw.pop("spells", [])
+    return items.build_detail(ints, floats, {}, spells, **kw)["lines"]
 
 
 # --- Covers ---------------------------------------------------------------------------------------
@@ -193,3 +194,67 @@ def test_a_ranged_weapon_gets_no_attack_enchantment():
                              weenie_type=next(iter(sorted(items.WEAPON_WEENIE_TYPES))))
 
     assert round(bow["attackMod"], 6) == 1.05
+
+
+# --- 164. BIT(1) arrives as bytes, and both values are truthy ---------------------------------------
+
+
+def test_a_stored_false_bool_is_false():
+    """PyMySQL hands BIT(1) back as b'\x00' / b'\x01' and `bool(b'\x00')` is True.
+
+    Chris's Pathwarden Trinket stores Retained = 0 and the game shows no Properties line; we showed
+    "Properties: Retained" on it, and on everything else carrying the row. His Silk Cloak got a
+    "Dyeable" it does not have the same way.
+
+    Every earlier test built these rows as Python ints - the one representation the database never
+    returns - which is exactly why they all passed while LIVE was wrong.
+    """
+    assert items.flag({items.BOOL_RETAINED: b"\x00"}, items.BOOL_RETAINED) is False
+    assert items.flag({items.BOOL_RETAINED: b"\x01"}, items.BOOL_RETAINED) is True
+
+
+def test_an_absent_bool_stays_none():
+    """None and a stored False are different facts: an absent IsSellable row means SELLABLE."""
+    assert items.flag({}, items.BOOL_IS_SELLABLE) is None
+    assert items.flag(None, items.BOOL_IS_SELLABLE) is None
+
+
+def test_retained_is_not_claimed_for_a_stored_false():
+    assert "Properties: Retained" not in _lines(bools={items.BOOL_RETAINED: b"\x00"})
+    assert "Properties: Retained" in _lines(bools={items.BOOL_RETAINED: b"\x01"})
+
+
+def test_dyeable_is_not_claimed_for_a_stored_false():
+    assert "Properties: Dyeable" not in _lines(bools={items.BOOL_DYABLE: b"\x00"})
+
+
+def test_cannot_be_sold_renders_from_the_bytes_the_driver_returns():
+    """`not b'\x00'` is False, so this sentence had never once rendered on LIVE."""
+    assert "This item cannot be sold." in _lines(bools={items.BOOL_IS_SELLABLE: b"\x00"})
+    assert "This item cannot be sold." not in _lines(bools={items.BOOL_IS_SELLABLE: b"\x01"})
+
+
+# --- 164. the double blank on cloaks and trinkets --------------------------------------------------
+
+
+def _spells_gap(**kw):
+    """How many blank lines sit immediately before the `Spells:` line."""
+    lines = _lines(**kw)
+    i = next(n for n, ln in enumerate(lines) if ln.startswith("Spells:"))
+    gap = 0
+    while i-1-gap >= 0 and lines[i-1-gap] == "":
+        gap += 1
+    return gap
+
+
+def test_spells_takes_a_double_gap_when_there_is_no_armour_block():
+    """A ring, a trinket and a cloak all show two blank lines before Spells; armour shows one."""
+    no_armour = _spells_gap(ints={items.INT_VALUE: 50}, spells=[1])
+    assert no_armour == 2
+
+
+def test_spells_takes_a_single_gap_directly_after_armour():
+    """Silk Baggy Pants: the resistance block absorbs one of the two."""
+    with_armour = _spells_gap(ints={items.INT_VALUE: 50, items.INT_ARMOR_LEVEL: 200},
+                              floats={items.FLOAT_ARMOR_MOD_SLASH: 0.8}, spells=[1])
+    assert with_armour == 1
