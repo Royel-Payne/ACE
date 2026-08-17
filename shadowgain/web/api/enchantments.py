@@ -176,6 +176,48 @@ def _top_layer(enchantments: list[dict], want: int, key: int) -> list[dict]:
     return list(by_category.values())
 
 
+# The spell ids above this are cooldown bookkeeping rather than real enchantments, and ACE skips
+# them when it builds the list the client sees (`EnchantmentManager.GetEnchantments`). Nothing in
+# our spell table reaches 0x8000, so this changes no output today - it is here because the rule is
+# part of the ported function and a silently-omitted filter is the kind of thing that is true right
+# up until it is not.
+SPELL_CATEGORY_COOLDOWN = 0x8000
+
+
+def top_layer_all(enchantments: list[dict]) -> list[dict]:
+    """The winner in every spell category, regardless of what stat it modifies.
+
+    160: THE DISPLAY LIST NEEDED THIS AND DID NOT HAVE IT. `_top_layer` above has always applied
+    the category rule, but only for one stat type at a time, because it exists to compute a NUMBER.
+    The panel's "Enchantments:" list was built straight from the registry rows instead, so it
+    printed every enchantment an item had ever been given that had not yet expired.
+
+    On Kill's Pathwarden Helm that read:
+
+        ~ Impenetrability I: ...improves armor value by 20 points
+        ~ Impenetrability II: ...improves armor value by 50 points
+
+    where the game lists only Impenetrability II. Both rows are real and both are in the registry -
+    but they share a spell category, so the weaker one is dormant, waiting to resume if the stronger
+    expires first. Printed together they read as +70 on an item that has +50, and the armour figure
+    directly above them says 50. The oracle found this on 11 of 101 equipped items.
+
+    Same tie-break as `_top_layer`: PowerLevel decides, then the later cast.
+    """
+    by_category: dict[int, dict] = {}
+
+    for e in enchantments:
+        if int(e.get("spell") or 0) > SPELL_CATEGORY_COOLDOWN:
+            continue
+
+        best = by_category.get(e["category"])
+
+        if best is None or (e["power"], e["start"]) > (best["power"], best["start"]):
+            by_category[e["category"]] = e
+
+    return list(by_category.values())
+
+
 def additive(enchantments: list[dict], want: int, key: int) -> float:
     return sum(e["value"] for e in _top_layer(enchantments, want | ADDITIVE, key))
 
@@ -237,9 +279,17 @@ def skill_current(base: int, enchantments: list[dict], skill_id: int) -> int:
 # Matching on the key alone would add 40 to a multiplier and report +4017%. `FLOAT` is the filter
 # that separates them.
 
+# 160: EVERY ONE OF THESE COMES IN A PAIR, and reading only the first half is a silent
+# undercount. A buff cast on the ITEM lands on the plain property; the same buff cast on the
+# WIELDER lands on the `WeaponAura*` twin, and ACE's getters always combine both. `defense_mod`
+# had the pair from the start; `mana_conv_mod` did not, which is why merging the wielder's
+# enchantments into an orb multiplied by exactly 1.0 and looked like it was working.
 FLOAT_WEAPON_DEFENSE = 29
 FLOAT_WEAPON_AURA_DEFENSE = 169
 FLOAT_MANA_CONVERSION_MOD = 144
+FLOAT_WEAPON_AURA_MANA_CONV = 171
+FLOAT_WEAPON_OFFENSE = 62
+FLOAT_WEAPON_AURA_OFFENSE = 168
 
 
 def defense_mod(enchantments: list[dict]) -> float:
@@ -248,13 +298,25 @@ def defense_mod(enchantments: list[dict]) -> float:
             + additive(enchantments, FLOAT, FLOAT_WEAPON_AURA_DEFENSE))
 
 
+def attack_mod(enchantments: list[dict]) -> float:
+    """`EnchantmentManager.GetAttackMod()` — additive over WeaponOffense AND WeaponAuraOffense.
+
+    Heart Seeker. The oracle caught Adramelech's Flaming Nodachi reading 1.14 against the game's
+    1.31 - the aura was on him, not on the sword, and nothing here was looking for it.
+    """
+    return (additive(enchantments, FLOAT, FLOAT_WEAPON_OFFENSE)
+            + additive(enchantments, FLOAT, FLOAT_WEAPON_AURA_OFFENSE))
+
+
 def mana_conv_mod(enchantments: list[dict]) -> float:
     """`EnchantmentManager.GetManaConvMod()` — MULTIPLICATIVE, unlike the defense mods above.
 
-    ACE's own comment: *"enchantments are multiplicative, so they are only effective if there is a
-    base mod"* — a 1.7x aura on an item with no ManaConversionMod is still nothing.
+    Hermetic Link. ACE's own comment: *"enchantments are multiplicative, so they are only
+    effective if there is a base mod"* — a 1.7x aura on an item with no ManaConversionMod is still
+    nothing, which is why an orb storing 0.08 is the thing being scaled rather than replaced.
     """
-    return multiplier(enchantments, FLOAT, FLOAT_MANA_CONVERSION_MOD)
+    return (multiplier(enchantments, FLOAT, FLOAT_MANA_CONVERSION_MOD)
+            * multiplier(enchantments, FLOAT, FLOAT_WEAPON_AURA_MANA_CONV))
 
 
 INT_ARMOR_LEVEL = 28

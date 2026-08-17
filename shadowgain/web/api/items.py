@@ -548,6 +548,66 @@ def is_focus(ints: dict) -> bool:
     )
 
 
+# --- is this a weapon? ---------------------------------------------------------------------------
+#
+# 160: THE ANSWER IS NOT "DOES IT HAVE A DAMAGE PROPERTY", AND ASSUMING SO PUT A DAMAGE LINE ON
+# FIVE PAIRS OF BOOTS AND GAUNTLETS. The oracle sweep across 101 equipped items found Steel Toed
+# Boots reporting `Damage: 25`, Opal Gauntlets 20, Chainmail Gauntlets 18, Sandals 17, Leather
+# Boots 13 - none of which the client shows, because the game never sends them.
+#
+# Boots and gauntlets carry a stored Damage for the kick and punch attacks. It is real, and it is
+# not part of examine. AppraiseInfo gates the whole weapon block on:
+#
+#     if (wo.Damage != null && !(wo is Clothing) || wo is MeleeWeapon || wo is Missile
+#         || wo is MissileLauncher || wo is Ammunition || wo is Caster)
+#         BuildWeapon(wo);
+#
+# `&&` binds tighter than `||`, so that reads: has damage AND is not clothing, OR is one of the
+# five weapon classes. Ported exactly rather than approximated - "clothing with damage" is
+# precisely the case that was wrong, so a looser rule would fix nothing.
+#
+# This is the counter-example to the comment on the weapon block below, which says the properties
+# decide and no is-this-a-weapon test is needed. That is right for every field a weapon may or may
+# not carry, and wrong for whether the block should run at all. Both are now true in the file.
+
+
+def _weenie_type_ids(*names: str) -> frozenset[int]:
+    """Resolve WeenieType NAMES to ids from the generated enum table.
+
+    By name, never by number: hand-mapped ids have caused silent bugs here before, and the
+    exporter already ships the mapping. An id that cannot be resolved raises at import rather
+    than quietly dropping out of the set - a weapon test that is missing `MeleeWeapon` would put
+    the panel back exactly where it started, which is the failure hardest to notice.
+    """
+    table = curves.enums().get("weenieType") or {}
+    by_name = {v["name"]: int(k) for k, v in table.items()}
+    missing = [n for n in names if n not in by_name]
+
+    if missing:
+        raise KeyError(f"weenieType enum is missing {missing} - re-run the enum exporter")
+
+    return frozenset(by_name[n] for n in names)
+
+
+WEAPON_WEENIE_TYPES = _weenie_type_ids(
+    "MeleeWeapon", "Missile", "MissileLauncher", "Ammunition", "Caster")
+CLOTHING_WEENIE_TYPE = next(iter(_weenie_type_ids("Clothing")))
+
+
+def is_weaponlike(weenie_type: int | None, ints: dict) -> bool:
+    """Would the game send this item a weapon block?"""
+    if weenie_type in WEAPON_WEENIE_TYPES:
+        return True
+
+    if ints.get(INT_DAMAGE) is None:
+        return False
+
+    # `weenie_type is None` means the caller did not supply one - the older tests, not the live
+    # path, which always does. Falling back to the previous behaviour keeps them meaningful
+    # instead of silently asserting the opposite of what they were written for.
+    return weenie_type != CLOTHING_WEENIE_TYPE
+
+
 def coverage(wielded_location: int | None) -> list[str]:
     """Every armour area this item covers, in head-to-toe order."""
     if not wielded_location:
@@ -694,7 +754,7 @@ def _fmt(n) -> str:
 def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                  ench: list[dict] | None = None, ench_item: list[dict] | None = None,
                  dids: dict | None = None, bools: dict | None = None,
-                 int64s: dict | None = None) -> dict:
+                 int64s: dict | None = None, weenie_type: int | None = None) -> dict:
     """The examine panel, as structured data plus ready-made lines.
 
     Both shapes on purpose: `lines` is what the tooltip renders today with no parsing, and the
@@ -1063,15 +1123,25 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # Chris found it by clicking a weapon and getting a near-empty window.
     #
     # Everything below is omitted when absent, so a robe gains nothing and a caster shows only the
-    # caster-ish half of it. That is why there is no "is this a weapon" test: the properties
-    # decide, which also means a weapon type nobody anticipated still renders whatever it carries.
+    # caster-ish half of it. The properties decide, which also means a weapon type nobody
+    # anticipated still renders whatever it carries.
+    #
+    # 160 QUALIFIED THAT, FOR DAMAGE ONLY. Boots and gauntlets store a Damage for kick and punch
+    # and are not weapons, so "the properties decide" put `Damage: 25` on five pairs of footwear.
+    # `is_weaponlike` is AppraiseInfo's own gate, ported - see the note beside it.
+    #
+    # The gate is deliberately NOT wrapped around this whole group. A shield stores WeaponDefense
+    # and the client shows it, but a shield builds no WeaponProfile - so gating the block wholesale
+    # would trade five wrong lines for a missing one on every shield in the game. Only the fields
+    # the oracle actually caught leaking are gated, and the sweep found the rest clean.
+    #
     # DAMAGE CARRIES ENCHANTMENTS, exactly as WeaponDefense does - `baseDamage + damageBonus +
     # auraDamageBonus` (WeaponProfile.GetDamage). We merged one and not the other, so a Blood
     # Drinker weapon read at its stored numbers while the game showed twenty points more.
     #
     # The aura half is gated on IsEnchantable; the ITEM's own bonus is not - that asymmetry is
     # ACE's, not a simplification here.
-    if (damage := ints.get(INT_DAMAGE)):
+    if (damage := ints.get(INT_DAMAGE)) and is_weaponlike(weenie_type, ints):
         variance = floats.get(FLOAT_DAMAGE_VARIANCE)
 
         dmg_bonus = enchantments.damage_bonus(ench_item or [])
@@ -1149,15 +1219,24 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         raw = floats.get(prop)
 
         # 158: AppraiseInfo adds the ITEM's and the WIELDER's defense mods before the client sees
-        # the number, so the stored 1.17 renders in game as +32.0% while a +0.15 aura is up. Only
-        # WeaponDefense gets this - it is the one AppraiseInfo modifies in that block.
+        # the number, so the stored 1.17 renders in game as +32.0% while a +0.15 aura is up.
         # ACE adds them SEPARATELY - `defenseMod + auraDefenseMod` - rather than pooling the two
         # registries. That matters: each side layers its own spells first, so a concatenated list
         # could pick a top layer across two objects that never competed.
+        #
+        # 160: ATTACK SKILL GETS THE SAME TREATMENT, and the note above used to say WeaponDefense
+        # was "the one AppraiseInfo modifies in that block". It is not - `WeaponProfile` runs the
+        # wielder's mods through GetAttackMod as well, and Heart Seeker on the wielder left
+        # Adramelech's Flaming Nodachi reading 1.14 against the game's 1.31.
+        BUFF_MERGE = {
+            FLOAT_WEAPON_DEFENSE: enchantments.defense_mod,
+            FLOAT_WEAPON_OFFENSE: enchantments.attack_mod,
+        }
+
         bonus = 0.0
 
-        if prop == FLOAT_WEAPON_DEFENSE and raw is not None and (wielder_ench or ench_item):
-            bonus = enchantments.defense_mod(ench_item or []) + enchantments.defense_mod(wielder_ench)
+        if (merge := BUFF_MERGE.get(prop)) and raw is not None and (wielder_ench or ench_item):
+            bonus = merge(ench_item or []) + merge(wielder_ench)
             raw += bonus
 
         if (text := _pct(raw, places)) is not None:
@@ -1453,7 +1532,11 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         seen_ids: set[int] = set()
         active = []
 
-        for e in ench_item:
+        # 160: ONLY THE TOP LAYER IN EACH CATEGORY, and only Item Enchantment school - the two
+        # filters `EnchantmentManager.GetEnchantments(MagicSchool.ItemEnchantment)` applies before
+        # AppraiseInfo ever sees the list. Without them the panel listed dormant buffs beside the
+        # ones actually in force; see `enchantments.top_layer_all`.
+        for e in enchantments.top_layer_all(ench_item):
             sid = int(e.get("spell") or 0)
 
             # One line per spell, not per row: a spell that modifies several stats writes a row per
@@ -1461,8 +1544,15 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
             if not sid or sid in seen_ids:
                 continue
 
-            seen_ids.add(sid)
             meta = table.get(sid) or {}
+
+            # An unknown spell keeps its line - it is still on the item, and dropping it would be
+            # a silent omission. A KNOWN spell from another school is dropped, because the client
+            # genuinely does not list it here.
+            if meta and meta.get("school") != "ItemEnchantment":
+                continue
+
+            seen_ids.add(sid)
             active.append({"id": sid, "name": meta.get("name") or f"Spell {sid}", "desc": meta.get("desc")})
 
         if active:

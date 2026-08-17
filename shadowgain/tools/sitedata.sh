@@ -202,8 +202,9 @@ if [ "$UP" = true ]; then
   #
   # `sg-roster` and not `listplayers`: both print the same roster, but listplayers is a
   # Developer-tier command that ShadowgainAudit relays to Discord #audit, and putting it on a
-  # 15s timer flooded that channel (125). sg-roster is in ReadOnlyNoise, which is what a command
-  # meant for polling looks like. Before putting ANY console command on a timer, check that set.
+  # 15s timer flooded that channel (125). Both are now in ShadowgainAudit.NotAudited (160), so
+  # neither would flood today - but a command meant for polling should be in that set on purpose.
+  # Before putting ANY console command on a timer, check it.
   # 157: 8s and 2s were 10 of this script's 13.76s, against a 15s timer - a 1.2s margin, and
   # 129's failure was precisely runs left with no idle gap. Neither number was buying anything.
   #

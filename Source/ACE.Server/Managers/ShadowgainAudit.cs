@@ -59,21 +59,40 @@ namespace ACE.Server.Managers
         };
 
         /// <summary>
-        /// Privileged but PURELY INFORMATIONAL commands, excluded from the trail.
+        /// Commands that are NOT written to the trail.
         ///
-        /// This is a deliberate narrowing of "audit every privileged command", and it exists
-        /// because the first live test produced four audit lines a minute from nobody: the
-        /// site's own status exporter runs `serverstatus` on a 15s systemd timer, which is
-        /// ~5,700 machine-generated lines a day. That would bury every real staff action, and
-        /// would rate-limit the Discord mirror for no benefit.
+        /// 160: THE CRITERION IS UNFAIR GAMEPLAY, NOT ACTIVITY. Chris, after eight days of live
+        /// data: "the point of audit isn't to reveal harmless commands, it's to prevent abuse
+        /// like giving items or xp or createitem... we shouldn't be monitored for EVERY action
+        /// unless it's an action that creates unfair gameplay."
         ///
-        /// The test for inclusion here is "reads state, changes nothing". An audit exists to
-        /// answer "who did what to the server"; a read that alters nothing has no answer to
-        /// contribute, so excluding it costs no accountability. Anything that MUTATES - even
-        /// harmlessly - stays audited.
+        /// The evidence agreed. Of 263 entries between 2026-08-09 and 2026-08-16, roughly three
+        /// quarters were our own tooling talking to itself - 64 `listplayers`, 20 `sg-appraise`
+        /// from one afternoon of 158 diagnostics, 41 shutdown/world lines from routine deploys,
+        /// 21 `resyncproperties`, 13 `fetch*` reads. The staff actions that matter - 33 dial
+        /// changes, 5 `set-accountaccess`, 12 `sg-multibox`, 7 progression repairs - were a
+        /// minority buried inside them. A trail nobody can skim is not a trail.
+        ///
+        /// THE DEFAULT IS STILL TO AUDIT. This is a denylist, not an allowlist, and that
+        /// asymmetry is the point: a new command that is forgotten here gets RECORDED, which is
+        /// the safe direction to fail. An allowlist would silently exempt whatever nobody
+        /// remembered to add, which is the one failure this file cannot afford.
+        ///
+        /// Three tests admit a command, and nothing else does:
+        ///
+        ///   1. READS - answers a question, changes nothing.
+        ///   2. SERVER OPERATIONS - changes the SERVER, but cannot advantage a CHARACTER.
+        ///      Shutting the world down is disruptive and visible to everyone; it cannot hand
+        ///      anyone an item, a level, or a rank. It belongs in a deploy log, not here.
+        ///   3. STAFF SELF-MOVEMENT - moves only the caller. Anything that moves ANOTHER
+        ///      player stays audited, because that is an action taken ON someone.
+        ///
+        /// Not admitted, however quiet: anything that creates or destroys an object, moves XP or
+        /// levels, edits a character, changes a dial, or changes who holds access.
         /// </summary>
-        private static readonly HashSet<string> ReadOnlyNoise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> NotAudited = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            // --- 1. reads ------------------------------------------------------------------
             "serverstatus",         // polled every 15s by tools/sitedata.sh
             "serverperformance",
             "allstats",
@@ -85,11 +104,49 @@ namespace ACE.Server.Managers
             // sheet's "online" dot flooded Discord #audit with 64 lines in half an hour and
             // buried the staff actions the channel exists to surface.
             //
-            // sitedata.sh now calls sg-roster instead, so this entry is not the live fix. The
-            // omission was still the real defect: two commands with the same output and the same
-            // effect on the world must not be audited differently, or the next person to poll
-            // one of them repeats this.
+            // Two commands with the same output and the same effect on the world must not be
+            // audited differently, or the next person to poll one of them repeats this.
             "listplayers",
+            "finger",
+            // The dial READERS. `modify*` and `setproperty` write and stay audited; these four
+            // only report what a dial currently holds.
+            "fetchbool",
+            "fetchlong",
+            "fetchdouble",
+            "fetchstring",
+            // 158's oracle and its siblings: each one serialises state to a file or the log and
+            // returns. `sg-appraise` is the reason this entry exists - a single sweep across the
+            // nine online characters wrote 20 audit lines about reading other people's armour.
+            "sg-appraise",
+            "sg-objdesc",
+            "sg-xptable",
+            "sg-skillattrs",
+
+            // --- 2. server operations ------------------------------------------------------
+            // Every LIVE deploy runs the shutdown sequence and reopens the world, which is ~5
+            // lines a time and was 41 of the 263. DEPLOY.md is the record of those, and it is a
+            // better one: it says what shipped, which this never could.
+            "shutdown",
+            "cancel-shutdown",
+            "set-shutdown-interval",
+            "world",
+            // Reloads the dial cache from the database. It cannot introduce a value - the write
+            // that produced the value was itself audited, which is the line worth keeping.
+            "resyncproperties",
+
+            // --- 3. staff self-movement ----------------------------------------------------
+            // Going somewhere is not an advantage on a server where staff are not competing.
+            // `teletome` and `teleallto` are deliberately ABSENT: they move other people.
+            "tele",
+            "teleto",
+            "telereturn",
+            "telepoi",
+            "teleloc",
+            "telexyz",
+            "teletype",
+            "teledist",
+            "teledungeon",
+            "sg-tele",
         };
 
         /// <summary>
@@ -115,7 +172,7 @@ namespace ACE.Server.Managers
 
                 var command = commandInfo.Attribute.Command ?? "?";
 
-                if (ReadOnlyNoise.Contains(command))
+                if (NotAudited.Contains(command))
                     return;
 
                 var sb = new StringBuilder(256);
