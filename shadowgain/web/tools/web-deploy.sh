@@ -63,6 +63,63 @@ for f in xptable.json skills.json vitals.json enums.json landblocks.json quests.
 done
 
 # ---------------------------------------------------------------------------------------------
+# pre-flight: the front-end has to PARSE
+# ---------------------------------------------------------------------------------------------
+#
+# 163. index.html carries ~900 lines of inline JavaScript and the API's pytest suite cannot see a
+# line of it. A syntax error there is not a degraded page, it is a BLANK one: the browser abandons
+# the entire script block, so nothing mounts and every part of the portal breaks at once.
+#
+# Until now the only check was loading the deployed page and looking at it - i.e. after it was
+# live. This is the same check, thirty seconds earlier.
+#
+# REQUIRED, not best-effort. A check that prints a warning and continues is a check nobody runs,
+# and the point is that it cannot be forgotten on the one deploy that needed it. SG_SKIP_JSCHECK=1
+# exists for a genuine emergency and announces itself.
+NODE="$(command -v node || true)"
+[ -n "$NODE" ] || { [ -x "/c/Program Files/nodejs/node.exe" ] && NODE="/c/Program Files/nodejs/node.exe"; }
+
+if [ "${SG_SKIP_JSCHECK:-0}" = 1 ]; then
+  echo "!! SG_SKIP_JSCHECK=1 - shipping front-end JavaScript that has NOT been parsed"
+elif [ -z "$NODE" ]; then
+  echo "!! node not found, so the front-end cannot be syntax-checked."
+  echo "   winget install --id OpenJS.NodeJS.LTS -e      (or SG_SKIP_JSCHECK=1 to override)"
+  exit 1
+else
+  echo "==> parsing inline JavaScript ($("$NODE" --version))"
+  JSTMP="$(mktemp -d)"
+  trap 'rm -rf "$JSTMP"' EXIT
+  # Inline blocks that are actually JAVASCRIPT. Three ways to not be one, and the middle case is
+  # why this is an allowlist on `type` rather than "everything without a src=":
+  #
+  #   src=...                  external, not ours to parse
+  #   type="importmap"         JSON. Caught the first version of this check red-handed - it made
+  #                            the check fail on a perfectly good file, which would have been
+  #                            written off as "the checker is broken" and disabled.
+  #   type="text/template"     markup someone may add later
+  #
+  # Joined with a `;` so a trailing expression in one block cannot fuse with the start of the next.
+  python -c "
+import re, sys
+JS = ('', 'module', 'text/javascript', 'application/javascript')
+src = open(sys.argv[1], encoding='utf-8').read()
+blocks = []
+for attrs, body in re.findall(r'<script([^>]*)>(.*?)</script>', src, re.S):
+    if re.search(r'\bsrc\s*=', attrs):
+        continue
+    m = re.search(r'\btype\s*=\s*[\"\']([^\"\']*)[\"\']', attrs)
+    if (m.group(1).strip().lower() if m else '') in JS:
+        blocks.append(body)
+if not blocks:
+    print('!! no inline JavaScript found - has index.html changed shape?'); sys.exit(1)
+open(sys.argv[2], 'w', encoding='utf-8').write('\n;\n'.join(blocks))
+print('    %d block(s), %d lines' % (len(blocks), sum(b.count(chr(10)) for b in blocks)))
+" "$WEB/public/index.html" "$JSTMP/inline.js" || exit 1
+  "$NODE" --check "$JSTMP/inline.js" || { echo "!! index.html inline JavaScript does not parse - aborting"; exit 1; }
+  echo "    parses"
+fi
+
+# ---------------------------------------------------------------------------------------------
 # --setup: everything that only has to happen once
 # ---------------------------------------------------------------------------------------------
 if [ "$SETUP" = 1 ]; then

@@ -483,6 +483,10 @@ function timeAgo(iso){ if(!iso) return ''; const d=(Date.now()-new Date(iso))/36
 function untilTime(iso){ if(!iso) return null; const d=(new Date(iso)-Date.now())/36e5; if(isNaN(d)||d<=0) return null; if(d<1)return Math.round(d*60)+'m'; if(d<24)return Math.round(d)+'h'; return Math.round(d/24)+'d'; }
 
 let CHAR=null, curCont=0, refreshTimer=null, curTab='attributes', SEL=[];
+// 163: which character the refresh is for, and when its data actually arrived. A phone's timers
+// stop while the tab is hidden, so "when is the next refresh due" has to be answered from the
+// clock rather than from a timer that may not have been running.
+let refreshCtx=null, lastFetch=0;
 // Where the equipment frame's own SEL entries end. renderGrid rewinds to it so repeated grid
 // renders replace their items instead of appending a fresh copy on every pack click.
 let SEL_BASE=0;
@@ -490,6 +494,9 @@ let SEL_BASE=0;
 /* ---------- boot / auth ---------- */
 async function boot(){
   pollStatus(); setInterval(pollStatus, 60000);
+  // 163 - see onPageVisible. Registered once at boot, not per character.
+  document.addEventListener('visibilitychange', onPageVisible);
+  window.addEventListener('pageshow', onPageVisible);
   try{
     const me = await api('/me').then(r=>r.json());
     if(me && me.account){ enterPortal(me.account); return; }
@@ -540,14 +547,45 @@ async function selectCharacter(id, chars){
   try{
     CHAR = await api('/character/'+id).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
   }catch(e){ $('#charArea').innerHTML='<div class="loading">Could not load this character.</div>'; return; }
+  lastFetch = Date.now();
   mountSheet();
   scheduleRefresh(id, chars);
 }
 
-function scheduleRefresh(id, chars){
+function refreshCadence(){ return (CHAR&&CHAR.cacheSeconds||300)*1000; }
+
+function scheduleRefresh(id, chars, delayMs){
+  refreshCtx = {id, chars};
   if(refreshTimer) clearTimeout(refreshTimer);
   // re-fetch on the cache cadence so an idle tab stays reasonably fresh
-  refreshTimer = setTimeout(()=>refreshCharacter(id, chars), (CHAR&&CHAR.cacheSeconds||300)*1000);
+  refreshTimer = setTimeout(()=>refreshCharacter(id, chars), delayMs ?? refreshCadence());
+}
+
+/* 163 - A PHONE NEVER REFRESHED, AND HAD NOT SINCE THE PORTAL SHIPPED.
+ *
+ * The refresh has always been a bare setTimeout (126). Mobile browsers freeze timers in a tab that
+ * is backgrounded or behind a locked screen, and they do not run them late to catch up - so on a
+ * phone the countdown stops when you look away and resumes, mid-count, when you come back. Leave
+ * the sheet open, lock the phone, unlock it ten minutes later: nothing has happened, and nothing
+ * is going to for whatever was left of the five minutes.
+ *
+ * Nothing in this file listened for the page becoming visible again. Now it does: on return, if
+ * the data is already due it refetches immediately, and if it is not it re-arms the timer for
+ * whatever is genuinely left rather than starting the five minutes over.
+ *
+ * `pageshow` as well as `visibilitychange` because a phone restoring from the back/forward cache
+ * fires only the former, with the whole JS heap - timers included - resumed from frozen.
+ *
+ * Refreshing faster than `cacheSeconds` would only re-serve the same cached payload, so the
+ * cadence is left alone. This makes the existing one actually elapse.
+ */
+function onPageVisible(){
+  if(document.visibilityState !== 'visible' || !refreshCtx) return;
+
+  const due = lastFetch + refreshCadence() - Date.now();
+
+  if(due <= 0) refreshCharacter(refreshCtx.id, refreshCtx.chars);
+  else scheduleRefresh(refreshCtx.id, refreshCtx.chars, due);
 }
 
 /* 162 - THE REFRESH USED TO BE selectCharacter, WHICH IS THE USER'S CLICK.
@@ -577,6 +615,7 @@ async function refreshCharacter(id, chars){
     next = await api('/character/'+id).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
   }catch(e){ scheduleRefresh(id, chars); return; }
 
+  lastFetch = Date.now();
   const changed = JSON.stringify(next) !== JSON.stringify(CHAR);
   const wornBefore = equippedIds(CHAR);
   CHAR = next;
