@@ -24,6 +24,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import asyncio
 import time
@@ -71,6 +72,55 @@ def _record(key, entry):
         print(f"warning: could not update {LEDGER}: {exc!r}", file=sys.stderr)
 
 
+def unwrap(lines):
+    """Join source-wrapped lines back into one line per paragraph.
+
+    168: DISCORD RENDERS EVERY NEWLINE LITERALLY. Markdown normally treats a single newline as a
+    space, so a paragraph hard-wrapped at 100 characters reads fine in an editor and fine on
+    GitHub - and arrives in Discord broken mid-sentence, roughly every twelve words. The 168
+    announcement went out that way and Chris spotted it immediately: "the formatting is doing
+    something odd".
+
+    Every earlier announcement happened to be authored as one long line per paragraph (159 runs to
+    486 characters), so the convention was real but implicit, and nothing enforced it. Wrapping
+    prose to a sane width is the normal habit everywhere else in this repo, which is exactly why
+    the next author would do the same thing.
+
+    Blank lines still separate paragraphs. Lines that MEAN something structurally keep their own
+    break: headings, list items, quotes, and tables - joining those would corrupt them rather than
+    just reflow them.
+
+    THE MARKER MUST BE FOLLOWED BY A SPACE, and the first attempt at this got it wrong in a way
+    worth keeping. Testing `startswith(("-", "*", ...))` treats `**bold**` as a bullet, so every
+    paragraph opening with a bold lead-in - which is most of them in these announcements - was
+    still broken after its first line. The line count fell 27 -> 20 and looked like a fix; only
+    reading the rendered output showed it was half of one.
+    """
+    BULLET = re.compile(r"^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\|)")
+
+    out, para = [], []
+
+    def flush():
+        if para:
+            out.append(" ".join(para))
+            para.clear()
+
+    for line in lines:
+        stripped = line.strip()
+
+        if not stripped:
+            flush()
+            out.append("")
+        elif BULLET.match(stripped):
+            flush()
+            out.append(stripped)
+        else:
+            para.append(stripped)
+
+    flush()
+    return out
+
+
 def parse_message(raw):
     """First '# ' heading is the title; everything after is the body."""
     lines = raw.strip().splitlines()
@@ -80,7 +130,7 @@ def parse_message(raw):
         title = lines[0][2:].strip()
         lines = lines[1:]
 
-    return title, "\n".join(lines).strip()
+    return title, "\n".join(unwrap(lines)).strip()
 
 
 async def run(args):
