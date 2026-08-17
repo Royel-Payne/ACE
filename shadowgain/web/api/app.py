@@ -92,7 +92,7 @@ def live_dials() -> dict:
                     cur,
                     "SELECT `key`, value FROM config_properties_boolean "
                     "WHERE `key` IN ('skill_uncap_ranks','attributes_start_at_ten',"
-                    "                'burden_capacity_floor_enabled')",
+                    "                'burden_capacity_floor_enabled','show_ammo_buff')",
                 )
             }
 
@@ -115,6 +115,13 @@ def live_dials() -> dict:
             # reads far heavier than the game shows them, because capacity would be 150*Str alone.
             "burden_capacity_floor_enabled": bools.get("burden_capacity_floor_enabled", True),
             "burden_capacity_floor": longs.get("burden_capacity_floor", 3000),
+            # 161b: whether a wielder's damage aura reaches their AMMUNITION. ACE's compiled
+            # default is false and LIVE agrees, so an arrow shows its own damage only.
+            #
+            # It is queried rather than assumed false BECAUSE the failure would be silent: the
+            # examine panel would keep showing unbuffed arrows after the dial was flipped, and
+            # nothing would say why. The IN-list above is the part that is easy to forget.
+            "show_ammo_buff": bools.get("show_ammo_buff", False),
         }
 
     value, _ = _dials_cache.get_or_build("dials", build)

@@ -183,13 +183,23 @@ def test_ammunition_ignores_the_wielders_defense_aura():
     assert "meleeDefenseMod" not in arrow
 
 
-def test_ammunition_still_reports_its_own_stored_defense():
-    """The exclusion drops the AURA, not the arrow's own number - a non-neutral one still shows."""
+def test_ammunition_defense_is_flat_neutral_even_when_stored_otherwise():
+    """CORRECTED IN 161b. This test first asserted 1.05 - that the arrow kept its STORED value and
+    lost only the aura - which is what `AppraiseInfo.cs:415` alone implies.
+
+    It is not the whole rule. `WeaponProfile.GetWeaponDefense` opens with
+    `if (weapon is Ammunition) return 1.0f;`, so the profile the client reads carries a flat 1.0
+    whatever the arrow stores. Both sites agree that ammunition has no defense bonus; only one of
+    them says the stored number survives, and it is the one the client does not read.
+
+    Kept rather than deleted because the half-right version passed, and a passing test that
+    encodes half a rule is the thing worth leaving a marker for.
+    """
     arrow = items.build_detail({}, {items.FLOAT_WEAPON_DEFENSE: 1.05}, {}, [],
                                ench=_defense_aura(0.13),
                                weenie_type=items.AMMUNITION_WEENIE_TYPE)
 
-    assert round(arrow["meleeDefenseMod"], 6) == 1.05
+    assert "meleeDefenseMod" not in arrow
 
 
 def test_a_non_ammunition_weapon_still_takes_the_aura():

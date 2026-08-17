@@ -32,9 +32,20 @@ the gap runs both ways:
     against the game's 22 with **no enchantment rows in the shard at all** - the portal was
     rendering the stored values correctly and had no way to know about the rest.
 
-Neither is fixable here, and the second is not fixable at all: the portal cannot see what has not
-been written. Before filing anything as a bug, check the registry rows in the shard. If they are
-absent, the panel is right and the database is behind.
+  * **A STACK is a moving target.** `Value` and `EncumbranceVal` on a stackable item are the
+    per-unit figure times the count, so an archer firing arrows changes both between the dump and
+    the read. Misadventure's Blunt Arrow walked 616 -> 600 -> 500 across three sweeps minutes
+    apart. Left in the comparison rather than exempted like `ItemCurMana`, because on everything
+    that is not a stack these two are the most basic check there is.
+
+Neither of the first two is fixable here, and the shard one is not fixable at all: the portal
+cannot see what has not been written. Before filing anything as a bug, check the registry rows in
+the shard. If they are absent, the panel is right and the database is behind.
+
+161 spent three rounds re-learning this. Misadventure buffing a full bane set mid-sweep produced
+four items' worth of "wrong" resistances, every one of them low by exactly the bane's own value,
+and the enchantment lists short by exactly the rows that had not landed yet. `load_many` was
+returning all ten rows correctly by the time anyone looked.
 
 WHAT IT COMPARES, AND WHAT IT DELIBERATELY DOES NOT
 

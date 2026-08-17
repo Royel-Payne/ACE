@@ -37,6 +37,17 @@ INT_RESIST_MAGIC = 36
 DID_SPELL = 28
 # PropertyBool.Retained - the client lists it under "Properties:".
 BOOL_RETAINED = 91
+# 161: both are plain PropertyBools that AppraiseInfo never touches - it ships the bool table
+# wholesale and the CLIENT turns them into words. So the wording below is the client's, including
+# its spelling: ACE's enum says `Dyable`, the panel says **Dyeable**.
+#
+# THE TWO ARE READ IN OPPOSITE DIRECTIONS, which is the whole reason they are not one helper.
+# `Dyeable` prints when the flag is TRUE. `IsSellable` prints when it is FALSE - the sentence is
+# "this item cannot be sold" - and an ABSENT row means sellable, so presence has to be tested
+# separately from truth. Shard-wide: 492 of 516 Dyable rows are true, 475 of 584 IsSellable rows
+# are false, so reading either by presence alone would be right often enough to look correct.
+BOOL_DYABLE = 100
+BOOL_IS_SELLABLE = 69
 # PropertyDataId.ProcSpell - cast on strike, which the client also names under "Properties:".
 DID_PROC_SPELL = 55
 # Item levelling (cloaks and aetheria). Level is NOT stored - it is derived from total XP.
@@ -478,6 +489,22 @@ COVERAGE_MASKS = [
     ("feet",       0x00000100),                          # FootWear
 ]
 
+# 161: the client's WORDS for those areas, for the `Covers ...` sentence.
+#
+# The panel never had that line - `coverage` was computed for the paperdoll grid and nothing wrote
+# it into the examine text, so a robe that the game describes as covering seven areas said nothing
+# at all. Chris's screenshots: `Covers Abdomen, Upper Legs, Lower Legs` on his Silk Baggy Pants and
+# `Covers Chest, Abdomen, Upper Arms, Lower Arms, Upper Legs, Lower Legs, Feet` on the Hoary
+# Mattekar Robe. A sentence, no colon, no trailing full stop.
+#
+# ORDER COMES FROM COVERAGE_MASKS, which is already in EquipMask bit order - and that is the order
+# the client prints, arms between abdomen and legs rather than anything anatomical.
+COVERAGE_WORDS = {
+    "head": "Head", "chest": "Chest", "abdomen": "Abdomen",
+    "upperArms": "Upper Arms", "lowerArms": "Lower Arms", "hands": "Hands",
+    "upperLegs": "Upper Legs", "lowerLegs": "Lower Legs", "feet": "Feet",
+}
+
 # Everything that is NOT body coverage: worn or held in one discrete place.
 DISCRETE_MASKS = [
     ("weapon",    0x00100000 | 0x02000000),   # MeleeWeapon, TwoHanded
@@ -593,6 +620,22 @@ WEAPON_WEENIE_TYPES = _weenie_type_ids(
     "MeleeWeapon", "Missile", "MissileLauncher", "Ammunition", "Caster")
 CLOTHING_WEENIE_TYPE = next(iter(_weenie_type_ids("Clothing")))
 AMMUNITION_WEENIE_TYPE = next(iter(_weenie_type_ids("Ammunition")))
+
+# 161b: `WorldObject.IsRanged` = IsAmmoLauncher || IsThrownWeapon, and both are read off
+# DefaultCombatStyle (PropertyInt 46) rather than the weenie type. It matters because
+# `WeaponProfile.GetWeaponOffense` gives a ranged weapon NO attack enchantment at all - not the
+# item's own, not the wielder's - where a melee weapon gets both.
+INT_DEFAULT_COMBAT_STYLE = 46
+COMBAT_STYLE_BOW = 0x00010
+COMBAT_STYLE_CROSSBOW = 0x00020
+COMBAT_STYLE_THROWN = 0x00080
+COMBAT_STYLE_ATLATL = 0x00400
+RANGED_COMBAT_STYLES = (COMBAT_STYLE_BOW | COMBAT_STYLE_CROSSBOW
+                        | COMBAT_STYLE_THROWN | COMBAT_STYLE_ATLATL)
+
+
+def is_ranged(ints: dict) -> bool:
+    return bool((ints.get(INT_DEFAULT_COMBAT_STYLE) or 0) & RANGED_COMBAT_STYLES)
 
 
 def is_weaponlike(weenie_type: int | None, ints: dict) -> bool:
@@ -736,14 +779,20 @@ def resistance_word(mod: float) -> str:
     return RESISTANCE_WORDS[-1][1]
 
 
+# 161: ORDER AND ONE WORD BOTH CORRECTED, from Chris's Silk Baggy Pants and Hoary Mattekar Robe.
+#
+# The client prints **Fire before Cold** - we had them the other way round - and calls the seventh
+# one **Electric**, not Lightning. "Lightning" is `ArmorProfile`'s field name, which is where it
+# came from; the player never sees that word. Both screenshots agree, and they are two different
+# items on two different characters.
 RESISTANCES = [
     ("Slashing", FLOAT_ARMOR_MOD_SLASH),
     ("Piercing", FLOAT_ARMOR_MOD_PIERCE),
     ("Bludgeoning", FLOAT_ARMOR_MOD_BLUDGEON),
-    ("Cold", FLOAT_ARMOR_MOD_COLD),
     ("Fire", FLOAT_ARMOR_MOD_FIRE),
+    ("Cold", FLOAT_ARMOR_MOD_COLD),
     ("Acid", FLOAT_ARMOR_MOD_ACID),
-    ("Lightning", FLOAT_ARMOR_MOD_ELECTRIC),
+    ("Electric", FLOAT_ARMOR_MOD_ELECTRIC),
     ("Nether", FLOAT_ARMOR_MOD_NETHER),
 ]
 
@@ -755,7 +804,8 @@ def _fmt(n) -> str:
 def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                  ench: list[dict] | None = None, ench_item: list[dict] | None = None,
                  dids: dict | None = None, bools: dict | None = None,
-                 int64s: dict | None = None, weenie_type: int | None = None) -> dict:
+                 int64s: dict | None = None, weenie_type: int | None = None,
+                 dials: dict | None = None) -> dict:
     """The examine panel, as structured data plus ready-made lines.
 
     Both shapes on purpose: `lines` is what the tooltip renders today with no parsing, and the
@@ -827,7 +877,10 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     # --- the physical facts ------------------------------------------------------------------
     if (value := ints.get(INT_VALUE)):
         detail["value"] = value
-        add("Value", f"{_fmt(value)} pyreal")
+        # 161: NO UNIT. The client writes `Value: 11,147` and nothing else - checked against four
+        # of Chris's screenshots covering a ring, a weapon, clothing and a robe. " pyreal" was
+        # ours, in the same family as the invented Cleave/Aura/Gems rows 158 removed.
+        add("Value", _fmt(value))
 
     if (burden := ints.get(INT_ENCUMBRANCE)):
         detail["burden"] = burden
@@ -967,15 +1020,19 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     group("magic")
 
     # --- magic ---------------------------------------------------------------------------------
+    # 161: BOTH END IN A FULL STOP, which is the client's own punctuation and looks like a typo
+    # until you see it beside `Mana Cost: 1 point per 18 seconds.` - all three lines of that block
+    # are written as sentences. Chris's Black Opal Ring reads `Spellcraft: 230.` and
+    # `Mana: 0 / 1634.`; the Silk Baggy Pants read `274.` and `981 / 981.`
     if (spellcraft := ints.get(INT_SPELLCRAFT)):
         detail["spellcraft"] = spellcraft
-        add("Spellcraft", _fmt(spellcraft))
+        add("Spellcraft", f"{_fmt(spellcraft)}.")
 
     cur_mana, max_mana = ints.get(INT_CURRENT_MANA), ints.get(INT_MAX_MANA)
 
     if max_mana:
         detail["mana"] = {"current": cur_mana or 0, "max": max_mana}
-        add("Mana", f"{_fmt(cur_mana or 0)} / {_fmt(max_mana)}")
+        add("Mana", f"{_fmt(cur_mana or 0)} / {_fmt(max_mana)}.")
 
     if (rate := floats.get(FLOAT_MANA_RATE)):
         # Stored per-second and negative (it drains). The game phrases it as a period.
@@ -1147,7 +1204,18 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
 
         dmg_bonus = enchantments.damage_bonus(ench_item or [])
 
-        if wielder_ench:
+        # 161b: AMMUNITION DOES NOT TAKE THE WIELDER'S DAMAGE BONUS, unless a dial says otherwise:
+        #
+        #     var auraDamageBonus = weapon.Wielder != null && (weapon.WeenieType != Ammunition
+        #         || PropertyManager.GetBool("show_ammo_buff").Item) ? ... : 0;
+        #
+        # `show_ammo_buff` is FALSE on LIVE, checked rather than assumed. The arrow's OWN bonus
+        # still applies - only the reflected aura is dropped. Misadventure's Blunt Arrow read 21
+        # against the game's 9, which is Blood Drinker on her being counted onto every arrow.
+        take_aura = not (weenie_type == AMMUNITION_WEENIE_TYPE
+                         and not (dials or {}).get("show_ammo_buff"))
+
+        if wielder_ench and take_aura:
             dmg_bonus += enchantments.damage_bonus(wielder_ench)
 
         damage = max(0, damage + dmg_bonus)
@@ -1229,22 +1297,37 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # was "the one AppraiseInfo modifies in that block". It is not - `WeaponProfile` runs the
         # wielder's mods through GetAttackMod as well, and Heart Seeker on the wielder left
         # Adramelech's Flaming Nodachi reading 1.14 against the game's 1.31.
-        # 160b: AMMUNITION IS EXCLUDED FROM THE DEFENSE MERGE ENTIRELY - not just the aura half.
-        # AppraiseInfo.cs:415 reads `if (PropertiesFloat.ContainsKey(WeaponDefense) && !(wo is
-        # Ammunition))`, so an arrow shows its stored number no matter what its wielder is running.
-        # Found by the post-deploy sweep on Misadventure's Blunt Arrow: the game sent 1, we sent
-        # 1.13. Nobody had ammunition equipped in any earlier run, which is the argument for
-        # re-running the oracle against whoever happens to be online rather than a fixed cast.
+        # 161b: AMMUNITION HAS ITS OWN ARITHMETIC, and so do ranged weapons. Both found by the
+        # oracle on Misadventure's Blunt Arrow, which is the first ammunition anyone has had
+        # equipped during a sweep - an argument for running it against whoever happens to be
+        # online rather than a fixed cast.
+        #
+        #     WeaponProfile.GetWeaponOffense:  if (weapon is Ammunition) return 1.0f;
+        #     WeaponProfile.GetWeaponDefense:  if (weapon is Ammunition) return 1.0f;
+        #
+        # FLAT 1.0, not "the stored value without the aura" - which is what the first attempt at
+        # this did. 1.0 is neutral, so the effect is that an arrow shows neither line at all.
+        #
+        # And for a ranged weapon the attack mod is dropped on BOTH sides:
+        #
+        #     var offenseMod     = !weapon.IsRanged ? weapon.EnchantmentManager.GetAttackMod() : 0.0f;
+        #     var auraOffenseMod = weapon.Wielder != null && !weapon.IsRanged ? ... : 0.0f;
+        #
+        # so Heart Seeker does nothing visible on a bow. Ported from the source rather than
+        # observed: no bow has been equipped during a sweep yet, so this half is unverified
+        # against a live item.
         BUFF_MERGE = {
             FLOAT_WEAPON_DEFENSE: enchantments.defense_mod,
             FLOAT_WEAPON_OFFENSE: enchantments.attack_mod,
         }
 
-        ammo_defense = prop == FLOAT_WEAPON_DEFENSE and weenie_type == AMMUNITION_WEENIE_TYPE
+        is_ammo = weenie_type == AMMUNITION_WEENIE_TYPE
         bonus = 0.0
 
-        if (merge := BUFF_MERGE.get(prop)) and raw is not None and not ammo_defense \
-                and (wielder_ench or ench_item):
+        if is_ammo and prop in (FLOAT_WEAPON_OFFENSE, FLOAT_WEAPON_DEFENSE):
+            raw = 1.0
+        elif (merge := BUFF_MERGE.get(prop)) and raw is not None and (wielder_ench or ench_item) \
+                and not (prop == FLOAT_WEAPON_OFFENSE and is_ranged(ints)):
             bonus = merge(ench_item or []) + merge(wielder_ench)
             raw += bonus
 
@@ -1341,6 +1424,21 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
     gap()
 
     group("coverage")
+
+    # 161: `Covers Chest, Abdomen, Upper Arms, ...` - see COVERAGE_WORDS.
+    #
+    # Read from VALID locations, not the CURRENT wielded one. They are equal for anything a player
+    # is wearing, but only ValidLocations survives taking the item off - the client still describes
+    # what a robe covers while it is sitting in a pack, and CurrentWieldedLocation is absent there.
+    #
+    # Self-gating: a weapon's ValidLocations sets none of the coverage bits, so `areas` comes back
+    # empty and no line is written. That is why there is no is-this-armour test here.
+    areas = [COVERAGE_WORDS[a] for a in coverage(ints.get(INT_VALID_LOCATIONS))
+             if a in COVERAGE_WORDS]
+
+    if areas:
+        detail["covers"] = areas
+        sentence("Covers " + ", ".join(areas))
 
     # --- armour and clothing -------------------------------------------------------------------
     if (armor_types := _flags(ints.get(INT_ARMOR_TYPE), ARMOR_TYPE_NAMES)):
@@ -1463,9 +1561,34 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         detail["bonded"] = True
         props_list.append("Bonded")
 
+    # 161: Chris's Silk Baggy Pants show `Properties: Dyeable` in game and had NO Properties line
+    # here at all - Dyeable was the only word that applied and we did not read it.
+    if (bools or {}).get(BOOL_DYABLE):
+        detail["dyeable"] = True
+        props_list.append("Dyeable")
+
     if props_list:
         gap()
         add("Properties", ", ".join(props_list))
+
+    # `This item cannot be sold.` is its OWN sentence, not a Properties word. Chris's Academy
+    # Spadone prints them as two blocks with a blank between:
+    #
+    #     Properties: Bonded
+    #
+    #     This item cannot be sold.
+    #
+    # Hence its own group - the spacing here comes from group boundaries, so a line that needs a
+    # blank on both sides needs a group of its own.
+    #
+    # `is not None` matters: an absent row means the item IS sellable, and `.get()` returning None
+    # would otherwise read as false and put this sentence on almost every item in the game.
+    sellable = (bools or {}).get(BOOL_IS_SELLABLE)
+
+    if sellable is not None and not sellable:
+        detail["sellable"] = False
+        group("unsellable")
+        sentence("This item cannot be sold.")
 
     gap()
 
@@ -1567,6 +1690,12 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         if active:
             detail["enchantments"] = active
             sentence("Enchantments:")
+            # 161: A BLANK LINE AFTER THE HEADING, and this is not symmetrical with the block
+            # above. The client writes `Spell Descriptions:` immediately followed by its `~` list,
+            # and writes `Enchantments:` followed by a blank and THEN its list. Both of Chris's
+            # armour screenshots show it, and it is the same heading style either way - so the
+            # difference is the client's, not a rule that can be derived from anything.
+            sentence("")
 
             for a in active:
                 sentence(f"~ {a['name']}: {a['desc']}" if a["desc"] else f"~ {a['name']}")
@@ -1623,7 +1752,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         "combat",         # skill, damage, speed, the bonuses, cleave
         "spells",         # the spell NAMES
         "cleave",         # "Cleave: 2 enemies in front arc." - its own block on a weapon
-        "properties",     # Retained, Unenchantable, Cast on Strike, imbues
+        "properties",     # Retained, Unenchantable, Cast on Strike, Dyeable, imbues
+        "unsellable",     # "This item cannot be sold." - a block of its own, see below
         "requirements",   # the wield / activation sentences
         "magic",          # mana conversion, spellcraft, mana, mana cost
         "descriptions",   # Spell Descriptions block
@@ -1631,8 +1761,28 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         "flavour",        # the composed name and any prose
     ]
 
+    # 161: GROUP PAIRS THAT THE CLIENT RUNS TOGETHER, with no blank between them.
+    #
+    # Every other boundary gets one. This pair does not: the client prints the wield and activation
+    # sentences straight into Spellcraft / Mana / Mana Cost as a single block -
+    #
+    #     Wield requires level 150
+    #     Activation requires Arcane Lore: 242
+    #     Spellcraft: 230.
+    #     Mana: 0 / 1634.
+    #     Mana Cost: 1 point per 18 seconds.
+    #
+    # - and we were splitting it after the Activation line. Chris found it on jewelry first and
+    # then on shirts and pants, which is every item carrying both halves.
+    #
+    # Keyed on the PAIR rather than on "magic", so magic following anything else still gets its
+    # blank. That matters because the groups are also reordered here: suppressing the blank
+    # whenever `magic` appears would silently join it to whatever happened to precede it.
+    CONTIGUOUS = {("requirements", "magic")}
+
     lines: list[str] = []
     buffed: list[int] = []
+    previous: str | None = None
 
     for name in PANEL_ORDER:
         entries = groups.get(name)
@@ -1640,7 +1790,7 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         if not entries:
             continue
 
-        if lines:
+        if lines and (previous, name) not in CONTIGUOUS:
             lines.append("")
 
             # DOUBLE blank before the enchantment block. The client sets it apart from the rest of
@@ -1654,6 +1804,8 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
                 buffed.append(len(lines))
 
             lines.append(text)
+
+        previous = name
 
     # Anything a block emitted before naming its group - there should be none, but a stray write
     # must not vanish silently.
