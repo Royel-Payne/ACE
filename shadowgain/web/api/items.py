@@ -592,6 +592,7 @@ def _weenie_type_ids(*names: str) -> frozenset[int]:
 WEAPON_WEENIE_TYPES = _weenie_type_ids(
     "MeleeWeapon", "Missile", "MissileLauncher", "Ammunition", "Caster")
 CLOTHING_WEENIE_TYPE = next(iter(_weenie_type_ids("Clothing")))
+AMMUNITION_WEENIE_TYPE = next(iter(_weenie_type_ids("Ammunition")))
 
 
 def is_weaponlike(weenie_type: int | None, ints: dict) -> bool:
@@ -1228,14 +1229,22 @@ def build_detail(ints: dict, floats: dict, strings: dict, spells: list[int],
         # was "the one AppraiseInfo modifies in that block". It is not - `WeaponProfile` runs the
         # wielder's mods through GetAttackMod as well, and Heart Seeker on the wielder left
         # Adramelech's Flaming Nodachi reading 1.14 against the game's 1.31.
+        # 160b: AMMUNITION IS EXCLUDED FROM THE DEFENSE MERGE ENTIRELY - not just the aura half.
+        # AppraiseInfo.cs:415 reads `if (PropertiesFloat.ContainsKey(WeaponDefense) && !(wo is
+        # Ammunition))`, so an arrow shows its stored number no matter what its wielder is running.
+        # Found by the post-deploy sweep on Misadventure's Blunt Arrow: the game sent 1, we sent
+        # 1.13. Nobody had ammunition equipped in any earlier run, which is the argument for
+        # re-running the oracle against whoever happens to be online rather than a fixed cast.
         BUFF_MERGE = {
             FLOAT_WEAPON_DEFENSE: enchantments.defense_mod,
             FLOAT_WEAPON_OFFENSE: enchantments.attack_mod,
         }
 
+        ammo_defense = prop == FLOAT_WEAPON_DEFENSE and weenie_type == AMMUNITION_WEENIE_TYPE
         bonus = 0.0
 
-        if (merge := BUFF_MERGE.get(prop)) and raw is not None and (wielder_ench or ench_item):
+        if (merge := BUFF_MERGE.get(prop)) and raw is not None and not ammo_defense \
+                and (wielder_ench or ench_item):
             bonus = merge(ench_item or []) + merge(wielder_ench)
             raw += bonus
 

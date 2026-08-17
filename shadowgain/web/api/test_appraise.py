@@ -155,3 +155,47 @@ def test_attack_mod_reads_both_offense_properties():
     assert round(enchantments.attack_mod(on_item), 6) == 0.1
     assert round(enchantments.attack_mod(on_wielder), 6) == 0.07
     assert round(enchantments.attack_mod(on_item + on_wielder), 6) == 0.17
+
+
+# --- 160b. ammunition, found by the post-deploy sweep ---------------------------------------------
+
+
+def _defense_aura(value: float) -> list[dict]:
+    return [_ench(1, category=1, power=1,
+                  type_=enchantments.FLOAT | enchantments.ADDITIVE | enchantments.SINGLE_STAT,
+                  key=enchantments.FLOAT_WEAPON_DEFENSE, value=value)]
+
+
+def test_ammunition_ignores_the_wielders_defense_aura():
+    """Misadventure's Blunt Arrow: the game sent 1, we sent 1.13.
+
+    `AppraiseInfo.cs:415` excludes Ammunition from the WeaponDefense merge outright - not just
+    the aura half - so an arrow shows its stored number whatever its wielder is running.
+
+    The arrow stores exactly 1.0, which is neutral, and a neutral modifier gets NO LINE rather
+    than "+0%". So the fix is visible here as the absence of the field: before it, the aura pushed
+    1.0 to 1.13 and the line appeared.
+    """
+    arrow = items.build_detail({}, {items.FLOAT_WEAPON_DEFENSE: 1.0}, {}, [],
+                               ench=_defense_aura(0.13),
+                               weenie_type=items.AMMUNITION_WEENIE_TYPE)
+
+    assert "meleeDefenseMod" not in arrow
+
+
+def test_ammunition_still_reports_its_own_stored_defense():
+    """The exclusion drops the AURA, not the arrow's own number - a non-neutral one still shows."""
+    arrow = items.build_detail({}, {items.FLOAT_WEAPON_DEFENSE: 1.05}, {}, [],
+                               ench=_defense_aura(0.13),
+                               weenie_type=items.AMMUNITION_WEENIE_TYPE)
+
+    assert round(arrow["meleeDefenseMod"], 6) == 1.05
+
+
+def test_a_non_ammunition_weapon_still_takes_the_aura():
+    """The exclusion is specific to ammunition - this is the 158 behaviour, still wanted."""
+    sword = items.build_detail({}, {items.FLOAT_WEAPON_DEFENSE: 1.0}, {}, [],
+                               ench=_defense_aura(0.13),
+                               weenie_type=MELEE_WEAPON)
+
+    assert round(sword["meleeDefenseMod"], 6) == 1.13

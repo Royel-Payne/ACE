@@ -17,6 +17,25 @@ items carrying no buff at all. Every one of those was found from a screenshot, o
 This turns the comparison into something that either passes or does not, the same way
 `objdesc-diff.py` did for the 3D model in 152.
 
+THE COMPARISON IS RACY IN BOTH DIRECTIONS, AND BOTH HAVE BEEN MISTAKEN FOR BUGS
+
+The oracle reads the LIVE WORLD; the portal reads the SHARD. Those are not the same instant, and
+the gap runs both ways:
+
+  * **The dump goes stale.** `sg-appraise` writes a snapshot; the portal is queried after. A
+    character who re-buffs in between makes the portal look wrong. This produced nine convincing
+    false findings on Black Breath - +200 ArmorLevel, every resistance pinned at 2.0 - against a
+    ten-minute-old dump. **Pair each dump with its own diff, seconds apart.**
+
+  * **The shard goes stale.** ACE holds biotas in memory and writes them on a timer, so a buff
+    can be live in the world and absent from the database. Trees' Academy Spadone read 10 damage
+    against the game's 22 with **no enchantment rows in the shard at all** - the portal was
+    rendering the stored values correctly and had no way to know about the rest.
+
+Neither is fixable here, and the second is not fixable at all: the portal cannot see what has not
+been written. Before filing anything as a bug, check the registry rows in the shard. If they are
+absent, the panel is right and the database is behind.
+
 WHAT IT COMPARES, AND WHAT IT DELIBERATELY DOES NOT
 
 Only the NUMBERS. Field order, wording and punctuation are the client's presentation and the portal
