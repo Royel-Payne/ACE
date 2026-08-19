@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -768,6 +768,186 @@ namespace ACE.Server.WorldObjects
                 else
                     return;
             }
+        }
+
+        /// <summary>
+        /// Shadowgain 174: the fluff crafts, whose turn-in tasks pay in RANKS rather than flat XP.
+        ///
+        /// Salvaging is DELIBERATELY ABSENT. It is the one crafting skill with a working progression
+        /// path already (the 173 'bandaid'), and Chris kept it explicitly: 'the salvaging path
+        /// currently in place stays'. Adding it here would stack a second path onto the only skill
+        /// that does not need one.
+        /// </summary>
+        private static readonly HashSet<Skill> CraftTaskSkills = new HashSet<Skill>
+        {
+            Skill.Alchemy, Skill.Cooking, Skill.Fletching, Skill.Lockpick,
+            Skill.ItemTinkering, Skill.WeaponTinkering, Skill.ArmorTinkering, Skill.MagicItemTinkering,
+        };
+
+        /// <summary>
+        /// Shadowgain 174: a crafting turn-in grants skill progress denominated in RANKS, not XP.
+        ///
+        /// **Why the stock flat award cannot work.** Measured on LIVE: a full clear of every crafting
+        /// task pays 195,000 xp per cycle, against a curve whose rank thresholds run 50,861 (r50) to
+        /// 1,296,183 (r100) to 7,970,578 (r125) to 54,088,830 (r150) to 346,000,776 (r175). Flat XP
+        /// therefore reaches ~r125 in about two months and then needs ~197 days for the next 25 ranks
+        /// and ~4 years for the 25 after that. A fixed number cannot track a curve that multiplies
+        /// ~6.5x every 25 ranks, at ANY payout - raising 50,000 to 500,000 moves the collapse by one
+        /// tier and no further. Denominating in ranks removes XP magnitude from the step, which is
+        /// the same reasoning 092 applied to quest attribute XP.
+        ///
+        /// The consequence is measured: of 22 level-50+ characters, **not one has a single rank of
+        /// Cooking**, Alchemy averages 3.3 and Lockpick 3.6. The tinkers sit at 34-43 only because
+        /// Salvaging feeds them.
+        ///
+        ///     fraction(R) = craft_quest_rank_fraction x (1 - R / tableMaxRank) ^ craft_quest_rank_decay
+        ///
+        /// evaluated against the skill's OWN rank, so a dead skill climbs fast and a healthy one
+        /// barely moves - self-correcting by construction rather than by tuning.
+        ///
+        /// **Ranks overflow naturally and are never clamped to +1** (Chris: 'rank 150 is 10 xp from
+        /// level, the reward would take them to 152; don't block this and only allow 151'). The grant
+        /// is applied as an XP delta and the rank is RE-DERIVED from the total, so crossing one or
+        /// several boundaries is simply what the arithmetic does. craft_quest_max_ranks is a safety
+        /// cap against a pathological tier value, NOT a limiter - it starts well above 1.
+        ///
+        /// **Routed through AwardSkillUsageXP, not the stock AwardSkillXP path.** That path calls
+        /// GrantXP(...) and then spends it back, which leaves the turn-in raising TotalExperience -
+        /// i.e. character LEVEL - as a side effect. It also writes the uint ExperienceSpent rather
+        /// than 109's 64-bit TrueExperienceSpent, and knows nothing about 005's InitLevel overflow
+        /// past the table top. AwardSkillUsageXP already handles all three, plus god mode.
+        ///
+        /// **Never pays LESS than the emote's own amount.** At high rank the fraction shrinks below
+        /// the flat award; taking the max means this can only ever be an improvement on stock, so
+        /// enabling it cannot quietly nerf a task that already worked.
+        ///
+        /// Returns true if it handled the award; false means 'not mine, use the stock path'.
+        /// </summary>
+        public bool TryAwardCraftTaskSkillXp(Skill skill, uint flatAmount)
+        {
+            if (!PropertyManager.GetBool("craft_quest_rank_xp_enabled").Item)
+                return false;
+
+            if (!CraftTaskSkills.Contains(skill))
+                return false;
+
+            var creatureSkill = GetCreatureSkill(skill, false);
+
+            if (creatureSkill == null || creatureSkill.AdvancementClass < SkillAdvancementClass.Trained)
+                return false;
+
+            var skillXpTable = GetSkillXPTable(creatureSkill.AdvancementClass);
+
+            if (skillXpTable == null || skillXpTable.Count < 2)
+                return false;
+
+            var tableMaxRank = skillXpTable.Count - 1;
+
+            // Ranks ONLY, never Ranks + InitLevel. Under 005 the overflow past the table top lives in
+            // InitLevel, but so does the flat 10 that every Specialized skill carries from birth -
+            // adding them would read a fresh specialised skill as rank 10 and quietly underpay it.
+            // Ranks is clamped at tableMaxRank, so an overflowing skill lands on headroom <= 0 below,
+            // which is the correct answer anyway.
+            var rank = (int)creatureSkill.Ranks;
+
+            // 1.0 at rank 0, 0.0 at the table top
+            var headroom = 1.0 - (double)rank / tableMaxRank;
+
+            // At or past the table top the tasks stop paying and ordinary use carries it from there.
+            // That is the intended end of this path, not an oversight: 'near max' is the goal Chris
+            // set, and beyond it the fraction would be granting slivers of ranks that cost billions.
+            if (headroom <= 0)
+                return false;
+
+            var baseFraction = PropertyManager.GetDouble("craft_quest_rank_fraction").Item;
+            var decay = PropertyManager.GetDouble("craft_quest_rank_decay").Item;
+            var ceiling = PropertyManager.GetDouble("craft_quest_max_ranks").Item;
+
+            if (double.IsNaN(baseFraction) || baseFraction <= 0)
+                return false;
+
+            if (double.IsNaN(decay) || decay < 0)
+                decay = 0;
+
+            // The ceiling is the only thing standing between a mistyped tier factor and a skill
+            // maxed in one turn-in, so a nonsensical value must FALL BACK rather than disable it.
+            // Same load-bearing invariant as 092's.
+            if (double.IsNaN(ceiling) || ceiling <= 0)
+                ceiling = 1.0;
+
+            var step = baseFraction * Math.Pow(headroom, decay) * GetCraftTaskTierMultiplier(flatAmount);
+
+            step = Math.Min(step, ceiling);
+
+            if (double.IsNaN(step) || step <= 0)
+                return false;
+
+            // Cost of THIS rank step, taken from the same function that defines rank, so the two
+            // cannot disagree. CalcSkillXpForRank searches the forward function rather than
+            // mirroring it - see 109.
+            var costHere = CalcSkillXpForRank(creatureSkill.AdvancementClass, rank);
+            var costNext = CalcSkillXpForRank(creatureSkill.AdvancementClass, rank + 1);
+
+            if (costHere == null || costNext == null || costNext.Value <= costHere.Value)
+                return false;
+
+            var xpToNext = costNext.Value - costHere.Value;
+
+            var scaled = step * xpToNext;
+
+            // AwardSkillUsageXP takes a uint. Out past the table top a single rank can cost more than
+            // that, but headroom has already returned false by then, so this clamp is a guard rather
+            // than a live path.
+            var grant = scaled >= uint.MaxValue ? uint.MaxValue : (uint)Math.Round(scaled);
+
+            // Never worse than stock - see the summary above.
+            if (grant < flatAmount)
+                grant = flatAmount;
+
+            if (grant == 0)
+                return false;
+
+            if (!AwardSkillUsageXP(creatureSkill, grant))
+                return false;
+
+            // AwardSkillUsageXP announces the RANK change; this is the XP line the stock emote award
+            // sends, kept so the player still sees that a turn-in paid even when it did not rank up.
+            Session?.Network.EnqueueSend(new GameMessageSystemChat(
+                $"You've earned {grant:N0} experience in your {creatureSkill.Skill.ToSentence()} skill.",
+                ChatMessageType.Broadcast));
+
+            return true;
+        }
+
+        /// <summary>
+        /// Shadowgain 174: optional scaling by the task's OWN xp amount, so a 100,000 turn-in can be
+        /// worth more than a 5,000 one.
+        ///
+        /// The real tasks span 5,000 to 100,000 - a 20:1 spread, nothing like the 23,000,000:1 that
+        /// forced 092's seven bands. Three bands over that range is enough, and the ceiling clamps
+        /// the result regardless.
+        ///
+        /// DEFAULT OFF, deliberately. With it off every task pays the same, which is precisely what
+        /// makes the low tiers enterable - the 173 finding was that the ladder's bottom rung is the
+        /// barrier, not its top. Turn it on only if the tiers need to mean something again.
+        /// </summary>
+        public static double GetCraftTaskTierMultiplier(long taskXp)
+        {
+            if (!PropertyManager.GetBool("craft_quest_tier_scaling_enabled").Item)
+                return 1.0;
+
+            var factor = PropertyManager.GetDouble("craft_quest_tier_factor").Item;
+
+            if (double.IsNaN(factor) || factor <= 0)
+                return 1.0;
+
+            if (taskXp < 1)
+                return 1.0;
+
+            // band 0 = under 10k, band 1 = 10k-99k, band 2 = 100k and above
+            var band = Math.Clamp((int)Math.Floor(Math.Log10(taskXp)) - 3, 0, 2);
+
+            return 1.0 + factor * (band / 2.0);
         }
 
         /// <summary>

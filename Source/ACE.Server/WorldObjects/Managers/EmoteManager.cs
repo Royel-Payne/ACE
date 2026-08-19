@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -157,7 +157,18 @@ namespace ACE.Server.WorldObjects.Managers
                     if (player != null)
                     {
                         if (delay < 1) delay += 1; // because of how AwardSkillXP grants and then raises the skill, ensure delay is at least 1 to allow for processing correctly
-                        player.AwardSkillXP((Skill)emote.Stat, (uint)emote.Amount, true);
+
+                        // Shadowgain 174: the crafting turn-in tasks pay in RANKS, not flat xp.
+                        // Hooked HERE rather than inside AwardSkillXP on purpose - that method is
+                        // also reached from AwardSkillPoints (which asks for an exact rank's worth
+                        // in a loop) and GrantLevelProportionalSkillXP, and re-denominating either
+                        // of those would change what they mean. This is the emote path only.
+                        //
+                        // Falls through to the stock award for every skill outside CraftTaskSkills
+                        // and whenever the dial is off, so the Tusker statues and every other
+                        // AwardSkillXP emote behave exactly as before.
+                        if (!player.TryAwardCraftTaskSkillXp((Skill)emote.Stat, (uint)emote.Amount))
+                            player.AwardSkillXP((Skill)emote.Stat, (uint)emote.Amount, true);
                     }
                     break;
 
