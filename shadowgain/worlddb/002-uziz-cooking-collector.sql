@@ -1,0 +1,55 @@
+-- Shadowgain 175: put the Gharu'ndim TIER-2 cooking collector in Uziz, where it belongs.
+--
+-- THE BUG. Of the 27 Crafting Experience Task collectors, 26 are spawned. `collectorcookingghalow`
+-- (wcid 28186, the 10,000-xp Gharu'ndim cooking task, wants a Spiced Apple Pie) has no
+-- landblock_instance row at all, so that task is unreachable on any world running stock data.
+--
+-- WHERE IT BELONGS, derived rather than guessed. Converting each spawned cooking collector's
+-- landblock + origin to game coordinates matches all eight to a wiki town within 0.06 units:
+--
+--     alunewbie  0.7N 51.2E  Lytelthorpe      alulow  29.6N 27.2E  Glenden Wood
+--     ghanewbie 31.1S 13.9E  Al-Arqas         sholow  61.8S 81.8E  Mayoi
+--     shonewbie 52.5S 82.0E  Nanto            alumid  66.5N 50.0E  Bandit Castle
+--     ghamid    64.9N 13.6E  Crater Lake      shomid  69.5N 17.7E  Neydisa Castle
+--
+-- The one town in the wiki's list of nine with no collector is UZIZ (25.7S 28.3E). That converts
+-- to landblock 0xA25F, x 156 y 60 - and landblock A25F is Uziz (uzizgrocer, uzizbowyer,
+-- uzizbarkeeper, ace49606-uziz all sit in it). So Uziz is ghalow's home, deterministically.
+--
+-- WHAT IS ALREADY STANDING ON THAT SPOT, and why this is an UPDATE rather than an INSERT.
+-- `ace49603-apprenticecook` sits at A25F0111 (156.211, 61.947, 19.705) - the exact position the
+-- wiki coordinates resolve to. It is not the tier-2 collector; it is a byte-for-byte functional
+-- CLONE of the Al-Arqas tier-1 one: same wanted item (mushroomnoodle), same greeting, same 5,000
+-- award, and - decisively - THE SAME QUEST NAME, CollectorCookingGhaNewbie.
+--
+-- Sharing the quest name is what makes it dead weight rather than a bonus. `MinDelta` is stamped
+-- per quest, not per NPC, so a player who turns in at Al-Arqas cannot also turn in at Uziz. The
+-- clone can never grant anything that was not already available 60 metres away in another town.
+--
+-- So the placement is right and the weenie it points at is wrong. Repointing it costs nothing that
+-- a player could ever have collected, restores the missing tier-2 task, and inherits a position
+-- and rotation that were placed by hand in 2022 - no guessing at terrain, no NPC in a wall, no
+-- second cook standing inside the first.
+--
+-- The row is a link CHILD of the 1-hour generator at guid 2049306667, which is left alone: the
+-- generator spawns whatever the child row names, so it will simply start spawning the right NPC.
+--
+-- TO REVERSE, or to keep the clone and add ghalow beside it instead, set weenie_Class_Id back to
+-- 49603 and INSERT a new row - but pick coordinates carefully, because A25F0111 is an interior
+-- cell and an arbitrary offset can land inside a wall.
+--
+-- WHY THIS FILE EXISTS: this is a world-database edit, and ace_world is REPLACED wholesale by an
+-- ACE world DB release. Anything changed by hand is silently gone on the next import with no
+-- error and no warning. Re-apply every file in this directory after any world DB update.
+--
+-- Idempotent: keys on the weenie and the landblock rather than a row id, so it survives re-import
+-- renumbering, and re-running it after it has applied matches zero rows. Applies at next server
+-- restart - ACE loads landblock instances when a landblock is first activated, so a running world
+-- keeps the old NPC until Uziz unloads and reloads.
+--
+--   docker exec -i ace-db mysql -uroot -p"$PW" < 002-uziz-cooking-collector.sql
+
+UPDATE ace_world.landblock_instance
+   SET weenie_Class_Id = 28186                 -- collectorcookingghalow
+ WHERE weenie_Class_Id = 49603                 -- ace49603-apprenticecook (the redundant clone)
+   AND (obj_Cell_Id >> 16) = 0xA25F;           -- Uziz only, never any other placement

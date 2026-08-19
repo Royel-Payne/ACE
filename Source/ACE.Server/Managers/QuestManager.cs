@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -317,6 +317,47 @@ namespace ACE.Server.Managers
         }
 
         /// <summary>
+        /// Shadowgain 175: the repeatable CRAFTING TASK quest families, whose lockout Chris can
+        /// override live with craft_quest_lockout_seconds.
+        ///
+        /// Three families, all authored the same way and all carrying MinDelta 72000 (20 hours):
+        ///
+        ///     Collector*      27 quests - Alchemy / Cooking / Fletching, 3 towns x 3 tiers
+        ///     Gromnie*        15 quests - the Arts and Crafts collectors, same three skills
+        ///     SiraluunClaw*   20 quests - the four tinkering skills
+        ///
+        /// MATCHED BY NAME PREFIX, and the precision was checked against the world DB rather than
+        /// assumed. 91 quests in ace_world are stamped by an emote that awards one of the eight
+        /// craft skills; these prefixes catch 62 of them. The 29 they miss are ALL Tusker King's
+        /// chamber statues (alchemy_test, cook1, lockpicking2, ...), which are one-off content and
+        /// have no row in the quest table at all - GetNextSolveTime returns before this is ever
+        /// consulted for them, so missing them is correct twice over.
+        ///
+        /// The prefixes also catch 27 further quests in the same families whose award emote sits on
+        /// an NPC that is not placed (GromnieToothbrushAsh, SiraluunClawHairpinUntamed1204, ...).
+        /// Those are additional tiers of the identical content, so including them is right: if they
+        /// are ever spawned they should honour the same knob.
+        ///
+        /// A name test rather than a skill test because the lockout is decided at the InqQuest step,
+        /// before any award exists to read a skill from.
+        /// </summary>
+        private static readonly string[] CraftTaskQuestPrefixes = { "Collector", "Gromnie", "SiraluunClaw" };
+
+        public static bool IsCraftTaskQuest(string questName)
+        {
+            if (string.IsNullOrEmpty(questName))
+                return false;
+
+            foreach (var prefix in CraftTaskQuestPrefixes)
+            {
+                if (questName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Some quests we do not want to scale MinDelta if "quest_mindelta_rate" has been set.
         /// They may be things that are races against time, like Colo
         /// </summary>
@@ -349,7 +390,30 @@ namespace ACE.Server.Managers
             var currentTime = (uint)Time.GetUnixTime();
             uint nextSolveTime;
 
-            if (CanScaleQuestMinDelta(quest))
+            // Shadowgain 175: live override for the crafting tasks' lockout.
+            //
+            // 174 shipped the rank-denominated craft grant against the stored 20h MinDelta, which
+            // paces well - but Chris wanted the FREQUENCY on a knob too, not just the grant size:
+            // 'if anyone wants to spend the weekend leveling this it should be allowed. These are
+            // fluff skills, not the long path.'
+            //
+            // craft_quest_rank_fraction moves how MUCH a turn-in pays; this moves how OFTEN one can
+            // be made. They are independent levers and the frequency one is what actually enables a
+            // weekend push, which is what makes a 20h default safe to launch with - the release
+            // valve exists and needs no SQL and no restart to open.
+            //
+            // 0 (the default) means 'use whatever the quest itself stores', so nothing changes until
+            // it is deliberately set. Negative is treated the same as 0 rather than as an error,
+            // because a lockout cannot be less than none.
+            //
+            // Deliberately bypasses quest_mindelta_rate rather than multiplying with it: this is an
+            // absolute number of seconds so the operator can reason about it directly, and stacking
+            // two independent scalars on the same timer is how a dial stops being predictable.
+            var craftLockout = PropertyManager.GetLong("craft_quest_lockout_seconds").Item;
+
+            if (craftLockout > 0 && IsCraftTaskQuest(questName))
+                nextSolveTime = playerQuest.LastTimeCompleted + (uint)Math.Min(craftLockout, uint.MaxValue);
+            else if (CanScaleQuestMinDelta(quest))
                 nextSolveTime = playerQuest.LastTimeCompleted + (uint)(quest.MinDelta * PropertyManager.GetDouble("quest_mindelta_rate", 1).Item);
             else
                 nextSolveTime = playerQuest.LastTimeCompleted + quest.MinDelta;

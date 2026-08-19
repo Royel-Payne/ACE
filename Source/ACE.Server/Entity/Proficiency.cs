@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using log4net;
 using ACE.Common;
 using ACE.Entity.Enum;
@@ -162,6 +162,32 @@ namespace ACE.Server.Entity
             // Focus/Self gap in the same restart that shipped it.
             if (skill.Skill == Skill.WarMagic || skill.Skill == Skill.VoidMagic)
                 multiplier *= PropertyManager.GetDouble("war_void_gain_multiplier").Item;
+
+            // Shadowgain 175: Lockpick, whose difficulty input is CAPPED BY AUTHORED DATA rather
+            // than by what the player chooses to face.
+            //
+            // Every other skill here reads its difficulty off a creature, and creature defence keeps
+            // climbing as players seek out harder content - so the award climbs with them. A lock's
+            // difficulty is ResistLockpick, a fixed number in the world database. Measured on LIVE:
+            // 23,408 pickable placements, of which 22,220 (95%) are difficulty 50 - ordinary doors -
+            // and the hardest lock in the game is 500.
+            //
+            // Because the award is effectiveDifficulty x clamp(effectiveDifficulty/Base, ...), a
+            // ceiling on difficulty is a ceiling on the award: it peaks at 1,000 xp for a 500 lock
+            // and then SHRINKS as the player's Base grows past 250 and the ratio falls off the cap.
+            // The skill is the only one whose gain gets worse as the player gets better, through no
+            // choice of theirs. That is why it sits at average rank 3.6 on LIVE with no player having
+            // passed 20 - the mechanism was wired correctly all along and the content starves it.
+            //
+            // This dial compensates for that ceiling. It CANNOT close the gap on its own - see the
+            // 175 write-up - because 1,000 xp per pick cannot chase a rank that costs tens of
+            // millions; that needs either harder lock content or a rank-denominated grant. It does
+            // make the reachable part of the curve worth playing, which is what was asked for.
+            //
+            // Same shape as war_void_gain_multiplier above, deliberately: a per-skill multiplier is
+            // the established lever here and this is exactly the case it was built for.
+            if (skill.Skill == Skill.Lockpick)
+                multiplier *= PropertyManager.GetDouble("lockpick_gain_multiplier").Item;
 
             // Shadowgain 005: uncapping removes Specialized's old advantage - a higher rank ceiling -
             // so without this Trained and Specialized collapse into identical progression, differing
