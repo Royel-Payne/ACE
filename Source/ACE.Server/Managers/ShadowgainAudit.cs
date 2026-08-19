@@ -106,18 +106,27 @@ namespace ACE.Server.Managers
         ///      anyone an item, a level, or a rank. It belongs in a deploy log, not here.
         ///   3. STAFF SELF-MOVEMENT - moves only the caller. Anything that moves ANOTHER
         ///      player stays audited, because that is an action taken ON someone.
-        ///   4. STAFF SELF-CONCEALMENT (177) - changes only how the caller is PERCEIVED, and
-        ///      where publishing the line defeats the tool it describes. This is the first test
-        ///      admitted for a reason other than noise: `@cloak` exists so staff can watch
-        ///      without being seen, and announcing each use in a channel six verified players
-        ///      can read makes it useless for the one job it has. Chris: "these 2 don't need to
-        ///      be exposed to users as it gives away our ability to use the tool in any sort of
-        ///      useful way."
+        ///   4. STAFF SELF-STATE (177) - changes only how the caller is perceived, or what the
+        ///      world is willing to do to them, and cannot move anything of value to anyone.
+        ///      `@cloak`, `@attackable`, `@neversaydie`, `@portal_bypass`. This is the first
+        ///      test admitted for a reason other than noise: these are the tools staff use to
+        ///      GET somewhere and WATCH, and a channel six verified players read is the wrong
+        ///      place to publish how that is done. Chris: "these 2 don't need to be exposed to
+        ///      users as it gives away our ability to use the tool in any sort of useful way",
+        ///      and on the other two: "potentially tools I might use."
         ///
-        /// TEST 4 IS THE NARROWEST OF THE FOUR AND MUST STAY THAT WAY. It is not "self-only" -
-        /// `@neversaydie` and `@portal_bypass` are also self-only and are deliberately still
-        /// audited, because nothing about recording them blunts them. The test is specifically
-        /// that DISCLOSURE ITSELF is the harm.
+        /// THE LINE FOR TEST 4 IS NOT "SELF-ONLY", and getting that wrong would gut this file.
+        /// `/god` is self-only too, and it stays audited forever - it rewrites the caller's every
+        /// skill and attribute, which is exactly the kind of thing a player is owed sight of. The
+        /// test is self-only AND unable to move an item, a rank, a level, or access - to anyone,
+        /// INCLUDING the caller. All four above pass; `/god` fails on the second half.
+        ///
+        /// ONE HONEST CAVEAT, recorded rather than argued away. `@neversaydie` is the weakest of
+        /// the four: invincibility lets staff survive content they could not otherwise clear, and
+        /// loot taken from it is real. It is admitted because staff are not competing with players
+        /// and because handing any of it onward - `createitem`, `give`, any transfer - lands in
+        /// the trail on its own line, which is the event a player actually has a stake in. If that
+        /// ever stops being true, this is the entry to revisit first.
         ///
         /// Not admitted, however quiet: anything that creates or destroys an object, moves XP or
         /// levels, edits a character, changes a dial, or changes who holds access.
@@ -180,22 +189,24 @@ namespace ACE.Server.Managers
             "teledungeon",
             "sg-tele",
 
-            // --- 4. staff self-concealment (177) -------------------------------------------
-            // Both act ONLY on session.Player - neither takes a target - so neither can be
-            // turned on someone else, which is what keeps them inside the criterion.
+            // --- 4. staff self-state (177) -------------------------------------------------
+            // All four act ONLY on session.Player. Verified individually rather than assumed:
+            // none of the four handlers takes a target parameter, so none can be turned on
+            // another player, which is what keeps them inside the criterion.
             //
-            // `cloak` is the clear case: a concealment tool whose every use is announced is not
-            // a concealment tool. `attackable off` is the same disclosure in a quieter form - it
-            // tells a reader that staff can walk through a dungeon unmolested, which is the same
-            // capability leak by another route.
+            // `cloak` is the clearest case - a concealment tool whose every use is announced is
+            // not a concealment tool. The other three leak the same capability by quieter routes:
+            // that staff walk dungeons unmolested, do not die, and ignore portal restrictions.
             //
-            // These DO confer a private benefit - not being seen, not being attacked - and that
-            // is the honest reason they were audited in the first place. They are admitted anyway
-            // because staff are not competing with players here, and because neither can move an
-            // item, a rank or a level. Anything either of them is used to SET UP still lands in
-            // the trail on its own line.
+            // These DO confer a private benefit, and that is the honest reason they were audited
+            // to begin with. They are admitted because staff are not competing with players and
+            // because none of them can move an item, a rank or a level - and anything they are
+            // used to SET UP still lands in the trail on its own line, which is the event a
+            // player actually has a stake in.
             "cloak",
             "attackable",
+            "neversaydie",
+            "portal_bypass",
         };
 
         /// <summary>
