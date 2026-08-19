@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 
 using log4net;
@@ -162,7 +162,33 @@ namespace ACE.Server.WorldObjects
                                 player.EnqueueBroadcast(new GameMessageSound(player.Guid, Sound.Lockpicking, 1.0f));
 
                                 var lockpickSkill = player.GetCreatureSkill(Skill.Lockpick);
-                                Proficiency.OnSuccessUse(player, lockpickSkill, difficulty);
+
+                                // Shadowgain 175b: the CHECK honours enchantments, the REWARD does not.
+                                //
+                                // `difficulty` above is the ENCHANTED ResistLockpick, and that is right
+                                // for deciding whether the pick succeeds - Weaken Lock is a legitimate
+                                // way into a lock too hard for your skill, and it should keep working.
+                                //
+                                // Paying XP on the same number is not right, because the enchantment
+                                // runs BOTH WAYS. Incantation of Strengthen Lock adds +250, and since
+                                // the award goes as difficulty x clamp(difficulty/Base), casting it on
+                                // an ordinary house door (ResistLockpick 50) turns a 13 xp pick into a
+                                // 464 xp one - 36x, self-applied, on any of the 7,602 placed aluvian
+                                // house doors. 175's lockpick_gain_multiplier scaled that to 3,711 a
+                                // door without changing the ratio, which is what made it worth finding.
+                                //
+                                // Reading the lock's OWN difficulty removes both halves of the problem:
+                                // Strengthen Lock cannot inflate the reward, and Weaken Lock cannot
+                                // deprive a player of it for using the intended tool. What a lock is
+                                // worth becomes a property of the lock, which is the only version of
+                                // this that cannot be farmed.
+                                //
+                                // Deliberately NOT min(base, enchanted): that would leave Weaken Lock
+                                // taxing the very players it exists to help, which is the same perverse
+                                // incentive that made proficiency read Base rather than Current.
+                                var awardDifficulty = (uint)Math.Max(0, target.ResistLockpick ?? difficulty);
+
+                                Proficiency.OnSuccessUse(player, lockpickSkill, awardDifficulty);
                             }
 
                             ConsumeUnlocker(player, unlocker, target, true);
