@@ -73,6 +73,17 @@ async def on_ready():
         # think we're gifting some people anything. It's not to be a window into every move we
         # make that's outside that scope."
         #
+        # WHY VERIFIED PLAYER AND NOT @everyone. The role is the line between people who linked a
+        # game account and people who joined the Discord. Chris, 2026-08-19: "the Verified Player
+        # role was granted access to #audit since those are the people who at least made a tiny bit
+        # of effort to be part of the community, #audit is a privilege for the players, not the
+        # lurkers who happen to join discord."
+        #
+        # So this is a THREE-TIER decision, not a public/private one, and each tier is deliberate:
+        # @everyone sees nothing, Verified Players see the trail, nobody writes to it. Reading it as
+        # "transparency, therefore public" would be the wrong simplification - the gate is the
+        # point, and it is the same shape as the presence gate on the web portal.
+        #
         # So the AUDIENCE IS PLAYERS, not staff. Two consequences worth stating, because they are
         # easy to get backwards:
         #
