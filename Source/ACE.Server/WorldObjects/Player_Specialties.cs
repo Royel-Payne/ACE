@@ -137,6 +137,18 @@ namespace ACE.Server.WorldObjects
             var difficulty = (uint)System.Math.Max(1, System.Math.Round(deviceRequirement * mult));
 
             Proficiency.OnSuccessUse(this, skill, difficulty);
+            // Shadowgain 172: Summoning is Endurance-primary / Self-secondary in the dat and paid
+            // NO attribute at all - the same gap the defence skills had, because the attribute
+            // hook lives only on the attack path. Chris asked for it directly: could Summoning be
+            // used to raise Endurance.
+            //
+            // FULL WEIGHT, unlike the evade path. The difference is frequency: evades fire 154,437
+            // times per 9h and needed damping, this fires 3,567 times per 7h across 6 characters,
+            // so it is wired the way every other attribute-awarding skill already is.
+            var summoningWeight = PropertyManager.GetDouble("summoning_attribute_weight").Item;
+
+            if (summoningWeight > 0.0)
+                AwardAttributesForSkill(Skill.Summoning, difficulty, summoningWeight);
         }
 
         /// <summary>
@@ -186,6 +198,23 @@ namespace ACE.Server.WorldObjects
             // fix. Measured on LIVE 2026-08-13: this path runs at ratio 12-45, entirely because of
             // that unit mismatch, and it is dial-limited already.
             Proficiency.OnSuccessUse(this, skill, award, boundDifficulty: false);
+            // Shadowgain 172: Summoning is Endurance-primary / Self-secondary in the dat and paid
+            // NO attribute at all - the same gap the defence skills had, because the attribute
+            // hook lives only on the attack path. Chris asked for it directly: could Summoning be
+            // used to raise Endurance.
+            //
+            // FULL WEIGHT, unlike the evade path. The difference is frequency: evades fire 154,437
+            // times per 9h and needed damping, this fires 3,567 times per 7h across 6 characters,
+            // so it is wired the way every other attribute-awarding skill already is.
+            //
+            // The SKILL award above skips the 119 bound because a share of kill XP is not a skill
+            // value. The ATTRIBUTE award does NOT skip it - AwardAttributeUsageXP bounds difficulty
+            // at 3x Endurance Base, turning Adramelech's average 9,895 into 570. That clamp is what
+            // stops the unit mismatch becoming a runaway on this path.
+            var summoningWeight = PropertyManager.GetDouble("summoning_attribute_weight").Item;
+
+            if (summoningWeight > 0.0)
+                AwardAttributesForSkill(Skill.Summoning, award, summoningWeight);
         }
 
         /// <summary>
