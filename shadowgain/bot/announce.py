@@ -122,6 +122,74 @@ def unwrap(lines):
     return out
 
 
+def lint(raw, title, body):
+    """Refuse the things Discord renders differently from how the file reads.
+
+    WHY A CHECK AND NOT A TEMPLATE. Three announcement defects have reached #info, and every one was
+    invisible in the markdown and obvious the moment it rendered:
+
+      * a duplicate post (119, twice five minutes apart) - now impossible, see the LEDGER above;
+      * hard-wrapped paragraphs arriving broken every twelve words (168) - now impossible, see
+        unwrap() above;
+      * four `# ` section headings rendering as full-size H1 INSIDE the embed (178).
+
+    The first two were fixed in code and have not recurred. The third was the one still relying on
+    the author remembering a convention, and it took nine announcements before someone broke it.
+    A template would not have helped: 178 was written from scratch, and so was every other one.
+    Chris asked whether a template would help - this is the answer to the question behind it.
+
+    Returns (problems, warnings). Problems refuse the send; warnings are printed and sent anyway.
+    """
+    problems = []
+    warnings = []
+
+    lines = raw.strip().splitlines()
+
+    # ONLY THE FIRST `# ` LINE BECOMES THE TITLE. Every later one stays in the body, where Discord
+    # renders it far larger than the surrounding text. This is the 178 defect exactly.
+    h1 = [i for i, l in enumerate(lines) if l.startswith("# ")]
+    if len(h1) > 1:
+        problems.append(
+            f"{len(h1)} '# ' heading lines (lines {', '.join(str(i + 1) for i in h1)}). "
+            f"Only the FIRST becomes the embed title; the rest render as oversized H1 inside the "
+            f"body. Use '**bold lead-in.**' for sections - see announcements/README.md.")
+
+    # `##` is a WARNING, not a refusal, and the difference was measured rather than guessed.
+    # Running this over every announcement ever sent, announce-rules.md is the only file that trips
+    # it - and that one shipped on 2026-08-16 to #rules-and-setup and reads correctly, because a
+    # long structured rules document genuinely does want a section break. Refusing it would have
+    # made the check wrong on real history, and a check that cries wolf on a good file is one
+    # somebody turns off.
+    #
+    # Multiple `# ` stays a hard refusal because it is not a style choice: the first is silently
+    # consumed as the embed TITLE, so the rest render at a level the author never actually chose.
+    deeper = [i for i, l in enumerate(lines) if l.startswith("## ")]
+    if deeper:
+        warnings.append(
+            f"'##' heading(s) on line(s) {', '.join(str(i + 1) for i in deeper)} render as headings "
+            f"inside the embed. Fine for a long structured doc; for a normal announcement prefer "
+            f"'**bold lead-in.**'.")
+
+    if title is None:
+        problems.append("no '# ' title line - the embed will have no title.")
+
+    # 4096 is Discord's hard limit on an embed description; over it the API rejects the send.
+    if len(body) > 4096:
+        problems.append(f"body is {len(body)} chars, over Discord's 4096 embed description limit.")
+
+    if not body.strip():
+        problems.append("body is empty.")
+
+    # allowed_mentions=none already stops these pinging, so this is about the TEXT reading as though
+    # it pinged when it did not - which looks like a failed ping rather than a deliberate choice.
+    for token in ("@everyone", "@here"):
+        if token in body:
+            problems.append(f"body contains {token}; mentions are suppressed on send, so it would "
+                            f"render as literal text. Remove it or say 'everyone' in words.")
+
+    return problems, warnings
+
+
 def parse_message(raw):
     """First '# ' heading is the title; everything after is the body."""
     lines = raw.strip().splitlines()
@@ -172,6 +240,23 @@ async def run(args):
                 raw = fh.read()
 
             title, body = parse_message(raw)
+
+            problems, warnings = lint(raw, title, body)
+
+            for warn in warnings:
+                print(f"note: {warn}", file=sys.stderr)
+
+            if problems:
+                print(f"REFUSING: {os.path.basename(args.file)} has "
+                      f"{len(problems)} formatting problem(s):", file=sys.stderr)
+                for prob in problems:
+                    print(f"  - {prob}", file=sys.stderr)
+
+                if not args.no_lint:
+                    print("Fix them, or pass --no-lint to send anyway.", file=sys.stderr)
+                    return
+
+                print("--no-lint given: sending anyway.", file=sys.stderr)
 
             key = f"{os.path.basename(args.file)}:{target.id}"
             digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
@@ -291,6 +376,8 @@ def main():
                     help="post even if this exact file has already been posted to this channel")
     ap.add_argument("--edit", metavar="MESSAGE_ID",
                     help="edit an already-posted announcement in place instead of posting a new one")
+    ap.add_argument("--no-lint", action="store_true",
+                    help="send even if the formatting checks fail (they are there for a reason)")
     args = ap.parse_args()
 
     if not TOKEN or not GUILD_ID:

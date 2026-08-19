@@ -23,8 +23,31 @@
 set -euo pipefail
 
 REPO="C:/Git Projects/Shadowgain/ACE"
-KEY="C:/Users/Chris/.ssh/shadowgain_ed25519"
-HOST="root@137.184.1.44"
+
+# TARGET. Defaults are LIVE, so every existing invocation behaves exactly as before.
+#
+# These exist because until 2026-08-19 this script could only ever be pointed at LIVE, which meant
+# a change to the DEPLOY PATH ITSELF had nowhere to be rehearsed - the first run of any edit was on
+# the production shard with players in it. That is how the closed-world bug below survived: it was
+# never wrong on a deploy anyone watched, only on one that followed Phase 1.
+#
+# TEST is not a clone of LIVE and the differences bite:
+#   - the compose SERVICE is ace-server on both, but the CONTAINER is sg-server on TEST
+#     (container_name in docker-compose.local.yml). `docker compose restart sg-server` fails with
+#     "no such service"; `docker logs ace-server` fails with "no such container". Both names are
+#     needed and they are not interchangeable.
+#   - TEST has no docker-compose.fast.yml and lives in /home/chris/shadowgain, not /opt/ACE.
+#
+#   Rehearse a change to this script:
+#     SG_HOST=chris@192.168.20.20 SG_KEY=~/.ssh/sgtest_ed25519 SG_CONTAINER=sg-server \
+#     SG_COMPOSE_DIR=/home/chris/shadowgain SG_COMPOSE_FILES="-f docker-compose.yml -f docker-compose.local.yml" \
+#       ./deploy.sh --restart-only
+KEY="${SG_KEY:-C:/Users/Chris/.ssh/shadowgain_ed25519}"
+HOST="${SG_HOST:-root@137.184.1.44}"
+CONTAINER="${SG_CONTAINER:-ace-server}"          # docker ps / docker logs
+SERVICE="${SG_SERVICE:-ace-server}"              # docker compose <service>
+COMPOSE_DIR="${SG_COMPOSE_DIR:-/opt/ACE}"
+COMPOSE_FILES="${SG_COMPOSE_FILES:--f docker-compose.yml -f docker-compose.fast.yml}"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
 # Countdown before the world closes. ACE broadcasts a warning to everyone online at
@@ -102,8 +125,8 @@ echo "==> droplet: ACE graceful shutdown, ${SHUTDOWN_SECS}s warning"
 # which is why set-shutdown-interval has to be sent first; any text after `shutdown`
 # is broadcast to everyone online.
 $SSH "$HOST" "
-  if docker ps --format '{{.Names}}' | grep -q '^ace-server\$'; then
-    send() { printf '%s\n' \"\$1\" | timeout -s KILL 10 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true; }
+  if docker ps --format '{{.Names}}' | grep -q '^$CONTAINER\$'; then
+    send() { printf '%s\n' \"\$1\" | timeout -s KILL 10 docker attach --sig-proxy=false $CONTAINER >/dev/null 2>&1 || true; }
     # Scope every check to lines produced AFTER this instant. A shutdown does NOT
     # recreate the container, so 'Exiting at' from previous deploys is still sitting in
     # the log and an unscoped grep matches stale output on the first poll.
@@ -135,10 +158,10 @@ $SSH "$HOST" "
     DEADLINE=\$(( $SHUTDOWN_SECS + 300 ))
     DRAINED=0
     while [ \$(( \$(date +%s) - START )) -lt \$DEADLINE ]; do
-      if ! docker ps --format '{{.Names}}' | grep -q '^ace-server\$'; then
+      if ! docker ps --format '{{.Names}}' | grep -q '^$CONTAINER\$'; then
         echo \"    container exited after \$(( \$(date +%s) - START ))s\"; DRAINED=1; break
       fi
-      if docker logs --since \"\$SINCE\" ace-server 2>&1 | grep -q 'Exiting at'; then
+      if docker logs --since \"\$SINCE\" $CONTAINER 2>&1 | grep -q 'Exiting at'; then
         echo \"    drain complete after \$(( \$(date +%s) - START ))s\"; DRAINED=1; break
       fi
       sleep 2
@@ -150,30 +173,74 @@ $SSH "$HOST" "
     fi
 
     # Progress + the stuck-player failsafe, which is the one warning worth seeing here.
-    docker logs --since \"\$SINCE\" ace-server 2>&1 \
+    docker logs --since \"\$SINCE\" $CONTAINER 2>&1 \
       | grep -iE 'Waiting for [0-9]+|Waiting for world|Saving OfflinePlayers|failsafe|Exiting at' | tail -6
   fi"
 
-echo "==> droplet: swap container to the staged image"
-$SSH "$HOST" 'cd /opt/ACE && \
-  docker compose -f docker-compose.yml -f docker-compose.fast.yml stop -t 45 ace-server >/dev/null 2>&1 && \
-  docker compose -f docker-compose.yml -f docker-compose.fast.yml up -d 2>&1 | tail -3'
+# Timestamp captured BEFORE the swap so the startup checks below can be scoped to this run.
+#
+# They used to grep the whole log on the stated assumption that "docker compose up -d recreates the
+# container, so its log starts empty". That is only true when the IMAGE CHANGED. Re-run
+# --restart-only without a fresh --stage, or restart with a config-only change, and compose starts
+# the SAME container with its log intact - so the grep matches a marker from a previous run.
+#
+# Caught on TEST 2026-08-19: --restart-only reported "WORLD OPEN" against a world with
+# world_closed=1, matching a "World is now open" line that was three days and 4,776 log lines old.
+# On LIVE the assumption has held only because --stage always changes the image first.
+SWAP_SINCE=$($SSH "$HOST" 'date -u +%Y-%m-%dT%H:%M:%S')
 
-echo "==> waiting for world to open"
+echo "==> droplet: swap container to the staged image"
+$SSH "$HOST" "cd $COMPOSE_DIR && \
+  docker compose $COMPOSE_FILES stop -t 45 $SERVICE >/dev/null 2>&1 && \
+  docker compose $COMPOSE_FILES up -d 2>&1 | tail -3"
+
+echo "==> waiting for the world to come up"
+# TWO OUTCOMES ARE BOTH SUCCESS, and treating only one as success was a real bug.
+#
+# DEPLOY.md Phase 1 sets world_closed=true on purpose, so that a staged deploy comes back up with
+# the door shut until the dials are flipped. In that state ACE logs
+#
+#     World started and is currently Closed
+#     To open world to players, use command: world open
+#
+# and never emits "World is now open" - because it is waiting for a human to type it. This loop
+# used to grep only for "World is now open", so following the runbook made the tool burn its full
+# 150s and exit 1 announcing a failure on a perfectly healthy deploy.
+#
+# Reproduced on TEST 2026-08-19 rather than reasoned about: with world_closed=1 the marker is
+# provably absent and the old loop reports "world did not open".
+#
+# That false failure is why deploys got hand-run phase by phase instead of using this script - and
+# hand-running is what produced the 178 incident, where a bespoke wait blocked on the container
+# stopping, which never happens, leaving the world empty and players locked out for 13 minutes.
+#
+# The open-world path logs "...currently Closed and will open automatically..." first, so match the
+# END STATE, not that phrase.
 for i in $(seq 1 15); do
   # Grep the WHOLE log, not a tail. `docker compose up -d` recreates the container, so its
-  # log starts empty - if the marker is present at all, the world opened on THIS run.
+  # log starts empty - if the marker is present at all, it was produced by THIS run.
   #
   # It used to check `tail -5`, which broke the moment the 15s status timer started
   # injecting serverstatus output: the marker scrolled out of the window within seconds
   # and every deploy reported "world did not open" while the world was, in fact, open.
-  if $SSH "$HOST" 'docker logs ace-server 2>&1 | grep -qi "World is now open"' 2>/dev/null; then
+  if $SSH "$HOST" "docker logs --since '$SWAP_SINCE' $CONTAINER 2>&1 | grep -qi 'World is now open'" 2>/dev/null; then
     echo "==> WORLD OPEN"
-    $SSH "$HOST" 'cd /opt/ACE && docker compose ps --format "{{.Name}}\t{{.Status}}"'
+    $SSH "$HOST" "cd $COMPOSE_DIR && docker compose ps --format \"{{.Name}}\t{{.Status}}\""
+    exit 0
+  fi
+  if $SSH "$HOST" "docker logs --since '$SWAP_SINCE' $CONTAINER 2>&1 | grep -qi 'use command: world open'" 2>/dev/null; then
+    echo "==> WORLD UP, AND DELIBERATELY CLOSED (world_closed is set)"
+    echo "    This is a SUCCESSFUL start. Nothing is wrong and nothing is waiting on this script."
+    echo "    Still to do by hand: DEPLOY.md Phase 5 (migration), Phase 6 (dials), then:"
+    echo "        ./console.sh -q \"modifybool world_closed false\""
+    echo "        ./console.sh -q \"resyncproperties\""
+    echo "        ./console.sh -q \"world open\""
+    $SSH "$HOST" "cd $COMPOSE_DIR && docker compose ps --format \"{{.Name}}\t{{.Status}}\""
     exit 0
   fi
   sleep 10
 done
 
-echo "!! world did not open within 150s - check: docker logs ace-server"
+echo "!! world neither opened nor reported itself closed within 150s"
+echo "!! this one IS a failure - check: docker logs $CONTAINER"
 exit 1
