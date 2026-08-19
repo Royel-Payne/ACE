@@ -4156,12 +4156,65 @@ namespace ACE.Server.Command.Handlers
         }
 
         // trainskill
-        [CommandHandler("trainskill", AccessLevel.Developer, CommandHandlerFlag.RequiresWorld, 1)]
+        /// <summary>
+        /// Shadowgain 170: implemented. Upstream shipped this as an empty stub - signature, comment,
+        /// "// TODO: output", no body - so it silently did nothing when called.
+        ///
+        /// It exists now as the FAIL-SAFE behind /sg-train. That command lets a player restore a skill
+        /// they pruned, which the client blocks by greying out its Train button whenever the dat price
+        /// exceeds their available credits. This is the same operation from the other side of the desk,
+        /// for anything /sg-train refuses.
+        ///
+        /// Charges the SERVER price (GetTrainingCost), which is 0 while all_skills_trained is on -
+        /// the same price the client path would have paid. It is not a free-skill grant dressed up as
+        /// an admin tool: turn that dial off and this charges full dat cost like anything else.
+        /// </summary>
+        [CommandHandler("trainskill", AccessLevel.Developer, CommandHandlerFlag.RequiresWorld, 1,
+            "Trains a skill on the last appraised player, at the server's price.",
+            "<skillName> - appraise the player first. Restores a pruned skill exactly as /sg-train does.")]
         public static void Handletrainskill(Session session, params string[] parameters)
         {
-            // @trainskill - Attempts to train the specified skill by spending skill credits on it.
+            var lastAppraised = CommandHandlerHelper.GetLastAppraisedObject(session);
 
-            // TODO: output
+            if (lastAppraised is not Player target)
+            {
+                ChatPacket.SendServerMessage(session, "The last appraised object was not a player.", ChatMessageType.Broadcast);
+                return;
+            }
+
+            var wanted = string.Concat(string.Join("", parameters).Where(c => !char.IsWhiteSpace(c)));
+
+            if (!Enum.TryParse(wanted, true, out Skill skill) || !Enum.IsDefined(typeof(Skill), skill))
+            {
+                ChatPacket.SendServerMessage(session, $"'{string.Join(" ", parameters)}' is not a valid skill name.", ChatMessageType.Broadcast);
+                return;
+            }
+
+            var before = target.GetCreatureSkill(skill).AdvancementClass;
+            var wasPruned = target.IsSkillPruned(skill);
+
+            var creditsBefore = target.AvailableSkillCredits ?? 0;
+
+            // The single-argument overload does the dat lookup and calls GetTrainingCost itself,
+            // which is 0 while all_skills_trained is on - the same price the client path pays.
+            if (!target.TrainSkill(skill))
+            {
+                ChatPacket.SendServerMessage(session,
+                    $"Could not train {skill} on {target.Name} (was {before}, credits {creditsBefore}).",
+                    ChatMessageType.Broadcast);
+                return;
+            }
+
+            var creatureSkill = target.GetCreatureSkill(skill);
+
+            target.Session?.Network.EnqueueSend(
+                new GameMessagePrivateUpdateSkill(target, creatureSkill),
+                new GameMessagePrivateUpdatePropertyInt(target, PropertyInt.AvailableSkillCredits, target.AvailableSkillCredits ?? 0),
+                new GameMessageSystemChat($"{skill.ToSentence()} has been restored at rank {creatureSkill.Ranks}.", ChatMessageType.Advancement));
+
+            ChatPacket.SendServerMessage(session,
+                $"{target.Name}: {skill} {before} -> {creatureSkill.AdvancementClass} at rank {creatureSkill.Ranks}, credits {creditsBefore} -> {target.AvailableSkillCredits ?? 0}{(wasPruned ? " (was pruned)" : "")}.",
+                ChatMessageType.Broadcast);
         }
 
         // reloadsysmsg
