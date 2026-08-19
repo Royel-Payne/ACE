@@ -6,6 +6,7 @@ Shadowgain: post an announcement embed to a Discord channel, as the bot.
     python announce.py --channel general --file msg.md --dry-run
     python announce.py --channel general --file msg.md
 
+    python announce.py --channel general --file msg.md --edit 1539719954977525793
 WHY THIS EXISTS. The bot had no outbound announcement path - only the inbound relay, /link,
 /bug and the role sweep. That was mistaken for "the bot cannot post announcements", which is
 wrong twice over: it already builds and sends embeds for every bug report, and the Shadowgain
@@ -179,6 +180,52 @@ async def run(args):
 
             embed = discord.Embed(title=title, description=body, colour=EMBED_COLOUR)
 
+            # 178: EDIT AN ALREADY-POSTED ANNOUNCEMENT IN PLACE.
+            #
+            # Added after the 178 post went out with four `# ` headings in the body. Only the FIRST
+            # one is consumed as the embed title; the rest render as full-size H1 inside the embed,
+            # which is why every other announcement in this directory uses a single `# ` line and
+            # `**bold**` lead-ins for sections. Chris: "a few really big/bold sections that feel a
+            # bit odd."
+            #
+            # Editing beats delete-and-repost for a wording or formatting fix: the message keeps its
+            # position and timestamp, nobody gets a second notification, and there is no window where
+            # #info has no announcement in it. Reposting is still the right move when the CONTENT
+            # changes materially - people who already read it need to see it again.
+            if args.edit:
+                try:
+                    msg = await target.fetch_message(int(args.edit))
+                except Exception as exc:                # noqa: BLE001
+                    print(f"could not fetch message {args.edit} in #{target.name}: {exc!r}",
+                          file=sys.stderr)
+                    return
+
+                if args.dry_run:
+                    print(f"--- DRY RUN: would EDIT message {args.edit} in #{target.name} ---")
+                    print(f"title: {title}")
+                    print("-" * 60)
+                    print(body)
+                    print("-" * 60)
+                    print(f"{len(body)} chars (embed description limit is 4096)")
+                    result["code"] = 0
+                    return
+
+                await msg.edit(embed=embed)
+                print(f"edited #{target.name} message {msg.id}")
+
+                # Re-stamp the ledger so the hash matches what is actually displayed now -
+                # otherwise a later --dry-run compares against the superseded wording.
+                _record(key, {
+                    "message_id": str(msg.id),
+                    "channel": target.name,
+                    "sha256": digest,
+                    "posted": (prior or {}).get("posted"),
+                    "edited": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                })
+
+                result["code"] = 0
+                return
+
             if args.dry_run:
                 print(f"--- DRY RUN: would post to #{target.name} ({target.id}) ---")
                 print(f"title: {title}")
@@ -242,6 +289,8 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="render the embed without sending")
     ap.add_argument("--force", action="store_true",
                     help="post even if this exact file has already been posted to this channel")
+    ap.add_argument("--edit", metavar="MESSAGE_ID",
+                    help="edit an already-posted announcement in place instead of posting a new one")
     args = ap.parse_args()
 
     if not TOKEN or not GUILD_ID:
