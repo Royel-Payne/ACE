@@ -517,7 +517,29 @@ namespace ACE.Server.WorldObjects
                 if (!Vitals.TryGetValue(vitalType, out var vital))
                     return;
 
-                var target = (uint)Math.Round((double)attributeRanks * vitalMaxRanks / attributeMaxRanks);
+                var proportion = 1.0;
+
+                // Shadowgain 171: HEALTH ONLY, and it exists because Endurance cannot be raised fast
+                // enough to matter. The 013 stretch spreads a 190-entry dat table over 280 ranks, so
+                // the server leader sits at 230 Endurance ranks having earned 8.8% of the XP the
+                // ceiling costs - the remaining 50 ranks cost 3.67 BILLION, ten times everything he
+                // has earned. That is 5,859 hours for him and 30,051 for the character behind him, so
+                // no multiplier on the GAIN RATE can reach it: doubling endurance_damage_multiplier
+                // halved a number still measured in years.
+                //
+                // Chris: 'end can't be a gate keeper to higher tier content. We need this to reach
+                // near max so players even have enough health'. So this pays health at the Endurance
+                // players can actually reach, instead of racing an exponential.
+                //
+                // Stamina and Mana are deliberately untouched - 'I don't want to change the other
+                // attributes, they seem good'. Health is the one that gates content.
+                if (vitalType == PropertyAttribute2nd.MaxHealth)
+                    proportion = PropertyManager.GetDouble("health_rank_proportion").Item;
+
+                if (proportion <= 0.0)
+                    proportion = 1.0;   // a nonsensical value must not silently zero anyone's health
+
+                var target = (uint)Math.Round((double)attributeRanks * vitalMaxRanks / attributeMaxRanks * proportion);
 
                 if (target > vitalMaxRanks)
                     target = (uint)vitalMaxRanks;

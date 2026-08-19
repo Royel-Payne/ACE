@@ -410,6 +410,33 @@ namespace ACE.Server.WorldObjects
             // Jkurs reported. Evade difficulty is the ATTACKER's weapon skill, so a developed main
             // swinging at a low-skill alt trained the alt's defence at full rate.
             Proficiency.OnSuccessUse(this, defenseSkill, difficulty, opponent: attacker);
+
+            // Shadowgain 171: EVADING TRAINS QUICKNESS.
+            //
+            // Melee Defence and Missile Defence are Quickness-PRIMARY in the dat's own skill
+            // formula, and awarded no attribute at all before this - the attribute hook lives on
+            // the ATTACK path (AwardAttributesForWeaponSkill, ~line 236), so however much you
+            // defended, no attribute moved. That is most of why Quickness was the outlier: 124
+            // ranks against 172-185 for every other attribute.
+            //
+            // PAID AS A SECONDARY, NOT THE PRIMARY THE DAT SAYS. Chris asked for that explicitly -
+            // 'I'm really looking for a steady path not explosive growth' - and the volume backs
+            // him: evades are the highest-frequency event in the game, 154,437 melee evades per 9h
+            // against Strength's 78,637 attack awards. At the full 0.25 overlap factor this alone
+            // roughly doubles Quickness, so it ships at 0.10 and is raised from evidence.
+            //
+            // BOTH attributes, through the dat's own formula. Chris, on review: 'Let's not remove
+            // the coordination gain on those, just add quick as secondary'. Running it through
+            // AwardAttributesForSkill keeps the game's mapping rather than a hand-written one - the
+            // 019 lesson, where four hand-mapped weapon skills were wrong - and the weight scales
+            // BOTH halves, so Quickness takes the dial and Coordination takes the 0.25 overlap OF
+            // the dial. At 0.10 that is Quickness +39% and Coordination +10%: Quickness gets the
+            // lift it needs, Coordination a nudge rather than the doubling full parity would give
+            // it, and the 4:1 primary/secondary shape the dat intends is preserved.
+            var defenseAttributeWeight = PropertyManager.GetDouble("defense_quickness_weight").Item;
+
+            if (defenseAttributeWeight > 0.0 && Proficiency.AllowsUsageGain(this, attacker))
+                AwardAttributesForSkill(defenseSkillType, difficulty, defenseAttributeWeight);
         }
 
         public BaseDamageMod GetBaseDamageMod(WorldObject damageSource)
