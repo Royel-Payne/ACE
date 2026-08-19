@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 
 using ACE.DatLoader;
@@ -230,10 +230,38 @@ namespace ACE.Server.Entity
             {
                 var skill = (Skill)i;
 
-                // Shadowgain 095h: fullWipe - Enlightenment sends the character back to level 1 and
-                // wiping every skill IS the intent here, unlike the Fianhe/Temple respec paths which
-                // now preserve earned ranks.
-                player.ResetSkill(skill, false, fullWipe: true);
+                // Shadowgain 095h (SUPERSEDED by 179, 2026-08-19): ~~fullWipe - Enlightenment sends
+                // the character back to level 1 and wiping every skill IS the intent here, unlike the
+                // Fianhe/Temple respec paths which now preserve earned ranks.~~
+                //
+                // Shadowgain 179: SKILLS ARE PRESERVED. Chris, on a use-only server: skills are the
+                // long earned path here, and wiping them on enlightenment destroys the one thing the
+                // whole design is about. Enlightenment now resets LEVEL + ATTRIBUTES + LUMINANCE +
+                // AETHERIA and KEEPS SKILLS + AUGS. A level-1 character with rank-200 skills
+                // afterwards is the intended outcome, not a bug. This is a DECISION - do not
+                // "correct" it back to a wipe.
+                //
+                // fullWipe:false rather than deleting this call, and the difference matters. The
+                // full-wipe branch does FOUR things: un-specialize (+credit refund), untrain the
+                // untrainable, zero ExperienceSpent, zero Ranks. Only the last two are unwanted.
+                // Dropping the call entirely would also keep every SPECIALIZATION - and since the
+                // method overwrites AvailableSkillCredits with the heritage base immediately below,
+                // a player would keep their specs AND get a full fresh credit pool on every
+                // enlightenment, specialising more skills each cycle, forever.
+                //
+                // fullWipe:false routes to UnspecializeSkill -> DemoteSkillToTrained, which keeps
+                // ExperienceSpent and RECOMPUTES the rank on the trained curve. That recompute is the
+                // reason not to hand-roll this: a spec-curve rank left on a now-Trained skill would
+                // disagree with the experience behind it.
+                //
+                // UntrainSkill refuses while all_skills_trained is on, which is correct - everything
+                // lands on Trained, which is exactly the intent (Chris: "reset this (to all
+                // trained)").
+                //
+                // The per-skill chat line this sends ~50 times is DELIBERATELY left in. Chris:
+                // "players get a kick out of seeing everything they've worked hard on wiped
+                // (kinda wiped)".
+                player.ResetSkill(skill, false, fullWipe: false);
             }
 
             player.AvailableExperience = 0;
