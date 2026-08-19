@@ -294,6 +294,13 @@ namespace ACE.Server.Entity
             // unassigned-XP pool, the IsMaxLevel early-return, and the GetRemainingXP(maxLevel)
             // bound that upstream imposed. Usage gain must keep working at and past max level, and
             // must not be killed when the player-facing spend path is disabled.
+            // Shadowgain 176: Lockpick may be paid in RANKS instead, when that is worth more.
+            // Substituted HERE, at the last moment before the write, so every gate, telemetry
+            // field and debug line above still runs exactly as it does for any other skill -
+            // this changes the AMOUNT, not the path. Returns pp untouched for anything that is
+            // not Lockpick, or while the dial is off.
+            pp = player.RankDenominateLockpickAward(skill, difficulty, pp);
+
             var applied = player.AwardSkillUsageXP(skill, pp);
 
             if (debug)

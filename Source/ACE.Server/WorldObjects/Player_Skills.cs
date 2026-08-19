@@ -771,6 +771,115 @@ namespace ACE.Server.WorldObjects
         }
 
         /// <summary>
+        /// Shadowgain 176: a successful lockpick may be paid in RANKS rather than flat XP.
+        ///
+        /// **Why Lockpick alone needs this, when 175's multiplier was not enough.** Every other
+        /// usage skill reads its difficulty off a creature, and creature defence keeps climbing as
+        /// players seek out harder content - so the award climbs with them. A lock's difficulty is
+        /// ResistLockpick, a fixed number in the world database, and 119 discards anything above
+        /// Base x 3 on top of that. The hardest lock in the game is 500, which is already AT that
+        /// ceiling for any rank below ~170 - so the award is pinned near 3,000 xp per pick forever
+        /// while a rank climbs past 50,000,000. Measured: 884,783 picks for rank 0 -> 200.
+        ///
+        /// That is why raising ResistLockpick was rejected rather than tried. It buys 0% at rank
+        /// 100, 8% at 125 and 19% at 150 - and Chris: *'Can't make the lockpicking harder or people
+        /// will never get through "locked" doors.'*
+        ///
+        ///     step(R, d) = lockpick_rank_fraction x (1 - R/tableMax) ^ decay x min(d, ref)/ref
+        ///
+        /// **MAX with the flat award, never a replacement.** The flat path wins below about rank
+        /// 100 and the rank path above it, and the crossover is precisely where a fixed number stops
+        /// keeping up with an exponential curve. Taking the larger leaves the early game untouched
+        /// and means enabling this can never make anything worse - the same guarantee 174 gives.
+        ///
+        /// **Scaled by the lock's difficulty, so no threshold is needed.** A door at 50 pays a tenth
+        /// of a 500 lock. That keeps the 7,602 placed house doors off the optimal path without a
+        /// cliff to explain or game, and picked doors stay unlocked until the landblock resets, so
+        /// they cannot be farmed in place regardless.
+        ///
+        /// **Depends on 175b.** The difficulty reaching here is now the lock's OWN ResistLockpick,
+        /// not the enchanted one. Without that, Incantation of Strengthen Lock (+250) would let a
+        /// player manufacture the very input this scales by - a x36 inflation on any house door.
+        ///
+        /// Returns the amount to actually award: the flat value untouched when this is off, not
+        /// Lockpick, or simply smaller.
+        /// </summary>
+        public uint RankDenominateLockpickAward(CreatureSkill skill, uint difficulty, uint flatAward)
+        {
+            if (skill == null || skill.Skill != Skill.Lockpick)
+                return flatAward;
+
+            if (!PropertyManager.GetBool("lockpick_rank_xp_enabled").Item)
+                return flatAward;
+
+            if (skill.AdvancementClass < SkillAdvancementClass.Trained)
+                return flatAward;
+
+            var skillXpTable = GetSkillXPTable(skill.AdvancementClass);
+
+            if (skillXpTable == null || skillXpTable.Count < 2)
+                return flatAward;
+
+            var tableMaxRank = skillXpTable.Count - 1;
+
+            // Ranks only, never Ranks + InitLevel - InitLevel carries both the overflow past the
+            // table top and the flat 10 a Specialized skill is born with. Same reasoning as 174.
+            var rank = (int)skill.Ranks;
+
+            var headroom = 1.0 - (double)rank / tableMaxRank;
+
+            // At or past the table top the rank path stops and the flat award carries on alone.
+            if (headroom <= 0)
+                return flatAward;
+
+            var baseFraction = PropertyManager.GetDouble("lockpick_rank_fraction").Item;
+            var decay = PropertyManager.GetDouble("lockpick_rank_decay").Item;
+            var ceiling = PropertyManager.GetDouble("lockpick_rank_max").Item;
+            var reference = PropertyManager.GetLong("lockpick_rank_reference_difficulty").Item;
+
+            if (double.IsNaN(baseFraction) || baseFraction <= 0)
+                return flatAward;
+
+            if (double.IsNaN(decay) || decay < 0)
+                decay = 0;
+
+            // Non-optional clamp: a nonsensical value falls back rather than disabling it. Same
+            // load-bearing invariant as 092 and 174.
+            if (double.IsNaN(ceiling) || ceiling <= 0)
+                ceiling = 1.0;
+
+            if (reference <= 0)
+                reference = 500;        // the hardest lock actually placed in the world
+
+            // Difficulty scaling, clamped at 1.0 so nothing above the reference pays extra. Belt and
+            // braces next to 175b: even if some future lock exceeds the reference, it cannot become
+            // a multiplier.
+            var difficultyScale = Math.Min(1.0, (double)difficulty / reference);
+
+            if (difficultyScale <= 0)
+                return flatAward;
+
+            var step = baseFraction * Math.Pow(headroom, decay) * difficultyScale;
+
+            step = Math.Min(step, ceiling);
+
+            if (double.IsNaN(step) || step <= 0)
+                return flatAward;
+
+            var costHere = CalcSkillXpForRank(skill.AdvancementClass, rank);
+            var costNext = CalcSkillXpForRank(skill.AdvancementClass, rank + 1);
+
+            if (costHere == null || costNext == null || costNext.Value <= costHere.Value)
+                return flatAward;
+
+            var scaled = step * (costNext.Value - costHere.Value);
+
+            var grant = scaled >= uint.MaxValue ? uint.MaxValue : (uint)Math.Round(scaled);
+
+            return Math.Max(flatAward, grant);
+        }
+
+        /// <summary>
         /// Shadowgain 174: the fluff crafts, whose turn-in tasks pay in RANKS rather than flat XP.
         ///
         /// Salvaging is DELIBERATELY ABSENT. It is the one crafting skill with a working progression
