@@ -18,6 +18,26 @@ namespace ACE.Server.Managers
     /// records rather than restricts, and the person it most needs to be tamper-proof against is
     /// whoever holds the second-highest access level on the server.
     ///
+    /// WHO THIS IS FOR, settled 2026-08-19 (177). The audience is PLAYERS, not staff. The #audit
+    /// channel is readable by every Verified Player and that is deliberate.
+    ///
+    /// Chris: "the audit trail exists to reveal any 'abuse' of admin powers, cheating, granting xp,
+    /// creating items, it's to provide transparency that no favoritism is being offered to anyone.
+    /// This is a hobby amateur server but we don't want people to think we're gifting some people
+    /// anything. It's not to be a window into every move we make that's outside that scope."
+    ///
+    /// That sentence decides every add and removal below, and it cuts BOTH ways:
+    ///
+    ///   - Anything that could look like a gift - items, experience, characters, access, dials -
+    ///     is recorded, and the default for anything unclassified is to record.
+    ///   - Anything OUTSIDE that scope is noise at best, and at worst tells players things about
+    ///     staff tooling they have no stake in. NotAudited is therefore a TRANSPARENCY decision,
+    ///     not a tidiness one: every entry on that list is something players will never see.
+    ///
+    /// The trail is not an internal log that players happen to be able to read. It is evidence
+    /// offered TO them, which is why it must stay skimmable and why it must never be the place
+    /// someone learns how staff operate.
+    ///
     /// WHY ONE HOOK INSTEAD OF PER-COMMAND CALLS. Every command, typed or console, resolves
     /// through CommandManager.GetCommandHandler and only executes when that returns Ok or
     /// SudoOk. Emitting at those two returns covers every privileged command that exists today

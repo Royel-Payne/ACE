@@ -7,6 +7,10 @@ An audit channel that humans can post in is one a human can pad, and one they ca
 from is one they can edit; both defeat the point. Discord message history is what makes
 this durable on the Discord side, so Read Message History is granted where View is.
 
+READABLE BY VERIFIED PLAYERS (177). It is a transparency mechanism aimed at players -
+evidence that nobody is being handed xp, items or favours - not an internal staff log.
+Restricting it to staff would leave it proving nothing to the only audience that matters.
+
 Requires Manage Channels on the bot, which Chris granted for this and intends to revoke.
 """
 import os, sys, asyncio, discord
@@ -56,22 +60,49 @@ async def on_ready():
                 embed_links=True, manage_messages=True),
         }
 
-        # Chris reads it; he just cannot write to it. Same for anyone he later trusts.
+        # 177: VERIFIED PLAYERS CAN READ THIS, AND THAT IS THE ENTIRE POINT.
+        #
+        # This was view_channel=False from 045 until 2026-08-19, and the live channel had been
+        # changed to True by hand at some point - so re-running this idempotent script would have
+        # silently taken the access away again. That is the bug being fixed here: the script now
+        # asserts what the channel is actually FOR.
+        #
+        # Chris, 2026-08-19: "the audit trail exists to reveal any 'abuse' of admin powers,
+        # cheating, granting xp, creating items, it's to provide transparency that no favoritism
+        # is being offered to anyone. This is a hobby amateur server but we don't want people to
+        # think we're gifting some people anything. It's not to be a window into every move we
+        # make that's outside that scope."
+        #
+        # So the AUDIENCE IS PLAYERS, not staff. Two consequences worth stating, because they are
+        # easy to get backwards:
+        #
+        #   - The channel being player-readable is a FEATURE. Do not "fix" it back to False.
+        #   - ShadowgainAudit's NotAudited list is therefore a TRANSPARENCY decision, not merely a
+        #     noise one. Anything added there becomes invisible to the people the channel exists
+        #     to reassure, which is why its criterion is unfair gameplay and why its default is
+        #     to record.
+        #
+        # send_messages stays denied: @everyone's deny covers every human, and a trail a human can
+        # post in is one they can pad.
         if VERIFIED_ROLE_ID:
             role = guild.get_role(VERIFIED_ROLE_ID)
             if role is not None:
                 overwrites[role] = discord.PermissionOverwrite(
-                    view_channel=False, send_messages=False)
+                    view_channel=True, send_messages=False, read_message_history=True)
 
         if existing is None:
             ch = await guild.create_text_channel(
                 NAME, category=category, overwrites=overwrites,
-                topic="Read-only. Every privileged command, written by the server. Not purged.",
+                topic=("Read-only, written by the server and never purged. Every privileged action that could "
+                       "affect fairness - items, experience, characters, access, dials. Staff movement and "
+                       "routine server operations are not listed."),
                 reason="Shadowgain 045: durable audit trail")
             print(f"CREATED #{NAME} id={ch.id}")
         else:
             await existing.edit(overwrites=overwrites,
-                                topic="Read-only. Every privileged command, written by the server. Not purged.",
+                                topic=("Read-only, written by the server and never purged. Every privileged action that could "
+                       "affect fairness - items, experience, characters, access, dials. Staff movement and "
+                       "routine server operations are not listed."),
                                 reason="Shadowgain 045: re-assert read-only")
             print(f"EXISTS  #{NAME} id={existing.id} (permissions re-asserted)")
             ch = existing
