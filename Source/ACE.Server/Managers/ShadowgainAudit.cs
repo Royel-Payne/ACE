@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -86,6 +86,18 @@ namespace ACE.Server.Managers
         ///      anyone an item, a level, or a rank. It belongs in a deploy log, not here.
         ///   3. STAFF SELF-MOVEMENT - moves only the caller. Anything that moves ANOTHER
         ///      player stays audited, because that is an action taken ON someone.
+        ///   4. STAFF SELF-CONCEALMENT (177) - changes only how the caller is PERCEIVED, and
+        ///      where publishing the line defeats the tool it describes. This is the first test
+        ///      admitted for a reason other than noise: `@cloak` exists so staff can watch
+        ///      without being seen, and announcing each use in a channel six verified players
+        ///      can read makes it useless for the one job it has. Chris: "these 2 don't need to
+        ///      be exposed to users as it gives away our ability to use the tool in any sort of
+        ///      useful way."
+        ///
+        /// TEST 4 IS THE NARROWEST OF THE FOUR AND MUST STAY THAT WAY. It is not "self-only" -
+        /// `@neversaydie` and `@portal_bypass` are also self-only and are deliberately still
+        /// audited, because nothing about recording them blunts them. The test is specifically
+        /// that DISCLOSURE ITSELF is the harm.
         ///
         /// Not admitted, however quiet: anything that creates or destroys an object, moves XP or
         /// levels, edits a character, changes a dial, or changes who holds access.
@@ -147,6 +159,23 @@ namespace ACE.Server.Managers
             "teledist",
             "teledungeon",
             "sg-tele",
+
+            // --- 4. staff self-concealment (177) -------------------------------------------
+            // Both act ONLY on session.Player - neither takes a target - so neither can be
+            // turned on someone else, which is what keeps them inside the criterion.
+            //
+            // `cloak` is the clear case: a concealment tool whose every use is announced is not
+            // a concealment tool. `attackable off` is the same disclosure in a quieter form - it
+            // tells a reader that staff can walk through a dungeon unmolested, which is the same
+            // capability leak by another route.
+            //
+            // These DO confer a private benefit - not being seen, not being attacked - and that
+            // is the honest reason they were audited in the first place. They are admitted anyway
+            // because staff are not competing with players here, and because neither can move an
+            // item, a rank or a level. Anything either of them is used to SET UP still lands in
+            // the trail on its own line.
+            "cloak",
+            "attackable",
         };
 
         /// <summary>
