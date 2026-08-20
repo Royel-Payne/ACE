@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -82,7 +82,12 @@ namespace ACE.Server.Command.Handlers
                     ? $"You still carry the {Mark()} - you have never taken the fast lane. Keep it that way."
                     : $"You have taken the fast lane at some point, so the {Mark()} is gone for good.");
 
-                Send(session, "Use /masochist off for the fast lane, or /masochist on for the hard lane.");
+                // Do not advertise a door that is shut. Someone on the fast lane still needs to be
+                // told how to leave it, so the hard-lane half is always offered.
+                Send(session, PropertyManager.GetBool("progression_lane_choice_enabled").Item
+                    ? "Use /masochist off for the fast lane, or /masochist on for the hard lane."
+                    : "The fast lane is closed on this world. Use /masochist on for the hard lane.");
+
                 return;
             }
 
@@ -95,6 +100,27 @@ namespace ACE.Server.Command.Handlers
             }
 
             var wantFast = arg == "off";
+
+            // Shadowgain 181: the fast lane can be CLOSED.
+            //
+            // Chris, 2026-08-19: *"I think it needs to go away honestly."* The interim measure was
+            // setting progression_speed_fast to match hard (9.0), but that is a TRAP rather than a
+            // switch - SetProgressionLane(true) still trips ShadowgainForfeitedMarker, which is
+            // never cleared, so a player would permanently burn their mark and Honour Roll place in
+            // exchange for nothing at all.
+            //
+            // ONLY THE WAY IN IS BLOCKED. Returning to the hard lane stays available whatever this
+            // dial says, so nobody who chose fast while it was open can be stranded there by a dial
+            // flipping afterwards. That asymmetry is the whole point: closing a door should never
+            // lock anyone inside.
+            //
+            // Refused BEFORE the confirmation prompt, so a closed lane never asks "are you sure".
+            if (wantFast && !PropertyManager.GetBool("progression_lane_choice_enabled").Item)
+            {
+                Send(session, "The fast lane is closed on this world - it is the hard road or nothing.");
+                Send(session, $"Your {Mark()} is safe; nothing has changed.");
+                return;
+            }
 
             // Warn once before the irreversible step, and make them repeat it. This is the only
             // action in the game that permanently destroys something earned.
@@ -166,10 +192,23 @@ namespace ACE.Server.Command.Handlers
 
             var mark = Mark();
 
-            Send(session, "Two roads to the top of Shadowgain:");
-            Send(session, $"  /masochist on   - the hard, slow road (the default). Keeps the {mark} mark and your Honour Roll spot.");
-            Send(session, "  /masochist off  - the fast lane, months instead of years.");
-            Send(session, $"Taking the fast lane even once forfeits the {mark} mark and your Honour Roll spot FOREVER - returning to the slow road never restores it. Both roads end at the same power.");
+            // 181: this text promised "months instead of years", which stops being true the moment
+            // the lane is closed or its speed is tuned to match. A signpost that lies is worse than
+            // no signpost, and this is the one place a new player learns the choice exists at all.
+            var laneOpen = PropertyManager.GetBool("progression_lane_choice_enabled").Item;
+
+            if (laneOpen)
+            {
+                Send(session, "Two roads to the top of Shadowgain:");
+                Send(session, $"  /masochist on   - the hard, slow road (the default). Keeps the {mark} mark and your Honour Roll spot.");
+                Send(session, "  /masochist off  - the fast lane, months instead of years.");
+                Send(session, $"Taking the fast lane even once forfeits the {mark} mark and your Honour Roll spot FOREVER - returning to the slow road never restores it. Both roads end at the same power.");
+            }
+            else
+            {
+                Send(session, "One road to the top of Shadowgain: the long one.");
+                Send(session, $"The fast lane is closed on this world. Everyone climbs the same way, and everyone keeps the {mark} mark.");
+            }
 
             Send(session, $"You are currently on: {(player.ShadowgainFastPath ? "the FAST lane" : "the hard road")}.");
 
