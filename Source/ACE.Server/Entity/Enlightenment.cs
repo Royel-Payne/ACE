@@ -261,6 +261,31 @@ namespace ACE.Server.Entity
                 // The per-skill chat line this sends ~50 times is DELIBERATELY left in. Chris:
                 // "players get a kick out of seeing everything they've worked hard on wiped
                 // (kinda wiped)".
+                // Shadowgain 179b (2026-08-19): ONLY DEMOTE SPECIALIZATIONS. Never touch a Trained
+                // skill.
+                //
+                // 179 used ResetSkill(fullWipe:false) for every skill, which was wrong and was caught
+                // on the first real TEST run. That method sends a SPECIALIZED skill to
+                // UnspecializeSkill (correct - demote, keep ranks) but sends a TRAINED skill to
+                // UntrainSkill - and on this server UntrainSkill does not merely untrain. Under
+                // all_skills_trained it takes 093's DELIBERATE PRUNE branch: the skill is added to
+                // ShadowgainPrunedSkills, and EnsureAllSkillsTrained skips anything on that list
+                // forever. So the reconcile can never undo it.
+                //
+                // Measured on Black Breath: 26 skills written into the pruned list, 14 left Untrained
+                // while still holding their ranks. They keep their XP, but they stop earning use-gain
+                // AND they lose the +1-per-enlightenment perk, because GetAugBonus_Base gates on
+                // AdvancementClass >= Trained. Enlightenment would quietly delete the single reason
+                // players do it, on most of their skills.
+                //
+                // Skipping Trained skills also does the right thing for a skill the player pruned
+                // BEFORE enlightening: it is already Untrained, so it is left alone and the prune
+                // survives, which is 093's whole point.
+                var creatureSkill = player.GetCreatureSkill(skill, false);
+
+                if (creatureSkill == null || creatureSkill.AdvancementClass != SkillAdvancementClass.Specialized)
+                    continue;
+
                 player.ResetSkill(skill, false, fullWipe: false);
             }
 
