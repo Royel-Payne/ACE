@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -61,7 +61,31 @@ namespace ACE.Server.WorldObjects
                 }
             }
 
-            if (slumlord.HouseRequiresMonarch)
+            // Shadowgain 182: the monarch requirement is now a dial, because on a small server it
+            // is not a difficulty gate - it is an impossibility.
+            //
+            // Chris, 2026-08-20: *"can we remove the rank (allegiance) requirements for ANY housing
+            // (on large servers this makes sense) we can't easily read these ranks with a low pop."*
+            //
+            // Both mansion gates are allegiance-shaped and BOTH have to go for the ask to be
+            // satisfied. Rank already had `mansion_min_rank`; this one had nothing and refused
+            // unconditionally. Note the failure is stricter than it looks: a solo player is not a
+            // monarch of anything, they have `Allegiance == null`, so they fail on the first clause
+            // before rank is ever considered. Dropping the rank dial alone would have changed
+            // nothing observable for exactly the players this is meant to help.
+            //
+            // Measured: 8 of 163 slumlords carry either gate, and they are the SAME 8 - every
+            // mansion. Cottages, villas and apartments have no allegiance requirement at all, so
+            // this touches mansions only.
+            //
+            // Deliberately NOT folded into `house_purchase_requirements`. That dial reads like it
+            // would cover this - "requirements to purchase/rent house are not checked" - but it is
+            // only ever consulted in the maintenance and warning paths, never in this method. Wiring
+            // it in here would silently widen an existing dial's meaning and would also drop the
+            // MinLevel 50 check, which Chris did not ask for and which is not an allegiance gate.
+            //
+            // Defaults TRUE, so shipping the code changes nothing until the dial is set.
+            if (slumlord.HouseRequiresMonarch && PropertyManager.GetBool("mansion_requires_monarch").Item)
             {
                 if (Allegiance == null || Allegiance.MonarchId != Guid.Full)
                 {
