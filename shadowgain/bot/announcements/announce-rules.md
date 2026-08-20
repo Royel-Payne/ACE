@@ -8,7 +8,7 @@ This is a small server run for fun in someone's spare time. It is not a competit
 
 **Macroing is fine, including unattended.** Please just do it somewhere quiet rather than in a busy spot where it spoils the area for other people.
 
-**One active game session per connection.** Own as many accounts as you like — the limit is only on how many can be logged in at once from the same connection. If you genuinely share a household or connection with another player, that is fine: ask a <@&686316120428380181> and we will set up an exception.
+**Two active game sessions per connection.** Own as many accounts as you like — the limit is only on how many can be logged in at once from the same connection. If you genuinely share a household or connection with another player, that is fine: ask a <@&686316120428380181> and we will set up an exception.
 
 **Be decent to each other.** That is the only rule with any teeth. Bring the fun down for other people and you will be asked to stop; keep at it and you will be asked to leave. What someone else's character has, how fast they levelled, and which path they took is not worth anyone's evening.
 
