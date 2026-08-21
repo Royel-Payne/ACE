@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 # sitedata.sh - publish honour-roll + live server status as JSON for shadowgain.com.
 #
-#   ./sitedata.sh            # generate once and publish
+#   ./sitedata.sh --dry-run  # build the feeds to a temp dir and DIFF against live. Publishes NOTHING.
+#   ./sitedata.sh            # generate once and PUBLISH TO THE LIVE SITE
 #   ./sitedata.sh --install  # also install a cron entry to refresh every 5 minutes
+#
+# !! THE BARE FORM PUBLISHES. There is no confirmation and no staging step: it writes straight into
+# !! the Caddy web root and shadowgain.com serves the result within the second.
+#
+# --dry-run exists because until 2026-08-21 it did not, so there was no way to check a query change
+# short of publishing it. On that day this was run purely as a syntax check after editing the
+# honour-roll SQL, and it deployed - harmlessly, since the output was identical, but only by luck.
+# The header did say 'generate once and publish'; it was read as a description rather than a warning,
+# which is what a script with no safe mode invites. Use --dry-run for anything you have not run
+# before, then the bare form once the diff is what you expect.
 #
 # Writes two files into the Caddy web root, served straight off the existing site:
 #   https://shadowgain.com/data/honourroll.json
@@ -25,7 +36,9 @@ HOST="root@137.184.1.44"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
 INSTALL=0
+DRY=0
 [ "${1:-}" = "--install" ] && INSTALL=1
+[ "${1:-}" = "--dry-run" ] && DRY=1
 
 # The generator runs ON the droplet so cron can call it without this machine being awake.
 $SSH "$HOST" 'cat > /opt/ACE/sitedata-gen.sh' <<'REMOTE'
@@ -53,7 +66,7 @@ trap 'rc=$?; if [ "$rc" -ne 0 ]; then
 
 cd /opt/ACE
 RP=$(grep '^MYSQL_ROOT_PASSWORD=' docker.env | cut -d= -f2)
-OUT=/var/www/shadowgain/data
+OUT="${SG_DATA_OUT:-/var/www/shadowgain/data}"
 mkdir -p "$OUT"
 
 # MODE: status | roll | both. The two feeds run on different cadences - status every
@@ -614,6 +627,19 @@ fi   # end status block
 chown -R caddy:caddy "$OUT" 2>/dev/null || true
 chmod 644 "$OUT"/*.json "$OUT"/*.jsonl 2>/dev/null || true
 REMOTE
+
+if [ "$DRY" = "1" ]; then
+  echo "==> DRY RUN: building into /tmp/sitedata-dry, publishing nothing"
+  $SSH "$HOST" 'chmod +x /opt/ACE/sitedata-gen.sh && SG_DATA_OUT=/tmp/sitedata-dry /opt/ACE/sitedata-gen.sh >/dev/null && echo built'
+  for f in honourroll status; do
+    echo "--- $f.json: diff vs LIVE (nothing below = identical) ---"
+    $SSH "$HOST" "diff <(python3 -m json.tool /var/www/shadowgain/data/$f.json 2>/dev/null) \
+                       <(python3 -m json.tool /tmp/sitedata-dry/$f.json 2>/dev/null) || true"
+  done
+  $SSH "$HOST" 'rm -rf /tmp/sitedata-dry'
+  echo "==> DRY RUN complete. The live feeds were not touched."
+  exit 0
+fi
 
 $SSH "$HOST" 'chmod +x /opt/ACE/sitedata-gen.sh && /opt/ACE/sitedata-gen.sh && echo generated'
 
