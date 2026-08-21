@@ -397,7 +397,7 @@ namespace ACE.Server.WorldObjects
 
             Proficiency.OnSuccessUse(this, creatureSkill, difficulty);
 
-            // Shadowgain 187b (#1, RESCOPED AND NOW SHIPPING ON): restore the Coordination that #2
+            // Shadowgain 187b (#1, RESCOPED AND NOW SHIPPING ON): pay Coordination for dual-wielding, which #2
             // redistributed away from dual-wielders. DELIBERATELY LIMITED TO DualWield.
             //
             // Originally this covered all five combat specialties, on the reasoning that they pay skill
@@ -416,13 +416,30 @@ namespace ACE.Server.WorldObjects
             // a large Strength/Quickness gain and takes Coordination away as a side effect. Left alone
             // that is a NEW complaint from the same players who reported the original bug.
             //
-            // THE WEIGHT IS CALIBRATED, NOT GUESSED. With off-hand share f, #2's Coordination deficit is
-            // f * (0.9 - 0.225) per swing, while this pays 0.9 * weight on EVERY dual-wield swing, so
-            // weight = 0.75 * f. Measured on TEST with the dial off: 48 main-hand vs 33 off-hand swings,
-            // f = 0.407, giving weight = 0.305. Cross-checked against the raw counts: old Coordination
-            // 48*0.225 + 33*0.9 = 40.5; with #2 alone 81*0.225 = 18.2; deficit 22.3; restored by
-            // 81*0.9*w -> w = 0.306. Hence the 0.30 default. An earlier 0.25 came from a GUESSED 35%
-            // share and is superseded.
+            // 0.30 IS A DELIBERATE BUFF, NOT A RESTORATION. This is the corrected story; the original
+            // claim that it was 'calibrated to restore' was measured on the wrong population.
+            //
+            // The arithmetic still holds: with off-hand share f, #2's Coordination deficit is
+            // f * (0.9 - 0.225) per swing while this pays 0.9 * weight on EVERY dual-wield swing, so a
+            // restoring weight would be 0.75 * f. What was wrong was f. It came from a TEST session
+            // where Chris had repeat attacks deliberately ON, giving f = 0.407 and hence 0.30.
+            //
+            // REAL PLAYERS ARE NOWHERE NEAR THAT. Measured on LIVE 2026-08-21 from 548k debug lines
+            // over the 1.4h before the deploy - Apex 1 off-hand swing in 820 (f = 0.001), Royel 1 in
+            // 1237 (0.001), Memento Mori 37 in 635 (0.058), Vauxwell 813 in 5356 (0.152); aggregate
+            // f = 0.106. A restoring weight would therefore be about 0.079, and 0.30 is roughly 4x it.
+            // (The model was confirmed exactly: DualWield awards = mainhand + 2*offhand matched to the
+            // unit for three of the four.)
+            //
+            // KEPT AT 0.30 ON PURPOSE (Chris, 2026-08-21: 'keep the dial as-is - it seems fine'), and
+            // the same data is the argument for keeping it. #3 means most players' off-hand almost
+            // never swings, so pre-fix they had essentially ZERO Coordination-primary income - which is
+            // exactly Apex's report that his Coordination had 'stopped moving', and it means #2 barely
+            // helped him: there were no off-hand swings to redirect. THIS dial is what actually fixes
+            // that complaint. At 0.079 it would not. It also removes the cadence dependence, which is
+            // the same principle #2 applies to weapon skills.
+            //
+            // An earlier 0.25 came from a guessed 35% share and is superseded by both accounts.
             //
             // It also removes a cadence dependency rather than reproducing one. Under the old code only
             // players who actually landed off-hand swings earned this Coordination, so it varied with
