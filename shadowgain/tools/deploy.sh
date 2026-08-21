@@ -62,12 +62,22 @@ SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o 
 # immediately: "the server restarted awfully fast (no countdown?)". The value was fine for TEST,
 # where the only player is Chris, and it became the LIVE default by never being distinguished.
 #
-# 300 lands on eight notices - 5m, 2m, 1m30s, 1m, 30s, 15s, 10s, 5s - which is a countdown a
-# player can actually act on: finish the fight, get somewhere safe, log out clean. THE COUNTDOWN
-# IS NOT DOWNTIME; players keep playing throughout it, so a longer one costs nothing but patience.
-# TEST passes SG_SHUTDOWN_SECS=15 explicitly (see the rehearsal line above) - the fast value is now
-# opt-in and the safe value is what you get by forgetting.
-SHUTDOWN_SECS="${SG_SHUTDOWN_SECS:-300}"
+# 900 = 15 MINUTES, which is the standard Chris settled on for LIVE. It lands on ten notices -
+# 15m, 10m, 5m, 2m, 1m30s, 1m, 30s, 15s, 10s, 5s - so a player can finish a fight, bank loot, get
+# somewhere safe and log out clean. THE COUNTDOWN IS NOT DOWNTIME; everyone keeps playing through
+# it, so its length costs patience and nothing else.
+#
+# Chris, 2026-08-21: 'The countdown we standardized on was 15 minutes (that should be the default
+# if no value for time is provided by me when deploying to LIVE)'. A first pass at this fix set 300;
+# the evidence for 900 was already in DEPLOY.md trap 1, which records a run at SG_SHUTDOWN_SECS=900.
+#
+# TEST passes SG_SHUTDOWN_SECS=15 explicitly (see the rehearsal line above) - the fast value is
+# opt-in and the LIVE-safe value is what you get by forgetting.
+#
+# CONSEQUENCE: --restart-only now runs ~16 minutes (900 + drain + swap), and its own deadline is
+# countdown + 300 = 1200s. That is well past the 10-minute FOREGROUND kill in the Bash tool, so this
+# MUST be run in the background. See DEPLOY.md Phase 2.
+SHUTDOWN_SECS="${SG_SHUTDOWN_SECS:-900}"
 SHUTDOWN_MSG="${SG_SHUTDOWN_MSG:-Quick restart to apply skill and attribute fixes - back in under a minute.}"
 
 BUILD=1
