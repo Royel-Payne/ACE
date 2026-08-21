@@ -1,4 +1,4 @@
-using ACE.Common;
+﻿using ACE.Common;
 using ACE.Entity.Enum;
 using ACE.Server.Entity;
 using ACE.Server.Managers;
@@ -396,6 +396,40 @@ namespace ACE.Server.WorldObjects
                 return;
 
             Proficiency.OnSuccessUse(this, creatureSkill, difficulty);
+
+            // Shadowgain 187 (#1, the FALLBACK - SHIPS OFF): the combat specialties pay skill XP and no
+            // attribute XP at all. Until this, the whole of TryAwardSpecialty was the OnSuccessUse line
+            // above, so DualWield, Recklessness, SneakAttack, DirtyFighting and Deception trained their
+            // skill and nothing else. That is the same gap 172 found on Summoning, whose comment names
+            // the cause exactly: the attribute hook lives only on the attack path.
+            //
+            // It lands hardest on dual-wielders because DualWield is Coordination-PRIMARY in the dat,
+            // and it and Missile Weapons are the only combat skills that are - missile has zero awards
+            // server-wide. Measured on LIVE 2026-08-20: Apex had 226 DualWield awards and 0
+            // Coordination-primary awards; his entire Coordination intake was secondary trickle.
+            //
+            // OFF BY DEFAULT, and this is not timidity. These hooks fire on EVERY qualifying swing for
+            // every melee build, not just dual-wielders, so switching them on at full weight is a large
+            // attribute increase server-wide - a balance change wearing a bug fix's clothes. 187 ships
+            // #2 (the XP-credit fix) ON as the actual remedy; this stays dark until #2's effect has been
+            // measured and someone decides the remaining gap is worth closing.
+            //
+            // The weight dial exists because 'fires every swing' is the whole problem. Chris's standing
+            // rule applies: start low and raise, because players hate nerfs.
+            //
+            // DELIBERATELY SEPARATE FROM #2. This adds a CALLER to AwardAttributesForSkill and changes
+            // nothing inside it, touches no file #2 touches, and shares no mutable state with it. With
+            // the dial off the only difference from this block being absent is one bool read returning
+            // false, so #2's XP-credit path is provably unaffected either way.
+            if (!PropertyManager.GetBool("specialty_attribute_gain_enabled").Item)
+                return;
+
+            var weight = PropertyManager.GetDouble("specialty_attribute_weight").Item;
+
+            if (double.IsNaN(weight) || weight <= 0.0)
+                return;
+
+            AwardAttributesForSkill(skill, difficulty, weight);
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -82,6 +82,56 @@ namespace ACE.Server.WorldObjects
             }
             //Console.WriteLine($"{Name}.GetCurrentWeaponSkill - {skill}");
             return skill;
+        }
+
+        /// <summary>
+        /// Shadowgain 187: WHICH SKILL THIS SWING ACTUALLY USED, for XP credit only.
+        ///
+        /// `GetCurrentWeaponSkill()` answers a different question - what do I ROLL AGAINST - and it is
+        /// read by about ten call sites doing that job: to-hit (GetEffectiveAttackSkill), damage
+        /// (DamageEvent), shield difficulty, monster-side lookups. Its dual-wield clause
+        ///
+        ///     if (dualWield.Current &lt; weaponSkill.Current) skill = Skill.DualWield;
+        ///
+        /// is CORRECT for all of those - retail resolves an off-hand swing against the lower of the
+        /// two skills. It is wrong for the one remaining caller, `OnDamageTarget`, which uses the
+        /// answer to decide who EARNED the swing. One function, two unrelated jobs.
+        ///
+        /// Reported by Apex and Adramelech from in-game, correctly, before anyone read the code:
+        /// *"im using dw fin weps...my offhand is ONLY giving xp to dual wield"*. Measured on LIVE:
+        /// Apex had 181 FinesseWeapons awards against 181 DualWield - an exact half of his swings
+        /// crediting a skill he was not training on purpose - while a two-hander banked every swing.
+        ///
+        /// This returns the skill of the weapon ACTUALLY SWUNG and nothing else. Combat maths is
+        /// untouched: hit chance, damage and shield difficulty still read
+        /// `GetCurrentWeaponSkill()` and still see the downgrade, so nobody's numbers move.
+        ///
+        /// Dual Wield does NOT lose its own progression - `Player_Specialties` credits it on every
+        /// dual-wield swing through the specialty hook. That hook's own comment already assumed
+        /// this arrangement (*"the weapon-skill hook covers the attack itself - this credits the
+        /// dual-wield skill as well"*); the weapon hook was simply being hijacked, so the comment
+        /// described a design that was not actually running.
+        ///
+        /// SIDE EFFECT WORTH KNOWING, and it is a good one: XP no longer depends on whether the
+        /// engine labelled a swing main-hand or off-hand. `DualWieldAlternate` is reset to false on
+        /// every attack REQUEST and toggled before the hand is chosen, so the first swing of each
+        /// request is always main-hand and a player's split depends on click cadence and repeat
+        /// attacks. That is stock ACE and 187 deliberately does not touch it - but once credit
+        /// follows the weapon in hand, it stops mattering for progression.
+        ///
+        /// The dial exists for restart-free rollback, not because the old behaviour is wanted.
+        /// </summary>
+        public Skill GetSkillCreditedForAttack()
+        {
+            if (!PropertyManager.GetBool("dualwield_offhand_credits_weapon_skill").Item)
+                return GetCurrentWeaponSkill();
+
+            var weapon = GetEquippedWeapon();
+
+            if (weapon?.WeaponSkill == null)
+                return GetHighestMeleeSkill();
+
+            return ConvertToMoASkill(weapon.WeaponSkill);
         }
 
         /// <summary>
@@ -219,7 +269,11 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public override void OnDamageTarget(WorldObject target, CombatType attackType, bool critical)
         {
-            var attackSkill = GetCreatureSkill(GetCurrentWeaponSkill());
+            // Shadowgain 187: the skill that EARNED this swing, which is not always the skill it was
+            // rolled against - see GetSkillCreditedForAttack. This is the ONLY caller that wants the
+            // difference; every other reader of GetCurrentWeaponSkill is asking about to-hit or damage
+            // and is deliberately left alone.
+            var attackSkill = GetCreatureSkill(GetSkillCreditedForAttack());
             var difficulty = GetTargetEffectiveDefenseSkill(target);
 
             // Shadowgain 119: the target goes in so the PvP gate is decided centrally - see
