@@ -38,12 +38,6 @@
   .brand b{color:var(--arcane)}
   .navlinks{display:flex;gap:18px;align-items:center;font-size:14.5px;flex-wrap:wrap}
   .navlinks a.active{color:var(--gold)}
-  /* 153: Vitaeum is Zan's project and carries his green, not the portal's arcane teal - the
-     colours are deliberately the same literals the apex pages use inline. */
-  .navlinks a.newlink{color:#46e86a;font-weight:700}
-  .navlinks a.newlink:hover{color:#8bff9e}
-  .newbadge{font-size:9px;background:#2be84f;color:#04140a;border-radius:4px;padding:1px 5px;
-    vertical-align:middle;letter-spacing:.5px;font-weight:700}
   .acct .btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:#dbe4ea;font-size:13.5px;cursor:pointer}
   .acct .btn:hover{border-color:var(--arcane-dim)}
 
@@ -391,10 +385,6 @@
           <a href="https://shadowgain.com/">Home</a>
           <a href="https://shadowgain.com/honourroll.html">Honour Roll</a>
           <a href="/" class="active">Characters</a>
-          <!-- 153: same link, same position and same badge as the five apex pages. The apex
-               writes it inline; here it is a class, because this nav is styled by the sheet
-               above and an inline colour would not follow it if the palette ever moves. -->
-          <a href="https://vitaeum.shadowgain.com" class="newlink">Vitaeum <span class="newbadge">NEW</span></a>
         </div>
         <div class="acct"><button class="btn" id="logoutBtn" title="Sign out"><span id="acctName">Account</span> &nbsp;&#9099;</button></div>
       </div>
