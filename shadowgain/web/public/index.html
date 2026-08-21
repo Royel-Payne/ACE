@@ -462,7 +462,7 @@ function tile(cat,label){const c=PAL[cat]||'#6b7a8d';return `<span class="ico" s
 function icon(o){ return o && o.icon
   ? `<img class="ico" src="${o.icon}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ico',style:'background:linear-gradient(180deg,${PAL[o.cat]||'#6b7a8d'},${shade(PAL[o.cat]||'#6b7a8d')})',textContent:'${((o.label||o.name||'?')[0]||'?').replace(/'/g,'')}'}))">`
   : tile(o&&o.cat,(o&&(o.label||o.name))||'?'); }
-const marker = m => m==='hard' ? '<span class="d" title="hard path">&dagger;</span> ' : '';
+const marker = m => '';  // hard-path † retired (lane closed 181). Kept as a no-op so call sites stay wired for a future enlightenment marker.
 
 /* 158 item 2: native tooltips exist for a POINTER, and half this page is tiles.
  *
