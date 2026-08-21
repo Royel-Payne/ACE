@@ -397,34 +397,47 @@ namespace ACE.Server.WorldObjects
 
             Proficiency.OnSuccessUse(this, creatureSkill, difficulty);
 
-            // Shadowgain 187 (#1, the FALLBACK - SHIPS OFF): the combat specialties pay skill XP and no
-            // attribute XP at all. Until this, the whole of TryAwardSpecialty was the OnSuccessUse line
-            // above, so DualWield, Recklessness, SneakAttack, DirtyFighting and Deception trained their
-            // skill and nothing else. That is the same gap 172 found on Summoning, whose comment names
-            // the cause exactly: the attribute hook lives only on the attack path.
+            // Shadowgain 187b (#1, RESCOPED AND NOW SHIPPING ON): restore the Coordination that #2
+            // redistributed away from dual-wielders. DELIBERATELY LIMITED TO DualWield.
             //
-            // It lands hardest on dual-wielders because DualWield is Coordination-PRIMARY in the dat,
-            // and it and Missile Weapons are the only combat skills that are - missile has zero awards
-            // server-wide. Measured on LIVE 2026-08-20: Apex had 226 DualWield awards and 0
-            // Coordination-primary awards; his entire Coordination intake was secondary trickle.
+            // Originally this covered all five combat specialties, on the reasoning that they pay skill
+            // XP and no attribute XP - the gap 172 closed for Summoning. THAT REASONING WAS WRONG HERE,
+            // and the TEST A/B is what showed it: DualWield awards matched HeavyWeapons awards
+            // minute-for-minute, exactly, proving they are the SAME SWING. Summoning was a player's only
+            // attribute source for that activity; these specialties ride on a swing whose weapon skill
+            // already pays. Paying all five would not close a gap, it would multiply - and it would land
+            // on every melee build via Recklessness and DirtyFighting, not on the dual-wielders this is
+            // meant to help. So the other four stay unpaid, on purpose.
             //
-            // OFF BY DEFAULT, and this is not timidity. These hooks fire on EVERY qualifying swing for
-            // every melee build, not just dual-wielders, so switching them on at full weight is a large
-            // attribute increase server-wide - a balance change wearing a bug fix's clothes. 187 ships
-            // #2 (the XP-credit fix) ON as the actual remedy; this stays dark until #2's effect has been
-            // measured and someone decides the remaining gap is worth closing.
+            // WHY DualWield ALONE NEEDS IT. #2 moved off-hand credit to the weapon skill, which is
+            // correct - but DualWield is Coordination-PRIMARY while every weapon skill pays Coordination
+            // only as SECONDARY (Heavy/Light are Strength-primary, Finesse is Quickness-primary; measured
+            // from TEST logs 2026-08-21, primary mult 0.900, secondary 0.225). So #2 hands dual-wielders
+            // a large Strength/Quickness gain and takes Coordination away as a side effect. Left alone
+            // that is a NEW complaint from the same players who reported the original bug.
             //
-            // The weight dial exists because 'fires every swing' is the whole problem. Chris's standing
-            // rule applies: start low and raise, because players hate nerfs.
+            // THE WEIGHT IS CALIBRATED, NOT GUESSED. With off-hand share f, #2's Coordination deficit is
+            // f * (0.9 - 0.225) per swing, while this pays 0.9 * weight on EVERY dual-wield swing, so
+            // weight = 0.75 * f. Measured on TEST with the dial off: 48 main-hand vs 33 off-hand swings,
+            // f = 0.407, giving weight = 0.305. Cross-checked against the raw counts: old Coordination
+            // 48*0.225 + 33*0.9 = 40.5; with #2 alone 81*0.225 = 18.2; deficit 22.3; restored by
+            // 81*0.9*w -> w = 0.306. Hence the 0.30 default. An earlier 0.25 came from a GUESSED 35%
+            // share and is superseded.
             //
-            // DELIBERATELY SEPARATE FROM #2. This adds a CALLER to AwardAttributesForSkill and changes
-            // nothing inside it, touches no file #2 touches, and shares no mutable state with it. With
-            // the dial off the only difference from this block being absent is one bool read returning
-            // false, so #2's XP-credit path is provably unaffected either way.
-            if (!PropertyManager.GetBool("specialty_attribute_gain_enabled").Item)
+            // It also removes a cadence dependency rather than reproducing one. Under the old code only
+            // players who actually landed off-hand swings earned this Coordination, so it varied with
+            // click rate and the repeat-attacks setting (see #3). Paying it per dual-wield swing gives
+            // every dual-wielder the same rate, which is the same thing #2 did for weapon skills.
+            //
+            // STILL SEPARATE FROM #2: this adds a CALLER to AwardAttributesForSkill and changes nothing
+            // inside it, so every existing caller - including #2's - is untouched by construction.
+            if (skill != Skill.DualWield)
                 return;
 
-            var weight = PropertyManager.GetDouble("specialty_attribute_weight").Item;
+            if (!PropertyManager.GetBool("dualwield_specialty_attribute_gain_enabled").Item)
+                return;
+
+            var weight = PropertyManager.GetDouble("dualwield_specialty_attribute_weight").Item;
 
             if (double.IsNaN(weight) || weight <= 0.0)
                 return;
