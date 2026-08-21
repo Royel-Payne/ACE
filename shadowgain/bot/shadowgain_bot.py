@@ -371,9 +371,16 @@ async def account_is_ascendant(account_name: str) -> bool:
     """
     Has this account earned gold?
 
-    Three conditions, and the last two are the point:
+    Four conditions, and the last two are the point:
 
-      1. a character at or past ASCENDANT_LEVEL (275, retail's ceiling);
+      1. a character that has REACHED ASCENDANT_LEVEL (275, retail's ceiling) - either standing
+         there now, or carrying Enlightenment >= 1 (PropertyInt 390), which is proof it once did.
+         Enlightenment.HandleEnlightenment refuses below level 275 and then calls RemoveLevel(),
+         which sets Level = 1 - so without the second half of that test, a player who enlightened
+         before the next sweep would read as level 1 and never qualify at all. The role itself is
+         a ratchet and is never revoked, so this only ever affected someone who had not been
+         granted it YET; that is precisely the person the timing catches. Nobody on LIVE had
+         enlightened when this was written (2026-08-21), so it is preventive rather than a repair;
       2. on the HARD lane - no ShadowgainForfeitedMarker (PropertyBool 9102). Gold means
          "earned the long road". A fast-lane character reaching the cap has not, which is
          exactly why the honour roll refuses them too;
@@ -395,8 +402,10 @@ async def account_is_ascendant(account_name: str) -> bool:
         WHERE c.is_Deleted = 0 AND c.delete_Time = 0
           AND a.accountName = %s
           AND a.accessLevel = 0
-          AND COALESCE((SELECT value FROM biota_properties_int
-                        WHERE object_Id = c.id AND type = 25), 1) >= %s
+          AND (COALESCE((SELECT value FROM biota_properties_int
+                         WHERE object_Id = c.id AND type = 25), 1) >= %s
+               OR COALESCE((SELECT value FROM biota_properties_int
+                            WHERE object_Id = c.id AND type = 390), 0) >= 1)
           AND COALESCE((SELECT value FROM biota_properties_int
                         WHERE object_Id = c.id AND type = 125), 0) >= %s
           AND NOT EXISTS (SELECT 1 FROM biota_properties_bool
