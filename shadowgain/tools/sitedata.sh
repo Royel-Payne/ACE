@@ -72,12 +72,22 @@ q() { docker exec ace-db mysql -uroot -p"$RP" -N -B ace_shard -e "$1" 2>/dev/nul
 if [ "$MODE" = "roll" ] || [ "$MODE" = "both" ]; then
 # PropertyBool 9102 = ShadowgainForfeitedMarker. A character qualifies when that row is
 # absent or false, i.e. it has never taken the fast lane.
+#
+# 183: the 9102 exclusion STAYS and is now a quiet legacy rule. The fast lane closed in 181, so the
+# roll no longer explains itself by it - but the three who took it while it was open stay off, and
+# their flags are preserved untouched (Chris: a use may still come).
+#
+# PropertyInt 390 = Enlightenment, 0-5. Emitted so the page can show the dagger as an ENLIGHTENMENT
+# marker instead, Awakened through Cosmic Conscious. WEB ONLY, deliberately: the in-game name marker
+# (progression_marker_enabled) stays false because that prefix leaked into VTank fields that are
+# machine-compared. Expect 0 for everyone until somebody reaches level 275.
 # PropertyInt 25 = Level, 125 = Age (total seconds played).
 ROWS=$(q "
 SELECT CONCAT(
   '{\"name\":\"', REPLACE(c.name,'\"','\\\\\"'), '\",',
   '\"level\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1), ',',
   '\"skillXp\":', COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0), ',',
+  '\"enlightenment\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0), ',',
   '\"hours\":', ROUND(COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=125),0)/3600,1), '}'
 )
 FROM \`character\` c
@@ -106,6 +116,27 @@ WHERE c.is_Deleted=0 AND c.delete_Time=0
   -- quotation mark in a SQL comment closes it and bash starts executing the remainder as commands.
   AND COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) >= ${SG_ROLL_MIN_LEVEL:-10}
   AND c.last_Login_Timestamp >= (UNIX_TIMESTAMP() - ${SG_ROLL_ACTIVITY_DAYS:-30} * 86400)
+
+  -- 183: ANTI-MULE FLOOR. Total skill XP, which is the one number a mule cannot fake.
+  --
+  -- The level-10 floor above cannot catch this on its own, and the reason is in its own comment:
+  -- leaving the Academy hands out roughly level 10 for nothing. So a storage alt that walked out
+  -- of the Academy and parked lands on exactly the floor meant to exclude it.
+  --
+  -- Skill XP separates them cleanly because it can only come from USING skills. Measured on LIVE
+  -- 2026-08-20 across every character then passing these filters:
+  --
+  --     Soul 3,156 / Two Hander 3,691 / Twohander 5,616   - all at 0.0 hours played
+  --     High Tides 26,253                                  - 0.2 hours, i.e. actually played
+  --
+  -- Three mules under 6k, then a 4.7x jump to the first character that had done anything. 10,000
+  -- sits in that gap: above what the Academy grants, below anyone who has played at all. It is
+  -- deliberately a MULE filter and not a merit bar - a new player clears it within minutes, which
+  -- is the intent. The roll says who is walking the road, not who is far along it.
+  --
+  -- Raise it only with a reason and a fresh look at the distribution. It is a cliff, and anyone
+  -- sitting just under it vanishes from a public page with no explanation.
+  AND COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0) >= ${SG_ROLL_MIN_SKILL_XP:-10000}
 
   -- 069: ONLY accessLevel 0 is eligible. Anything above it - Advocate, Sentinel, Envoy,
   -- Developer, Admin - is excluded from the roll entirely.
