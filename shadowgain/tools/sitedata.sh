@@ -122,29 +122,36 @@ WHERE c.is_Deleted=0 AND c.delete_Time=0
   --
   -- NO DOUBLE QUOTES IN THIS BLOCK. The whole query sits inside a double-quoted shell string, so a
   -- quotation mark in a SQL comment closes it and bash starts executing the remainder as commands.
-  AND COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) >= ${SG_ROLL_MIN_LEVEL:-10}
+  -- 183b: raised 10 -> 40 (Chris, 2026-08-20). The level-10 floor only ever excluded characters
+  -- that never left the Academy; 40 clears the low-level alt clutter as well. The two floors
+  -- target DIFFERENT mules and both are required - see the skill-XP note below.
+  AND COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) >= ${SG_ROLL_MIN_LEVEL:-40}
   AND c.last_Login_Timestamp >= (UNIX_TIMESTAMP() - ${SG_ROLL_ACTIVITY_DAYS:-30} * 86400)
 
-  -- 183: ANTI-MULE FLOOR. Total skill XP, which is the one number a mule cannot fake.
+  -- 183b: ANTI-MULE FLOOR, and it catches the mule a LEVEL floor never can.
   --
-  -- The level-10 floor above cannot catch this on its own, and the reason is in its own comment:
-  -- leaving the Academy hands out roughly level 10 for nothing. So a storage alt that walked out
-  -- of the Academy and parked lands on exactly the floor meant to exclude it.
+  -- Two floors, two different mules (Chris, 2026-08-20):
+  --   the LEVEL floor above clears low-level alts and made-and-parked characters;
+  --   THIS one clears a HIGH-LEVEL parked mule, which no level floor can reach.
   --
-  -- Skill XP separates them cleanly because it can only come from USING skills. Measured on LIVE
-  -- 2026-08-20 across every character then passing these filters:
+  -- Why skill XP is the honest signal: level XP arrives from kills, quests and - historically -
+  -- cross-lane hand-offs, so a character can be dragged up without ever using a skill. Skill XP
+  -- only ever comes from USING skills, so a mule sits near zero no matter how high its level or
+  -- how worked its attributes are.
   --
-  --     Soul 3,156 / Two Hander 3,691 / Twohander 5,616   - all at 0.0 hours played
-  --     High Tides 26,253                                  - 0.2 hours, i.e. actually played
+  -- CALIBRATED AGAINST A KNOWN MULE, measured 2026-08-20:
   --
-  -- Three mules under 6k, then a 4.7x jump to the first character that had done anything. 10,000
-  -- sits in that gap: above what the Academy grants, below anyone who has played at all. It is
-  -- deliberately a MULE filter and not a merit bar - a new player clears it within minutes, which
-  -- is the intent. The roll says who is walking the road, not who is far along it.
+  --   Masochist    level 155, 12.9 hours   3,467,361   <- storage, and a level floor cannot see it
+  --   Lunar Wind   level  50, 25.5 hours  18,223,720   <- lowest REAL character at level 40+
   --
-  -- Raise it only with a reason and a fresh look at the distribution. It is a cliff, and anyone
-  -- sitting just under it vanishes from a public page with no explanation.
-  AND COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0) >= ${SG_ROLL_MIN_SKILL_XP:-10000}
+  -- A 5.3x gap, so 5,000,000 sits clear of both edges. Cowork suggested falling back to a count
+  -- of distinct skills with real XP if the gap turned out fuzzy; it is not, so that stays unbuilt.
+  --
+  -- Note this currently excludes NOBODY additional - at level 40+ the lowest real character is
+  -- already 3.6x above it. That is the point: it is a GUARD against a high-level mule appearing,
+  -- not a filter doing visible work today. Masochist itself is off the roll via the 9102 rule, so
+  -- it is a reference point here rather than the thing being excluded.
+  AND COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0) >= ${SG_ROLL_MIN_SKILL_XP:-5000000}
 
   -- 069: ONLY accessLevel 0 is eligible. Anything above it - Advocate, Sentinel, Envoy,
   -- Developer, Admin - is excluded from the roll entirely.
