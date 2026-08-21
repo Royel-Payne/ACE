@@ -125,7 +125,13 @@ WHERE c.is_Deleted=0 AND c.delete_Time=0
   -- 183b: raised 10 -> 40 (Chris, 2026-08-20). The level-10 floor only ever excluded characters
   -- that never left the Academy; 40 clears the low-level alt clutter as well. The two floors
   -- target DIFFERENT mules and both are required - see the skill-XP note below.
-  AND COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) >= ${SG_ROLL_MIN_LEVEL:-40}
+  -- 187c: OR enlightened. Enlightenment requires level 275 and then resets Level to 1, so a plain
+  -- level floor drops the very players this list exists to celebrate - a list about taking the long
+  -- road, excluding the one act that proves it. Enlightenment >= 1 IS the proof, so it stands in for
+  -- the floor. Skill XP survives enlightenment (179), so the skill floor below still applies to them
+  -- normally and a parked mule cannot ride in this way.
+  AND (COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1) >= ${SG_ROLL_MIN_LEVEL:-40}
+       OR COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0) >= 1)
   AND c.last_Login_Timestamp >= (UNIX_TIMESTAMP() - ${SG_ROLL_ACTIVITY_DAYS:-30} * 86400)
 
   -- 183b: ANTI-MULE FLOOR, and it catches the mule a LEVEL floor never can.
