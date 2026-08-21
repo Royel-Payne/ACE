@@ -41,6 +41,7 @@ REPO="C:/Git Projects/Shadowgain/ACE"
 #   Rehearse a change to this script:
 #     SG_HOST=chris@192.168.20.20 SG_KEY=~/.ssh/sgtest_ed25519 SG_CONTAINER=sg-server \
 #     SG_COMPOSE_DIR=/home/chris/shadowgain SG_COMPOSE_FILES="-f docker-compose.yml -f docker-compose.local.yml" \
+#     SG_SHUTDOWN_SECS=15 \
 #       ./deploy.sh --restart-only
 KEY="${SG_KEY:-C:/Users/Chris/.ssh/shadowgain_ed25519}"
 HOST="${SG_HOST:-root@137.184.1.44}"
@@ -50,11 +51,23 @@ COMPOSE_DIR="${SG_COMPOSE_DIR:-/opt/ACE}"
 COMPOSE_FILES="${SG_COMPOSE_FILES:--f docker-compose.yml -f docker-compose.fast.yml}"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
-# Countdown before the world closes. ACE broadcasts a warning to everyone online at
-# fixed thresholds only - 30s, 15s, 10s, 5s (and 1m, 2m, 5m... for longer waits) - so
-# a value that isn't near one of those gives fewer notices. 15 gets a player two
-# warnings; 10 gets one plus the final "shutting down NOW".
-SHUTDOWN_SECS="${SG_SHUTDOWN_SECS:-15}"
+# Countdown before the world closes. DEFAULTS TO 5 MINUTES BECAUSE THE DEFAULT IS WHAT LIVE GETS.
+#
+# ACE only broadcasts when the remaining time formats to one of these exact strings
+# (ServerManager.ShutdownNotifier): 45m, 30m, 15m, 10m, 5m, 2m, 1m30s, 1m, 30s, 15s, 10s, 5s.
+# Below ~10s remaining the wording changes to "shutting down NOW!!!!".
+#
+# This was 15, which gives a LIVE player exactly one "shutting down in 15 seconds" and then NOW.
+# On 2026-08-21 (187) that shipped to a shard with 13 characters on it and Chris noticed
+# immediately: "the server restarted awfully fast (no countdown?)". The value was fine for TEST,
+# where the only player is Chris, and it became the LIVE default by never being distinguished.
+#
+# 300 lands on eight notices - 5m, 2m, 1m30s, 1m, 30s, 15s, 10s, 5s - which is a countdown a
+# player can actually act on: finish the fight, get somewhere safe, log out clean. THE COUNTDOWN
+# IS NOT DOWNTIME; players keep playing throughout it, so a longer one costs nothing but patience.
+# TEST passes SG_SHUTDOWN_SECS=15 explicitly (see the rehearsal line above) - the fast value is now
+# opt-in and the safe value is what you get by forgetting.
+SHUTDOWN_SECS="${SG_SHUTDOWN_SECS:-300}"
 SHUTDOWN_MSG="${SG_SHUTDOWN_MSG:-Quick restart to apply skill and attribute fixes - back in under a minute.}"
 
 BUILD=1
