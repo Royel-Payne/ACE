@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+. "$(dirname "${BASH_SOURCE[0]}")/_isolation-guard.sh"   # 191: refuse LIVE from the experiment worktree
 # Shadowgain landing-site deploy: ship static files to the Caddy web root.
 #
 #   ./site-deploy.sh                 # ship every page + asset in landing/

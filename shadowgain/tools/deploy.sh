@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+SG_TOOL_HONORS_ENV=1 . "$(dirname "${BASH_SOURCE[0]}")/_isolation-guard.sh"   # 191: honours SG_HOST, so target is verifiable
 # Shadowgain deploy: build locally, ship the output, restart the droplet.
 #
 #   ./deploy.sh                # build + ship + build image + restart
