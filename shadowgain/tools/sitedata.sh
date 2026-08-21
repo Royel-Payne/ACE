@@ -81,6 +81,11 @@ if [ "$MODE" = "roll" ] || [ "$MODE" = "both" ]; then
 # marker instead, Awakened through Cosmic Conscious. WEB ONLY, deliberately: the in-game name marker
 # (progression_marker_enabled) stays false because that prefix leaked into VTank fields that are
 # machine-compared. Expect 0 for everyone until somebody reaches level 275.
+#
+# enlightenmentTitle is the TIER NAME for that number, straight from Enlightenment.AddPerks:
+# 1 Awakened, 2 Enlightened, 3 Illuminated, 4 Transcended, 5 Cosmic Conscious. The page reads
+# c.enlightenmentTitle and falls back to a generic Enlightened without it, so every tier would have
+# rendered identically - dormant today because everyone is 0, wrong the moment anyone is not.
 # PropertyInt 25 = Level, 125 = Age (total seconds played).
 ROWS=$(q "
 SELECT CONCAT(
@@ -88,6 +93,9 @@ SELECT CONCAT(
   '\"level\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1), ',',
   '\"skillXp\":', COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0), ',',
   '\"enlightenment\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0), ',',
+  '\"enlightenmentTitle\":\"', CASE COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0)
+    WHEN 1 THEN 'Awakened' WHEN 2 THEN 'Enlightened' WHEN 3 THEN 'Illuminated'
+    WHEN 4 THEN 'Transcended' WHEN 5 THEN 'Cosmic Conscious' ELSE '' END, '\",',
   '\"hours\":', ROUND(COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=125),0)/3600,1), '}'
 )
 FROM \`character\` c
