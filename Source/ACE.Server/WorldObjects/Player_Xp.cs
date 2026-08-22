@@ -88,6 +88,12 @@ namespace ACE.Server.WorldObjects
         /// allegiance would do the same. XpType.Proficiency also keeps it out of GrantItemXP, which
         /// only fires for Kill and Quest.
         /// </summary>
+        /// <summary>
+        /// True while the social hooks below are running, so Loyalty/Leadership training cannot
+        /// re-enter and pass itself up forever. See the guard in GrantUnifiedProgressXP.
+        /// </summary>
+        private bool grantingSocialXp;
+
         public void GrantUnifiedProgressXP(long amount)
         {
             if (amount <= 0) return;
@@ -156,9 +162,36 @@ namespace ACE.Server.WorldObjects
             // UpdateXpAndLevel). Retail pass-up went to the unassigned pool anyway, so this is the
             // retail shape - and crucially nobody can level off someone else's practice, which would
             // have reopened the exact gap 190 measured and broken the model's core promise.
-            AwardLeadershipUse(granted);
+            // RE-ENTRANCY GUARD, and it is load-bearing rather than defensive.
+            //
+            // Both hooks below TRAIN A SKILL, and training a skill runs Proficiency.OnSuccessUse,
+            // which now calls straight back into this method. Without the guard that is an infinite
+            // cycle:
+            //
+            //   AwardLoyaltyUse -> UpdateXpAllegiance -> GrantUnifiedProgressXP
+            //                   -> Proficiency.OnSuccessUse -> AwardLoyaltyUse -> ...
+            //
+            // It blew the stack on something as ordinary as examining an item (ArcaneLore trains, so
+            // the cycle starts), and Chris hit it within minutes as an inability to stay connected.
+            //
+            // The guard wraps ONLY the social hooks, not the level credit: XP earned by Loyalty and
+            // Leadership themselves still counts toward level like any other skill, it just does not
+            // pass itself up a second time.
+            if (grantingSocialXp)
+                return;
 
-            UpdateXpAllegiance(granted);
+            grantingSocialXp = true;
+
+            try
+            {
+                AwardLeadershipUse(granted);
+
+                UpdateXpAllegiance(granted);
+            }
+            finally
+            {
+                grantingSocialXp = false;
+            }
         }
 
         public void GrantXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
