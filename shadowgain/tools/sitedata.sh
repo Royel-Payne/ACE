@@ -113,7 +113,21 @@ ROWS=$(q "
 SELECT CONCAT(
   '{\"name\":\"', REPLACE(c.name,'\"','\\\\\"'), '\",',
   '\"level\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1), ',',
-  '\"skillXp\":', COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0), ',',
+  -- 196: TRUE skill XP, not the pinned shadow. Past the dat table top, CreatureSkill pins p_p at
+  -- uint.MaxValue (4,294,967,295) and the real total rides in PropertyInt64 9100+skill
+  -- (ShadowgainSkillXpBase). Summing p_p therefore UNDERSTATES anyone with an uncapped skill, which
+  -- is why Adramelech reported the site disagreeing with his in-game portal - @myskills reads
+  -- TrueExperienceSpent and this read the shadow.
+  '\"skillXp\":', COALESCE((SELECT SUM(COALESCE(o.value, s.p_p)) FROM biota_properties_skill s LEFT JOIN biota_properties_int64 o ON o.object_Id=s.object_Id AND o.type=9100+s.type WHERE s.object_Id=c.id),0), ',',
+  -- 196: totalXp is READ, never summed. Under unified progression TotalExperience (PropertyInt64 1)
+  -- is what drives level and what the player sees in game, and skill XP + attribute XP is only
+  -- ALMOST equal to it - Adramelech carries a 3.8M residual from the @grantxp correction in 198, and
+  -- any future admin grant or migration would open another. Computing it here would look right and
+  -- drift silently; reading the stored total cannot disagree with the character panel.
+  '\"totalXp\":', COALESCE((SELECT value FROM biota_properties_int64 WHERE object_Id=c.id AND type=1),0), ',',
+  -- Attribute XP is c_P_Spent, which has no overflow property and is never pinned - attributes come
+  -- nowhere near the uint ceiling - so unlike skillXp above this is a plain SUM.
+  '\"attributeXp\":', COALESCE((SELECT SUM(a.c_P_Spent) FROM biota_properties_attribute a WHERE a.object_Id=c.id),0), ',',
   '\"enlightenment\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0), ',',
   '\"enlightenmentTitle\":\"', CASE COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0)
     WHEN 1 THEN 'Awakened' WHEN 2 THEN 'Enlightened' WHEN 3 THEN 'Illuminated'
@@ -179,7 +193,9 @@ WHERE c.is_Deleted=0 AND c.delete_Time=0
   -- already 3.6x above it. That is the point: it is a GUARD against a high-level mule appearing,
   -- not a filter doing visible work today. Masochist itself is off the roll via the 9102 rule, so
   -- it is a reference point here rather than the thing being excluded.
-  AND COALESCE((SELECT SUM(p_p) FROM biota_properties_skill WHERE object_Id=c.id),0) >= ${SG_ROLL_MIN_SKILL_XP:-5000000}
+  -- 196: same correction as skillXp above - the anti-mule floor must measure the TRUE total, or a
+  -- character with a capped skill is judged on a number that stopped moving.
+  AND COALESCE((SELECT SUM(COALESCE(o.value, s.p_p)) FROM biota_properties_skill s LEFT JOIN biota_properties_int64 o ON o.object_Id=s.object_Id AND o.type=9100+s.type WHERE s.object_Id=c.id),0) >= ${SG_ROLL_MIN_SKILL_XP:-5000000}
 
   -- 069: ONLY accessLevel 0 is eligible. Anything above it - Advocate, Sentinel, Envoy,
   -- Developer, Admin - is excluded from the roll entirely.
