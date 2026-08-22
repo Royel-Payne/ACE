@@ -24,6 +24,17 @@ namespace ACE.Server.WorldObjects
         {
             //Console.WriteLine($"{Name}.EarnXP({amount}, {sharable}, {fixedAmount})");
 
+            // Shadowgain 193: under unified progression, KILLS do not grant character XP - progression
+            // comes from use, and killing already advances you because killing IS skill use.
+            //
+            // This has its own dial ON PURPOSE. The first attempt suppressed kills by setting
+            // xp_modifier = 0, which worked for kills and silently destroyed QUEST XP too: quest
+            // rewards flow through this same multiplier, so they were multiplied to zero before ever
+            // reaching the reserve-pool redirect below. Chris found it by turning in a quest and being
+            // paid nothing. A global dial repurposed as a per-type switch will always do this.
+            if (xpType == XpType.Kill && !PropertyManager.GetBool("kill_xp_grants_level").Item)
+                return;
+
             // apply xp modifiers.  Quest XP is multiplicative with general XP modification
             var questModifier = PropertyManager.GetDouble("quest_xp_modifier").Item;
             var modifier = PropertyManager.GetDouble("xp_modifier").Item;
@@ -208,6 +219,15 @@ namespace ACE.Server.WorldObjects
                 // redirect is deliberate.
                 if (HasVitae && Session != null)
                     UpdateXpVitae(amount);
+
+                // SAY SO. The stock 'You've earned N experience' line sits after the level block, which
+                // this path returns before - so the turn-in went completely silent and read as a broken
+                // quest even once the XP was arriving. Worded for what it now does, because 'experience'
+                // alone would imply levels.
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessageSystemChat(
+                        $"You've earned {amount:N0} experience toward augmentations.",
+                        ChatMessageType.Broadcast));
 
                 return;
             }
