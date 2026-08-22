@@ -32,22 +32,49 @@ namespace ACE.Server.WorldObjects
         public int AttackSequence;
 
         /// <summary>
-        /// Shadowgain 193 (lever 4): ticks once per attack ANIMATION - one swing, one shot.
+        /// Shadowgain 195: which strike of the current attack animation is landing - 0 is the first.
         ///
-        /// NOT AttackSequence, which was the first attempt and was wrong. AttackSequence increments
-        /// once per attack REQUEST, and with repeat attacks on, a single request drives a whole chain
-        /// of swings: Attack() and LaunchMissile() both re-enter under the SAME sequence and merely
-        /// CHECK it (`if (AttackSequence != attackSequence) return;`) to know when to stop. So scoping
-        /// the award by it paid the first swing of a chain and nothing after - Chris measured roughly
-        /// one award per eight swings, which is a repeat chain, not a coincidence.
+        /// Set by Player_Melee immediately before each DamageTarget call, and reset to 0 by
+        /// Player_Missile, which is single-strike. The award site reads it to decide whether this hit
+        /// is the FIRST strike (always pays in full) or an ADDITIONAL one (pays
+        /// skill_xp_extra_strike_factor).
+        ///
+        /// This replaces 193's AttackActionId gate. That gate answered 'has this attack already paid?'
+        /// with a yes/no; the factors answer 'how much does THIS hit pay?', which subsumes it - with
+        /// both factors at 0 the behaviour is identical, because only strike 0 on the primary target
+        /// pays anything, and a repeat chain re-enters the strike loop from 0 each swing.
         /// </summary>
-        public int AttackActionId;
+        public int CurrentStrikeIndex;
 
         /// <summary>
-        /// The attack action that has already paid skill/attribute XP. -1 so the first attack of a
-        /// session is not mistaken for a repeat of action 0.
+        /// Shadowgain 195: true while the CLEAVE fan-out of the current strike is being damaged.
+        /// Cleave is kept separate from extra strikes on purpose - an extra strike is a fair second
+        /// attack on your actual target, whereas cleave scales with how many creatures happen to be
+        /// standing nearby, which is what made it the elastic runaway 189 measured.
         /// </summary>
-        private int lastXpAttackSequence = -1;
+        public bool CurrentHitIsCleave;
+
+        /// <summary>
+        /// Shadowgain 195: the fraction of a full award this hit pays. Carried in a field rather than
+        /// a parameter because OnDamageTarget overrides a base virtual whose signature is not ours to
+        /// change.
+        /// </summary>
+        private double currentHitXpFactor = 1.0;
+
+        /// <summary>
+        /// Shadowgain 195: how much skill/attribute XP THIS hit is worth, as a fraction of a full
+        /// award. First strike on the primary target always pays 1.0; extras and cleave are tunable.
+        /// </summary>
+        public double GetMultiHitXpFactor()
+        {
+            if (CurrentHitIsCleave)
+                return Math.Clamp(PropertyManager.GetDouble("skill_xp_cleave_factor").Item, 0.0, 1.0);
+
+            if (CurrentStrikeIndex > 0)
+                return Math.Clamp(PropertyManager.GetDouble("skill_xp_extra_strike_factor").Item, 0.0, 1.0);
+
+            return 1.0;
+        }
         public bool Attacking;
         public bool AttackCancelled;
 
@@ -214,12 +241,11 @@ namespace ACE.Server.WorldObjects
                 //
                 // Damage, procs and target death all still run per hit. Only the two XP paths are
                 // collapsed to once per attack action.
-                var payXp = !PropertyManager.GetBool("skill_xp_once_per_attack").Item
-                            || AttackActionId != lastXpAttackSequence;
+                var xpFactor = GetMultiHitXpFactor();
 
-                if (payXp)
+                if (xpFactor > 0.0)
                 {
-                    lastXpAttackSequence = AttackActionId;
+                    currentHitXpFactor = xpFactor;
 
                     OnDamageTarget(target, damageEvent.CombatType, damageEvent.IsCritical);
 
@@ -228,7 +254,7 @@ namespace ACE.Server.WorldObjects
                     // the Get*Mod helpers because those are evaluation functions called during damage
                     // calculation; this is the one place per landed attack where the resolved
                     // DamageEvent says which effects actually applied.
-                    AwardCombatSpecialtyUse(damageEvent, target);
+                    AwardCombatSpecialtyUse(damageEvent, target, xpFactor);
                 }
 
                 if (targetPlayer != null)
@@ -334,8 +360,8 @@ namespace ACE.Server.WorldObjects
             // stays correct for repeat attacks, which issue a fresh sequence each time.
             //
             // Damage, procs and everything else still run per hit. Only the XP award is collapsed.
-            // (the once-per-attack gate lives at the DamageTarget call site, so it covers the
-            // specialty awards too - see lever 4 there)
+            // (195: how much this hit pays is decided at the DamageTarget call site, so the same
+            // factor reaches the specialty awards too - see GetMultiHitXpFactor)
 
             // Shadowgain 187: the skill that EARNED this swing, which is not always the skill it was
             // rolled against - see GetSkillCreditedForAttack. This is the ONLY caller that wants the
@@ -346,7 +372,7 @@ namespace ACE.Server.WorldObjects
 
             // Shadowgain 119: the target goes in so the PvP gate is decided centrally - see
             // Proficiency.AllowsUsageGain. This call site is half of what Jkurs reported.
-            Proficiency.OnSuccessUse(this, attackSkill, difficulty, opponent: target);
+            Proficiency.OnSuccessUse(this, attackSkill, difficulty, currentHitXpFactor, opponent: target);
 
             // Shadowgain 004: the same target-derived difficulty feeds the attributes this attack
             // exercises (heavy/2h -> Strength, light/dual -> Quickness, finesse/missile -> Coordination,
@@ -355,7 +381,7 @@ namespace ACE.Server.WorldObjects
             // Shadowgain 119: gated separately because attributes do NOT flow through Proficiency -
             // they have a parallel award path, so the gate above does not reach them.
             if (Proficiency.AllowsUsageGain(this, target))
-                AwardAttributesForWeaponSkill(attackSkill.Skill, difficulty);
+                AwardAttributesForWeaponSkill(attackSkill.Skill, difficulty, currentHitXpFactor);
         }
 
         public override uint GetEffectiveAttackSkill()

@@ -592,9 +592,9 @@ namespace ACE.Server.WorldObjects
         /// Attr2 is skipped when absent (Missile Weapons has none) or identical to Attr1 (Dual Wield
         /// lists Coordination twice), so neither is double-awarded.
         /// </summary>
-        public void AwardAttributesForWeaponSkill(Skill skill, uint difficulty)
+        public void AwardAttributesForWeaponSkill(Skill skill, uint difficulty, double weight = 1.0)
         {
-            AwardAttributesForSkill(skill, difficulty);
+            AwardAttributesForSkill(skill, difficulty, weight);
         }
 
         /// <summary>
