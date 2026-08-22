@@ -47,9 +47,31 @@ namespace ACE.Server.Command.Handlers
             if (biota == null)
                 return false;
 
+            // 196: PP IS A SHADOW, NOT THE TOTAL. Past the dat table top, CreatureSkill pins PP at
+            // uint.MaxValue (4,294,967,295) for the wire format and the real total rides in
+            // PropertyInt64 ShadowgainSkillXpBase + skill (9100+). Summing PP therefore UNDERSTATES
+            // every uncapped skill, and the first run of this migration did exactly that - Adra by
+            // 36.1 BILLION, Black Breath 5.5B, Adramelech 5.1B, Apex 0.2B - giving all four a level
+            // computed from a number that had stopped moving.
+            //
+            // Caught because Adramelech noticed the WEBSITE disagreeing with his in-game portal:
+            // @myskills reads TrueExperienceSpent, the site summed PP. The display mismatch was the
+            // visible edge of this.
+            //
+            // Mirrors CreatureSkill.TrueExperienceSpent exactly: overflow if present, else PP.
             if (biota.PropertiesSkill != null)
-                foreach (var s in biota.PropertiesSkill.Values)
-                    skillXp += s.PP;
+            {
+                foreach (var kvp in biota.PropertiesSkill)
+                {
+                    var overflowProp = (PropertyInt64)((int)PropertyInt64.ShadowgainSkillXpBase + (int)kvp.Key);
+                    long overflow = 0;
+
+                    var hasOverflow = biota.PropertiesInt64 != null
+                                      && biota.PropertiesInt64.TryGetValue(overflowProp, out overflow);
+
+                    skillXp += hasOverflow ? overflow : kvp.Value.PP;
+                }
+            }
 
             if (biota.PropertiesAttribute != null)
                 foreach (var a in biota.PropertiesAttribute.Values)
