@@ -140,6 +140,25 @@ namespace ACE.Server.WorldObjects
             // vitae - which is also the right shape: you recover by playing.
             if (HasVitae && Session != null)
                 UpdateXpVitae(granted);
+
+            // Shadowgain 193: THE SOCIAL SKILLS AND THE ALLEGIANCE CHAIN.
+            //
+            // Chris asked whether pass-up still worked. It did not. Kills are suppressed, this method
+            // bypasses GrantXP, and the quest path returns early - so between them, Leadership trained
+            // from NOTHING and Loyalty only from quest pass-up. On a shard where Loyalty is the single
+            // highest skill several players own, that is not a rounding error.
+            //
+            // 007's semantics are preserved exactly: Leadership trains on XP you earn while fellowed
+            // with your own vassals, Loyalty on what you pass up (inside UpdateXpAllegiance).
+            //
+            // What the PATRON receives changed, and that is Chris's call: pass-up now lands in their
+            // AvailableExperience rather than their level (see the XpType.Allegiance branch in
+            // UpdateXpAndLevel). Retail pass-up went to the unassigned pool anyway, so this is the
+            // retail shape - and crucially nobody can level off someone else's practice, which would
+            // have reopened the exact gap 190 measured and broken the model's core promise.
+            AwardLeadershipUse(granted);
+
+            UpdateXpAllegiance(granted);
         }
 
         public void GrantXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
@@ -205,6 +224,22 @@ namespace ACE.Server.WorldObjects
             //
             // Deliberately BEFORE the TotalExperience block, and returns, so quest XP never touches
             // level, Leadership or the level-up path.
+            // Shadowgain 193: allegiance pass-up reaches the patron as RESERVE XP, never as level.
+            // Player_Allegiance redeems the cached amount with GrantXP(..., XpType.Allegiance, ...),
+            // which would otherwise raise TotalExperience and level a patron off their vassals' swings.
+            // Deliberately does NOT touch vitae - stock ACE already excluded Allegiance XP from vitae
+            // recovery, and that exclusion is preserved here rather than quietly reversed.
+            if (xpType == XpType.Allegiance && PropertyManager.GetBool("unified_progression_enabled").Item)
+            {
+                AvailableExperience += amount;
+
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
+                        this, PropertyInt64.AvailableExperience, AvailableExperience ?? 0));
+
+                return;
+            }
+
             if (xpType == XpType.Quest && PropertyManager.GetBool("quest_xp_to_reserve_only").Item)
             {
                 AvailableExperience += amount;
