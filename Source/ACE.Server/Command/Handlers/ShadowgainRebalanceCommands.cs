@@ -164,6 +164,17 @@ namespace ACE.Server.Command.Handlers
                     onlinePlayer.SetProperty(PropertyInt.Level, newLevel);
                     onlinePlayer.SetProperty(PropertyInt64.TotalExperience, total);
                     onlinePlayer.SetProperty(PropertyInt64.AvailableExperience, 0);
+
+                    // DeathLevel must not outlive the level scale it was recorded on. Vitae is worked
+                    // off against VitaeCPPoolThreshold = (level^2.5 * 2.5 + 20) * vitae^5, so a
+                    // character who died at 275 and recomputes to 8 keeps a threshold ~6,600x too
+                    // large and can never clear the penalty. Clamping down only - a DeathLevel BELOW
+                    // the new level is harmless and is left alone.
+                    var deathOn = onlinePlayer.GetProperty(PropertyInt.DeathLevel) ?? 0;
+
+                    if (deathOn > newLevel)
+                        onlinePlayer.SetProperty(PropertyInt.DeathLevel, newLevel);
+
                     onlinePlayer.SaveBiotaToDatabase();
                 }
                 else if (p is OfflinePlayer offlinePlayer)
@@ -171,6 +182,17 @@ namespace ACE.Server.Command.Handlers
                     offlinePlayer.SetProperty(PropertyInt.Level, newLevel);
                     offlinePlayer.SetProperty(PropertyInt64.TotalExperience, total);
                     offlinePlayer.SetProperty(PropertyInt64.AvailableExperience, 0);
+
+                    // DeathLevel must not outlive the level scale it was recorded on. Vitae is worked
+                    // off against VitaeCPPoolThreshold = (level^2.5 * 2.5 + 20) * vitae^5, so a
+                    // character who died at 275 and recomputes to 8 keeps a threshold ~6,600x too
+                    // large and can never clear the penalty. Clamping down only - a DeathLevel BELOW
+                    // the new level is harmless and is left alone.
+                    var deathOff = offlinePlayer.GetProperty(PropertyInt.DeathLevel) ?? 0;
+
+                    if (deathOff > newLevel)
+                        offlinePlayer.SetProperty(PropertyInt.DeathLevel, newLevel);
+
                 }
                 else
                     continue;

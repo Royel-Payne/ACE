@@ -117,6 +117,18 @@ namespace ACE.Server.WorldObjects
                     this, PropertyInt64.TotalExperience, TotalExperience ?? 0));
 
             CheckForLevelup();
+
+            // VITAE. Found by Chris dying on TEST with no way back: the death penalty is worked off by
+            // earning XP, and UpdateXpAndLevel is where that happens - so bypassing it to stop the
+            // AvailableExperience double-credit ALSO stopped vitae recovery. With xp_modifier = 0,
+            // killing grants nothing through EarnXP either, so the penalty became PERMANENT: the client
+            // reported 'you will regain 1% once you earn 578,627 more experience' against a counter
+            // that could never move.
+            //
+            // Under unified progression, use-XP is the only XP there is, so it must be what clears
+            // vitae - which is also the right shape: you recover by playing.
+            if (HasVitae && Session != null)
+                UpdateXpVitae(granted);
         }
 
         public void GrantXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
@@ -189,6 +201,13 @@ namespace ACE.Server.WorldObjects
                 if (Session != null)
                     Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
                         this, PropertyInt64.AvailableExperience, AvailableExperience ?? 0));
+
+                // Quest XP still works off vitae. It no longer buys levels, but from the player's side
+                // it is plainly 'earning experience', and the vitae panel says recovery comes from
+                // earning experience - so excluding it would read as a bug even though the level
+                // redirect is deliberate.
+                if (HasVitae && Session != null)
+                    UpdateXpVitae(amount);
 
                 return;
             }
