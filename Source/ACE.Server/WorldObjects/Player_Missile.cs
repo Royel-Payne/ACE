@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 
 using ACE.Entity.Enum;
@@ -145,6 +145,12 @@ namespace ACE.Server.WorldObjects
         {
             if (AttackSequence != attackSequence)
                 return;
+
+            // Shadowgain 195: missiles are single-strike and never cleave. Reset both explicitly -
+            // without this a shot would inherit whatever the last melee hit left behind and could be
+            // scored as an extra strike or a cleave target, paying a fraction of what it should.
+            CurrentStrikeIndex = 0;
+            CurrentHitIsCleave = false;
 
             var weapon = GetEquippedMissileWeapon();
             if (weapon == null || CombatMode == CombatMode.NonCombat)

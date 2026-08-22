@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+. "$(dirname "${BASH_SOURCE[0]}")/_isolation-guard.sh"   # 191: refuse LIVE from the experiment worktree
 # sitedata.sh - publish honour-roll + live server status as JSON for shadowgain.com.
 #
 #   ./sitedata.sh --dry-run  # build the feeds to a temp dir and DIFF against live. Publishes NOTHING.

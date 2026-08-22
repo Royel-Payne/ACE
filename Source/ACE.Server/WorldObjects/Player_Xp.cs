@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,6 +23,17 @@ namespace ACE.Server.WorldObjects
         public void EarnXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
         {
             //Console.WriteLine($"{Name}.EarnXP({amount}, {sharable}, {fixedAmount})");
+
+            // Shadowgain 193: under unified progression, KILLS do not grant character XP - progression
+            // comes from use, and killing already advances you because killing IS skill use.
+            //
+            // This has its own dial ON PURPOSE. The first attempt suppressed kills by setting
+            // xp_modifier = 0, which worked for kills and silently destroyed QUEST XP too: quest
+            // rewards flow through this same multiplier, so they were multiplied to zero before ever
+            // reaching the reserve-pool redirect below. Chris found it by turning in a quest and being
+            // paid nothing. A global dial repurposed as a per-type switch will always do this.
+            if (xpType == XpType.Kill && !PropertyManager.GetBool("kill_xp_grants_level").Item)
+                return;
 
             // apply xp modifiers.  Quest XP is multiplicative with general XP modification
             var questModifier = PropertyManager.GetDouble("quest_xp_modifier").Item;
@@ -58,6 +69,131 @@ namespace ACE.Server.WorldObjects
         /// <param name="amount">The amount of XP to grant to the player</param>
         /// <param name="xpType">The source of the XP being granted</param>
         /// <param name="shareable">If TRUE, this XP can be shared with fellowship members</param>
+        /// <summary>
+        /// Shadowgain 193: UNIFIED PROGRESSION. Feed use-based XP into TotalExperience, so character
+        /// level is derived from skill+attribute use rather than from kills.
+        ///
+        /// 192 established the design: level already comes from TotalExperience via
+        /// CheckForLevelup's walk over CharacterLevelXPList, so the cheapest correct change is not to
+        /// re-point the level derivation - it is to change what FEEDS TotalExperience. That keeps
+        /// TotalExperience the single source of truth for the client XP bar, /xp, fellowship and
+        /// Enlightenment, all of which keep working untouched. Additive, not structural.
+        ///
+        /// GrantXP, not EarnXP, and deliberately: EarnXP would re-apply xp_modifier AND
+        /// ProgressionSpeed, but the caller's award has already been through ProgressionSpeed in
+        /// Proficiency/Player_Attributes. Passing through EarnXP would square the lane speed.
+        ///
+        /// ShareType.None because use-based XP is PERSONAL - you earned it by swinging. Splitting it
+        /// to a fellowship would pay people for someone else's practice, and passing it up an
+        /// allegiance would do the same. XpType.Proficiency also keeps it out of GrantItemXP, which
+        /// only fires for Kill and Quest.
+        /// </summary>
+        /// <summary>
+        /// True while the social hooks below are running, so Loyalty/Leadership training cannot
+        /// re-enter and pass itself up forever. See the guard in GrantUnifiedProgressXP.
+        /// </summary>
+        private bool grantingSocialXp;
+
+        public void GrantUnifiedProgressXP(long amount)
+        {
+            if (amount <= 0) return;
+
+            if (!PropertyManager.GetBool("unified_progression_enabled").Item)
+                return;
+
+            var scale = PropertyManager.GetDouble("unified_progression_scale").Item;
+
+            if (double.IsNaN(scale) || scale <= 0.0)
+                return;
+
+            var granted = (long)Math.Round(amount * scale);
+
+            if (granted <= 0) return;
+
+            // NOT GrantXP, and this was a real bug for one build: GrantXP -> UpdateXpAndLevel does
+            // `AvailableExperience += addAmount` alongside TotalExperience, and also calls
+            // AwardLeadershipUse. So routing use-XP through it inflated the AUGMENTATION currency
+            // (AugmentationDevice spends AvailableExperience directly) and trained Leadership off
+            // skill swings - two side effects, neither intended, both invisible until Chris asked why
+            // the unassigned pool was grossly inflated.
+            //
+            // Skill XP is already SPENT by definition - it went into a skill. It must raise the level
+            // total and nothing else, so this does exactly that and then re-uses CheckForLevelup.
+            var maxLevelXp = (long)DatManager.PortalDat.XpTable.CharacterLevelXPList.Last();
+            var room = maxLevelXp - (TotalExperience ?? 0);
+
+            if (room <= 0) return;
+
+            if (granted > room)
+                granted = room;
+
+            TotalExperience += granted;
+
+            if (Session != null)
+                Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
+                    this, PropertyInt64.TotalExperience, TotalExperience ?? 0));
+
+            CheckForLevelup();
+
+            // VITAE. Found by Chris dying on TEST with no way back: the death penalty is worked off by
+            // earning XP, and UpdateXpAndLevel is where that happens - so bypassing it to stop the
+            // AvailableExperience double-credit ALSO stopped vitae recovery. With xp_modifier = 0,
+            // killing grants nothing through EarnXP either, so the penalty became PERMANENT: the client
+            // reported 'you will regain 1% once you earn 578,627 more experience' against a counter
+            // that could never move.
+            //
+            // Under unified progression, use-XP is the only XP there is, so it must be what clears
+            // vitae - which is also the right shape: you recover by playing.
+            if (HasVitae && Session != null)
+                UpdateXpVitae(granted);
+
+            // Shadowgain 193: THE SOCIAL SKILLS AND THE ALLEGIANCE CHAIN.
+            //
+            // Chris asked whether pass-up still worked. It did not. Kills are suppressed, this method
+            // bypasses GrantXP, and the quest path returns early - so between them, Leadership trained
+            // from NOTHING and Loyalty only from quest pass-up. On a shard where Loyalty is the single
+            // highest skill several players own, that is not a rounding error.
+            //
+            // 007's semantics are preserved exactly: Leadership trains on XP you earn while fellowed
+            // with your own vassals, Loyalty on what you pass up (inside UpdateXpAllegiance).
+            //
+            // What the PATRON receives changed, and that is Chris's call: pass-up now lands in their
+            // AvailableExperience rather than their level (see the XpType.Allegiance branch in
+            // UpdateXpAndLevel). Retail pass-up went to the unassigned pool anyway, so this is the
+            // retail shape - and crucially nobody can level off someone else's practice, which would
+            // have reopened the exact gap 190 measured and broken the model's core promise.
+            // RE-ENTRANCY GUARD, and it is load-bearing rather than defensive.
+            //
+            // Both hooks below TRAIN A SKILL, and training a skill runs Proficiency.OnSuccessUse,
+            // which now calls straight back into this method. Without the guard that is an infinite
+            // cycle:
+            //
+            //   AwardLoyaltyUse -> UpdateXpAllegiance -> GrantUnifiedProgressXP
+            //                   -> Proficiency.OnSuccessUse -> AwardLoyaltyUse -> ...
+            //
+            // It blew the stack on something as ordinary as examining an item (ArcaneLore trains, so
+            // the cycle starts), and Chris hit it within minutes as an inability to stay connected.
+            //
+            // The guard wraps ONLY the social hooks, not the level credit: XP earned by Loyalty and
+            // Leadership themselves still counts toward level like any other skill, it just does not
+            // pass itself up a second time.
+            if (grantingSocialXp)
+                return;
+
+            grantingSocialXp = true;
+
+            try
+            {
+                AwardLeadershipUse(granted);
+
+                UpdateXpAllegiance(granted);
+            }
+            finally
+            {
+                grantingSocialXp = false;
+            }
+        }
+
         public void GrantXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
         {
             if (IsOlthoiPlayer)
@@ -107,6 +243,62 @@ namespace ACE.Server.WorldObjects
             // Do not move this to a path that also sees Fellowship or Allegiance XP.
             if (xpType == XpType.Quest)
                 AwardQuestAttributeXp(amount);
+
+            // Shadowgain 193 (step 3): QUEST XP BUYS AUGMENTATIONS, IT DOES NOT BUY LEVELS.
+            //
+            // This is the point of the change, not a side effect: high-tier quest XP is precisely how
+            // a character reaches the cap fast, and under unified progression level is supposed to
+            // mean accumulated USE. Letting quests feed it would reopen the exact gap 190 measured.
+            //
+            // NO NEW PROPERTY WAS NEEDED. AvailableExperience already IS this pool: it is retail's
+            // unassigned XP, AugmentationDevice.cs already spends it directly, and the level-up
+            // message already tells players it is 'spendable only on augmentation gems'. The reserve
+            // pool Chris wanted has existed all along - it just had kill XP pouring into it.
+            //
+            // Deliberately BEFORE the TotalExperience block, and returns, so quest XP never touches
+            // level, Leadership or the level-up path.
+            // Shadowgain 193: allegiance pass-up reaches the patron as RESERVE XP, never as level.
+            // Player_Allegiance redeems the cached amount with GrantXP(..., XpType.Allegiance, ...),
+            // which would otherwise raise TotalExperience and level a patron off their vassals' swings.
+            // Deliberately does NOT touch vitae - stock ACE already excluded Allegiance XP from vitae
+            // recovery, and that exclusion is preserved here rather than quietly reversed.
+            if (xpType == XpType.Allegiance && PropertyManager.GetBool("unified_progression_enabled").Item)
+            {
+                AvailableExperience += amount;
+
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
+                        this, PropertyInt64.AvailableExperience, AvailableExperience ?? 0));
+
+                return;
+            }
+
+            if (xpType == XpType.Quest && PropertyManager.GetBool("quest_xp_to_reserve_only").Item)
+            {
+                AvailableExperience += amount;
+
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
+                        this, PropertyInt64.AvailableExperience, AvailableExperience ?? 0));
+
+                // Quest XP still works off vitae. It no longer buys levels, but from the player's side
+                // it is plainly 'earning experience', and the vitae panel says recovery comes from
+                // earning experience - so excluding it would read as a bug even though the level
+                // redirect is deliberate.
+                if (HasVitae && Session != null)
+                    UpdateXpVitae(amount);
+
+                // SAY SO. The stock 'You've earned N experience' line sits after the level block, which
+                // this path returns before - so the turn-in went completely silent and read as a broken
+                // quest even once the XP was arriving. Worded for what it now does, because 'experience'
+                // alone would imply levels.
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessageSystemChat(
+                        $"You've earned {amount:N0} experience toward augmentations.",
+                        ChatMessageType.Broadcast));
+
+                return;
+            }
 
             // until we are max level we must make sure that we send
             var xpTable = DatManager.PortalDat.XpTable;

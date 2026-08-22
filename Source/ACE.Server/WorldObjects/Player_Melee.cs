@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using ACE.DatLoader.Entity.AnimationHooks;
@@ -321,6 +321,10 @@ namespace ACE.Server.WorldObjects
                 actionChain.AddDelaySeconds(attackFrames[i].time * animLength - prevTime);
                 prevTime = attackFrames[i].time * animLength;
 
+                // 195: a per-iteration COPY. C# `for` variables are shared by every closure created in
+                // the loop, so capturing `i` directly would give each strike the final value.
+                var strikeIndex = i;
+
                 actionChain.AddAction(this, () =>
                 {
                     if (IsDead)
@@ -329,6 +333,10 @@ namespace ACE.Server.WorldObjects
                         OnAttackDone();
                         return;
                     }
+
+                    // 195: this hit is strike `strikeIndex` on the PRIMARY target, never cleave.
+                    CurrentStrikeIndex = strikeIndex;
+                    CurrentHitIsCleave = false;
 
                     var damageEvent = DamageTarget(creature, weapon);
 
@@ -343,11 +351,17 @@ namespace ACE.Server.WorldObjects
                     {
                         var cleave = GetCleaveTarget(creature, weapon);
 
+                        // 195: everything in this loop is a cleave target, whatever strike it rode in
+                        // on. Reset afterwards so a later hit is not mis-scored as cleave.
+                        CurrentHitIsCleave = true;
+
                         foreach (var cleaveHit in cleave)
                         {
                             // target procs don't happen for cleaving
                             DamageTarget(cleaveHit, weapon);
                         }
+
+                        CurrentHitIsCleave = false;
                     }
                 });
 

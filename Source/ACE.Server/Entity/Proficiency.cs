@@ -303,6 +303,14 @@ namespace ACE.Server.Entity
 
             var applied = player.AwardSkillUsageXP(skill, pp);
 
+            // Shadowgain 193: the same award also drives character level (see
+            // Player.GrantUnifiedProgressXP). GATED ON `applied`, which AwardSkillUsageXP returns
+            // false for when the skill is untrained, already at its ceiling, or the award rounded to
+            // zero - so XP the skill could not actually absorb does not silently level the character
+            // anyway. `pp` is the amount; `applied` is only the did-it-land flag.
+            if (applied)
+                player.GrantUnifiedProgressXP(pp);
+
             if (debug)
             {
                 // Shadowgain 119: print the RAW difficulty as well whenever the bound actually bit,

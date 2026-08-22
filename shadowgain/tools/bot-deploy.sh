@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+. "$(dirname "${BASH_SOURCE[0]}")/_isolation-guard.sh"   # 191: refuse LIVE from the experiment worktree
 # Shadowgain Discord bot deploy.
 #
 #   ./bot-deploy.sh             # ship code + deps + service, then restart

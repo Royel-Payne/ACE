@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+SG_TOOL_HONORS_ENV=1 . "$(dirname "${BASH_SOURCE[0]}")/_isolation-guard.sh"   # 191: honours SG_HOST, so target is verifiable
 # console.sh - run a command on the live ACE server console.
 #
 #   ./console.sh "acecommands"                    # list every console command
@@ -28,8 +29,11 @@
 # Output goes to the container log, not back over stdin, so this tails the log after.
 set -euo pipefail
 
-KEY="C:/Users/Chris/.ssh/shadowgain_ed25519"
-HOST="root@137.184.1.44"
+# 191: parameterised so the isolation guard can VERIFY the target. Defaults stay LIVE, so mainline
+# behaviour is unchanged; the experiment worktree must pass SG_HOST/SG_KEY/SG_CONTAINER explicitly.
+KEY="${SG_KEY:-C:/Users/Chris/.ssh/shadowgain_ed25519}"
+HOST="${SG_HOST:-root@137.184.1.44}"
+CONTAINER="${SG_CONTAINER:-ace-server}"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
 QUIET=0
@@ -47,11 +51,11 @@ TAIL="${2:-40}"
 CMD_B64=$(printf '%s' "$CMD" | base64 -w0)
 
 $SSH "$HOST" "
-  docker ps --format '{{.Names}}' | grep -q '^ace-server\$' || { echo 'ace-server is not running'; exit 1; }
-  MARK=\$(docker logs ace-server 2>&1 | wc -l)
-  printf '%s\n' \"\$(echo '$CMD_B64' | base64 -d)\" | timeout -s KILL 10 docker attach --sig-proxy=false ace-server >/dev/null 2>&1 || true
+  docker ps --format '{{.Names}}' | grep -q '^$CONTAINER\$' || { echo "$CONTAINER is not running"; exit 1; }
+  MARK=\$(docker logs $CONTAINER 2>&1 | wc -l)
+  printf '%s\n' \"\$(echo '$CMD_B64' | base64 -d)\" | timeout -s KILL 10 docker attach --sig-proxy=false $CONTAINER >/dev/null 2>&1 || true
   sleep 2
   if [ '$QUIET' = '0' ]; then
-    docker logs ace-server 2>&1 | tail -n +\$((MARK+1)) | tail -n $TAIL
+    docker logs $CONTAINER 2>&1 | tail -n +\$((MARK+1)) | tail -n $TAIL
   fi
 "

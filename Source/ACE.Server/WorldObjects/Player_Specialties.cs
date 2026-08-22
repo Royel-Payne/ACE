@@ -20,7 +20,7 @@ namespace ACE.Server.WorldObjects
         /// Difficulty is the target's effective defense throughout - external to every skill being
         /// raised, per the anti-runaway rule.
         /// </summary>
-        public void AwardCombatSpecialtyUse(DamageEvent damageEvent, WorldObject target)
+        public void AwardCombatSpecialtyUse(DamageEvent damageEvent, WorldObject target, double hitFactor = 1.0)
         {
             if (damageEvent == null || target == null)
                 return;
@@ -42,24 +42,24 @@ namespace ACE.Server.WorldObjects
             // Recklessness applied to this hit - the mod is left at 1.0 when it did not fire, and is
             // also reset to 1.0 on criticals (Recklessness deliberately does not apply to those).
             if (damageEvent.RecklessnessMod != 1.0f && damageEvent.RecklessnessMod != 0.0f)
-                TryAwardSpecialty(Skill.Recklessness, difficulty);
+                TryAwardSpecialty(Skill.Recklessness, difficulty, hitFactor);
 
             if (damageEvent.SneakAttackMod != 1.0f && damageEvent.SneakAttackMod != 0.0f)
             {
-                TryAwardSpecialty(Skill.SneakAttack, difficulty);
+                TryAwardSpecialty(Skill.SneakAttack, difficulty, hitFactor);
 
                 // Deception shares the sneak-attack event rather than getting its own hook: it is
                 // what grants the chance to sneak attack from the FRONT, and its Current value scales
                 // that chance (Creature_Combat.cs). A landed sneak attack is therefore a genuine use
                 // of Deception, and it has no other in-combat expression to hook.
-                TryAwardSpecialty(Skill.Deception, difficulty);
+                TryAwardSpecialty(Skill.Deception, difficulty, hitFactor);
             }
 
             // Dual Wield trains when actually fighting with two weapons. GetCurrentWeaponSkill()
             // already reports DualWield in that case (Player_Combat.cs), so the weapon-skill hook
             // covers the attack itself - this credits the dual-wield skill as well.
             if (IsDualWieldAttack)
-                TryAwardSpecialty(Skill.DualWield, difficulty);
+                TryAwardSpecialty(Skill.DualWield, difficulty, hitFactor);
         }
 
         /// <summary>
@@ -78,7 +78,10 @@ namespace ACE.Server.WorldObjects
             var difficulty = GetTargetEffectiveDefenseSkill(target);
 
             if (difficulty > 0)
-                TryAwardSpecialty(Skill.DirtyFighting, difficulty);
+                // 195: reads the factor directly - AwardDirtyFightingUse is called from
+                // Creature_Combat.FightDirty during damage calculation, so the strike/cleave context
+                // set around DamageTarget is still current, but there is no parameter to receive it.
+                TryAwardSpecialty(Skill.DirtyFighting, difficulty, GetMultiHitXpFactor());
         }
 
         /// <summary>
@@ -388,14 +391,14 @@ namespace ACE.Server.WorldObjects
         /// Proficiency enforces this too, but checking here keeps the debug log free of a
         /// BLOCKED=untrained line on every single swing for skills most characters never train.
         /// </summary>
-        private void TryAwardSpecialty(Skill skill, uint difficulty)
+        private void TryAwardSpecialty(Skill skill, uint difficulty, double hitFactor = 1.0)
         {
             var creatureSkill = GetCreatureSkill(skill);
 
             if (creatureSkill == null || creatureSkill.AdvancementClass < SkillAdvancementClass.Trained)
                 return;
 
-            Proficiency.OnSuccessUse(this, creatureSkill, difficulty);
+            Proficiency.OnSuccessUse(this, creatureSkill, difficulty, hitFactor);
 
             // Shadowgain 187b (#1, RESCOPED AND NOW SHIPPING ON): pay Coordination for dual-wielding, which #2
             // redistributed away from dual-wielders. DELIBERATELY LIMITED TO DualWield.
@@ -459,7 +462,9 @@ namespace ACE.Server.WorldObjects
             if (double.IsNaN(weight) || weight <= 0.0)
                 return;
 
-            AwardAttributesForSkill(skill, difficulty, weight);
+            // 195: hitFactor scales the ATTRIBUTE half too, or an extra strike would pay no skill XP
+            // while still paying full attributes - and under unified progression both feed level.
+            AwardAttributesForSkill(skill, difficulty, weight * hitFactor);
         }
     }
 }
