@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using ACE.DatLoader.Entity.AnimationHooks;
@@ -271,6 +271,11 @@ namespace ACE.Server.WorldObjects
                 OnAttackDone();
                 return;
             }
+
+            // Shadowgain 193 (lever 4): one attack ACTION begins here. This method re-enters once per
+            // swing under a repeat chain while AttackSequence stays fixed, so this is the only place
+            // that ticks once per actual swing.
+            AttackActionId++;
 
             var animLength = DoSwingMotion(target, out var attackFrames);
             if (animLength == 0)

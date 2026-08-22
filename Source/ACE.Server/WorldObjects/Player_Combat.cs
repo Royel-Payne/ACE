@@ -32,8 +32,20 @@ namespace ACE.Server.WorldObjects
         public int AttackSequence;
 
         /// <summary>
-        /// Shadowgain 193 (lever 4): the AttackSequence that has already paid skill/attribute XP.
-        /// -1 so the very first attack of a session is not mistaken for a repeat of sequence 0.
+        /// Shadowgain 193 (lever 4): ticks once per attack ANIMATION - one swing, one shot.
+        ///
+        /// NOT AttackSequence, which was the first attempt and was wrong. AttackSequence increments
+        /// once per attack REQUEST, and with repeat attacks on, a single request drives a whole chain
+        /// of swings: Attack() and LaunchMissile() both re-enter under the SAME sequence and merely
+        /// CHECK it (`if (AttackSequence != attackSequence) return;`) to know when to stop. So scoping
+        /// the award by it paid the first swing of a chain and nothing after - Chris measured roughly
+        /// one award per eight swings, which is a repeat chain, not a coincidence.
+        /// </summary>
+        public int AttackActionId;
+
+        /// <summary>
+        /// The attack action that has already paid skill/attribute XP. -1 so the first attack of a
+        /// session is not mistaken for a repeat of action 0.
         /// </summary>
         private int lastXpAttackSequence = -1;
         public bool Attacking;
@@ -191,14 +203,33 @@ namespace ACE.Server.WorldObjects
 
             if (damageEvent.HasDamage)
             {
-                OnDamageTarget(target, damageEvent.CombatType, damageEvent.IsCritical);
+                // Shadowgain 193 (lever 4): ONE gate covering BOTH award paths.
+                //
+                // It started inside OnDamageTarget, which normalised the weapon skill and left the
+                // SPECIALTIES paying per hit and per cleave target - so 2H still multiplied
+                // Recklessness, SneakAttack, DirtyFighting and DualWield by hit count, and lever 4's
+                // whole point is hit-count neutrality. Measured on TEST while the gate was in the
+                // wrong place: TwoHandedCombat 7 awards against Recklessness 64 over the same six
+                // minutes.
+                //
+                // Damage, procs and target death all still run per hit. Only the two XP paths are
+                // collapsed to once per attack action.
+                var payXp = !PropertyManager.GetBool("skill_xp_once_per_attack").Item
+                            || AttackActionId != lastXpAttackSequence;
 
-                // Shadowgain 007: the combat specialties had no usage path at all - they fire
-                // constantly in play but never trained themselves. Hooked here rather than inside the
-                // Get*Mod helpers because those are evaluation functions called during damage
-                // calculation; this is the one place per landed attack where the resolved DamageEvent
-                // says which effects actually applied.
-                AwardCombatSpecialtyUse(damageEvent, target);
+                if (payXp)
+                {
+                    lastXpAttackSequence = AttackActionId;
+
+                    OnDamageTarget(target, damageEvent.CombatType, damageEvent.IsCritical);
+
+                    // Shadowgain 007: the combat specialties had no usage path at all - they fire
+                    // constantly in play but never trained themselves. Hooked here rather than inside
+                    // the Get*Mod helpers because those are evaluation functions called during damage
+                    // calculation; this is the one place per landed attack where the resolved
+                    // DamageEvent says which effects actually applied.
+                    AwardCombatSpecialtyUse(damageEvent, target);
+                }
 
                 if (targetPlayer != null)
                     targetPlayer.TakeDamage(this, damageEvent);
@@ -303,12 +334,8 @@ namespace ACE.Server.WorldObjects
             // stays correct for repeat attacks, which issue a fresh sequence each time.
             //
             // Damage, procs and everything else still run per hit. Only the XP award is collapsed.
-            var oncePerAttack = PropertyManager.GetBool("skill_xp_once_per_attack").Item;
-
-            if (oncePerAttack && AttackSequence == lastXpAttackSequence)
-                return;
-
-            lastXpAttackSequence = AttackSequence;
+            // (the once-per-attack gate lives at the DamageTarget call site, so it covers the
+            // specialty awards too - see lever 4 there)
 
             // Shadowgain 187: the skill that EARNED this swing, which is not always the skill it was
             // rolled against - see GetSkillCreditedForAttack. This is the ONLY caller that wants the

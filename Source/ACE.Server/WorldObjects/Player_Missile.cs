@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 
 using ACE.Entity.Enum;
@@ -145,6 +145,9 @@ namespace ACE.Server.WorldObjects
         {
             if (AttackSequence != attackSequence)
                 return;
+
+            // Shadowgain 193 (lever 4): same reasoning as Player_Melee.Attack - one shot, one action.
+            AttackActionId++;
 
             var weapon = GetEquippedMissileWeapon();
             if (weapon == null || CombatMode == CombatMode.NonCombat)
