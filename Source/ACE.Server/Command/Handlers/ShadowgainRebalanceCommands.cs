@@ -13,7 +13,13 @@ using ACE.Server.WorldObjects;
 namespace ACE.Server.Command.Handlers
 {
     /// <summary>
-    /// Shadowgain 193: the unified-progression recompute.
+    /// Shadowgain 193: the unified-progression recompute. REWRITTEN in 199 - it no longer resets
+    /// AvailableExperience; see the note on that below.
+    ///
+    /// It is now a RE-SYNC rather than a one-time migration: it brings Level and TotalExperience back
+    /// into agreement with what the character has actually earned. That is safe to run whenever
+    /// something has knocked them apart - 199's uncredited attribute XP, an admin grant, or a data
+    /// correction like 198's Loyalty overflow wipe - because both values are recomputed from source.
     ///
     /// THIS FILE IS THE MIGRATION, and per 190/192 the migration IS the reset. Under the unified model
     /// character level is derived from use rather than kills, so every existing character is carrying a
@@ -84,7 +90,8 @@ namespace ACE.Server.Command.Handlers
             "Recompute character level from total skill + attribute XP (Shadowgain 193 unified progression).",
             "[apply]\n"
             + "No argument = DRY RUN, prints the table and writes nothing.\n"
-            + "'apply'     = writes the new level and TotalExperience. Refuses if any player is online.")]
+            + "'apply'     = writes the new level and TotalExperience, and clamps a stale DeathLevel.\n"
+            + "             AvailableExperience is NOT touched (199). Refuses if any player is online.")]
         public static void HandleUnifyLevels(Session session, params string[] parameters)
         {
             var apply = parameters.Length > 0 && parameters[0].Equals("apply", StringComparison.OrdinalIgnoreCase);
@@ -151,18 +158,21 @@ namespace ACE.Server.Command.Handlers
                 return;
             }
 
-            // AvailableExperience is ZEROED, and it has to be. It is the unassigned pool, which under
-            // the old rules accumulated every point of kill XP - Adramelech was carrying 190.4 BILLION
-            // against a recomputed total of 25.5B. Under unified progression that pool is fed by QUESTS
-            // only and buys augmentations, so a legacy balance is not "saved up", it is a leftover from
-            // a currency that no longer exists.
+            // AvailableExperience IS NO LONGER TOUCHED. 199 changed what this command is for.
             //
-            // The alternative considered was capping it at the new TotalExperience rather than zeroing.
-            // Rejected as arbitrary: it would preserve a number with no meaning under the new rules.
-            // Chris: "reset it, sync it with character skill xp, they're grossly inflated now."
+            // In 194 it was zeroed, and that was right: the pool was a legacy of kill XP under the old
+            // rules (Adramelech carried 190.4 BILLION against a recomputed total of 25.5B), and under
+            // unified progression it is fed by quests only and buys augmentations. Chris: "reset it,
+            // sync it with character skill xp, they're grossly inflated now."
             //
-            // Consequence worth stating plainly: this removes existing augmentation purchasing power.
-            // Players re-earn it through quests, which is the design.
+            // That was a ONE-TIME correction, and re-running it would now be destructive. Since 194 the
+            // pool has been refilling legitimately from quests and allegiance pass-up, and 198
+            // deliberately put ~5.0B in Adramelech's. Measured before the 199 run: 5,080,443,639 across
+            // the shard would have been silently destroyed by a second pass.
+            //
+            // The rule this encodes: a migration that RESETS a value is safe exactly once. Re-running is
+            // only safe for values RECOMPUTED FROM SOURCE - which Level and TotalExperience are, and the
+            // unassigned pool is not.
             var written = 0;
 
             foreach (var p in PlayerManager.GetAllPlayers())
@@ -185,7 +195,6 @@ namespace ACE.Server.Command.Handlers
                 {
                     onlinePlayer.SetProperty(PropertyInt.Level, newLevel);
                     onlinePlayer.SetProperty(PropertyInt64.TotalExperience, total);
-                    onlinePlayer.SetProperty(PropertyInt64.AvailableExperience, 0);
 
                     // DeathLevel must not outlive the level scale it was recorded on. Vitae is worked
                     // off against VitaeCPPoolThreshold = (level^2.5 * 2.5 + 20) * vitae^5, so a
@@ -203,7 +212,6 @@ namespace ACE.Server.Command.Handlers
                 {
                     offlinePlayer.SetProperty(PropertyInt.Level, newLevel);
                     offlinePlayer.SetProperty(PropertyInt64.TotalExperience, total);
-                    offlinePlayer.SetProperty(PropertyInt64.AvailableExperience, 0);
 
                     // DeathLevel must not outlive the level scale it was recorded on. Vitae is worked
                     // off against VitaeCPPoolThreshold = (level^2.5 * 2.5 + 20) * vitae^5, so a

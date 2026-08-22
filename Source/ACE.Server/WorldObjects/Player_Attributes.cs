@@ -241,6 +241,29 @@ namespace ACE.Server.WorldObjects
             // without this the gain is never persisted.
             ChangesDetected = true;
 
+            // Shadowgain 199: THE USE-BASED AWARD DRIVES CHARACTER LEVEL TOO. It did not, and that was
+            // a straight omission rather than a decision - 193 wired the unified grant into the skill
+            // path (Proficiency) and into SpendAttributeXp, the MANUAL raise-with-unassigned-XP path,
+            // and missed this one. Under unified progression AvailableExperience comes only from quests
+            // and buys augmentations, so the manual path is essentially never taken: in practice
+            // attributes contributed NOTHING to level while 193's own comment on the other call site
+            // says they should, and while TryGetUseXp counted them when 194 set everyone's level.
+            //
+            // Measured on LIVE 2026-08-22 over 4 minutes and 8 characters: dTotalExperience equalled
+            // dSkillXP exactly for every one of them, while 6,448,828 attribute xp was earned and
+            // credited to nobody - 20.6% of all use-XP in the window, and 57.7% for the character who
+            // leaned on attributes hardest. Levels were SET on a skill+attribute basis and then grew on
+            // skills alone, so the gap widened with every hour played.
+            //
+            // GRANT WHAT LANDED, NOT WHAT WAS CHARGED. newXP is clamped by maxXP above, so at the
+            // ceiling `pp` is computed but little or none of it is absorbed. Granting `pp` would level a
+            // character off experience their attribute could not take - exactly what the `applied` gate
+            // on the skill side exists to prevent. The delta is the only honest amount.
+            var granted = (long)(newXP - prevXP);
+
+            if (granted > 0)
+                GrantUnifiedProgressXP(granted);
+
             if (debug)
             {
                 // Shadowgain 119: show the raw difficulty too when the bound bit - see Proficiency.
