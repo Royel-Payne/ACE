@@ -30,6 +30,12 @@ namespace ACE.Server.WorldObjects
     partial class Player
     {
         public int AttackSequence;
+
+        /// <summary>
+        /// Shadowgain 193 (lever 4): the AttackSequence that has already paid skill/attribute XP.
+        /// -1 so the very first attack of a session is not mistaken for a repeat of sequence 0.
+        /// </summary>
+        private int lastXpAttackSequence = -1;
         public bool Attacking;
         public bool AttackCancelled;
 
@@ -269,6 +275,41 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public override void OnDamageTarget(WorldObject target, CombatType attackType, bool critical)
         {
+            // Shadowgain 193 (lever 4): ONE SKILL AWARD PER ATTACK ACTION, not per hit landed.
+            //
+            // This method runs once per DamageTarget() call, and an attack can call it many times:
+            // Player_Melee runs `for (i = 0; i < numStrikes; i++)` - 2 for every two-handed stance,
+            // unconditionally - and INSIDE that loop it also calls DamageTarget once per cleave
+            // target. So a two-hander with CleaveTargets=2 can pay up to 2 x (1 + 2) = SIX awards
+            // for one button press, while a one-hander pays one.
+            //
+            // Measured on LIVE (189): two-handers land 1.45-1.80 targets per strike and 2.84-3.57
+            // awards per attack; one-handers were 1.00 across 3,002 clusters, with zero exceptions.
+            // A triple-strike one-hander would pay 3 - the one-handed branch of GetNumStrikes can
+            // reach 3 while the two-handed branch returns 2 before ever checking the weapon flags.
+            //
+            // Normalising to one award per attack makes skill gain HIT-COUNT NEUTRAL: 2H, 1H, dual
+            // wield and triple all pay 1. That kills the cleave runaway (which scaled with pack
+            // density, so it paid most for pulling groups) and the triple-strike runaway together,
+            // and it dissolves the dual-wield #3 problem for XP purposes - which hand swung stops
+            // mattering when the hand no longer changes the award count.
+            //
+            // Accepted trade (Chris, 193): fast weapons now out-gain slow ones per MINUTE, because
+            // attacks/min differs. That gap is far smaller than the one it replaces, and it makes
+            // weapon choice a damage-and-feel decision rather than a progression decision.
+            //
+            // AttackSequence is incremented once per attack REQUEST in Player_Melee and
+            // Player_Missile, so it is already the correct scope - no new state machine, and it
+            // stays correct for repeat attacks, which issue a fresh sequence each time.
+            //
+            // Damage, procs and everything else still run per hit. Only the XP award is collapsed.
+            var oncePerAttack = PropertyManager.GetBool("skill_xp_once_per_attack").Item;
+
+            if (oncePerAttack && AttackSequence == lastXpAttackSequence)
+                return;
+
+            lastXpAttackSequence = AttackSequence;
+
             // Shadowgain 187: the skill that EARNED this swing, which is not always the skill it was
             // rolled against - see GetSkillCreditedForAttack. This is the ONLY caller that wants the
             // difference; every other reader of GetCurrentWeaponSkill is asking about to-hit or damage

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 using ACE.DatLoader;
 using ACE.Entity.Enum;
@@ -102,6 +102,11 @@ namespace ACE.Server.WorldObjects
             }
 
             creatureAttribute.ExperienceSpent += amount;
+
+            // Shadowgain 193: attributes count toward character level too (Chris's 193 decision -
+            // both are use-based, so both should drive level). This is what moves the projected
+            // recompute from the 'skill only' column to '+attributes' - Adramelech 172 -> 183.
+            GrantUnifiedProgressXP(amount);
 
             // calculate new rank
             creatureAttribute.Ranks = (ushort)CalcAttributeRank(creatureAttribute.ExperienceSpent);

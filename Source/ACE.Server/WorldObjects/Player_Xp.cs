@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -58,6 +58,44 @@ namespace ACE.Server.WorldObjects
         /// <param name="amount">The amount of XP to grant to the player</param>
         /// <param name="xpType">The source of the XP being granted</param>
         /// <param name="shareable">If TRUE, this XP can be shared with fellowship members</param>
+        /// <summary>
+        /// Shadowgain 193: UNIFIED PROGRESSION. Feed use-based XP into TotalExperience, so character
+        /// level is derived from skill+attribute use rather than from kills.
+        ///
+        /// 192 established the design: level already comes from TotalExperience via
+        /// CheckForLevelup's walk over CharacterLevelXPList, so the cheapest correct change is not to
+        /// re-point the level derivation - it is to change what FEEDS TotalExperience. That keeps
+        /// TotalExperience the single source of truth for the client XP bar, /xp, fellowship and
+        /// Enlightenment, all of which keep working untouched. Additive, not structural.
+        ///
+        /// GrantXP, not EarnXP, and deliberately: EarnXP would re-apply xp_modifier AND
+        /// ProgressionSpeed, but the caller's award has already been through ProgressionSpeed in
+        /// Proficiency/Player_Attributes. Passing through EarnXP would square the lane speed.
+        ///
+        /// ShareType.None because use-based XP is PERSONAL - you earned it by swinging. Splitting it
+        /// to a fellowship would pay people for someone else's practice, and passing it up an
+        /// allegiance would do the same. XpType.Proficiency also keeps it out of GrantItemXP, which
+        /// only fires for Kill and Quest.
+        /// </summary>
+        public void GrantUnifiedProgressXP(long amount)
+        {
+            if (amount <= 0) return;
+
+            if (!PropertyManager.GetBool("unified_progression_enabled").Item)
+                return;
+
+            var scale = PropertyManager.GetDouble("unified_progression_scale").Item;
+
+            if (double.IsNaN(scale) || scale <= 0.0)
+                return;
+
+            var granted = (long)Math.Round(amount * scale);
+
+            if (granted <= 0) return;
+
+            GrantXP(granted, XpType.Proficiency, ShareType.None);
+        }
+
         public void GrantXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
         {
             if (IsOlthoiPlayer)
