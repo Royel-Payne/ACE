@@ -9,8 +9,9 @@ THE ONE CONTRACT CORRECTION (see the Summary in Task.md 124)
 Contract 1 says `trueRank = InitLevel + Ranks`. That is wrong on our server, and reading it that
 way would put a number on the page that disagrees with `@mystats` in game:
 
-  * `init_Level` on a skill is the retail SPECIALIZATION BONUS (+10 to the skill's base value),
-    not part of its rank. Black Breath's Melee Defense is s_a_c=3, init_Level=10, ranks=190 —
+  * `init_Level` on a skill is the retail SPECIALIZATION BONUS (+10 to the skill's base value)
+    PLUS any overcap ranks 109c parked there, so it must NOT be added to a separately
+    derived true rank - see the note at the `base =` line. Black Breath's Melee Defense is s_a_c=3, init_Level=10, ranks=190 —
     `InitLevel + Ranks` reports 200, and the server says 190.
   * rank is DERIVED from experience, every time, by `Player.CalcSkillRankUncapped` — see
     curves.py. It is not stored anywhere.
@@ -478,7 +479,48 @@ def build_skills(raw: dict, ench: list[dict]) -> list[dict]:
             group = "untrained" if meta.get("usableUntrained") else "unusable"
             rank, into, to_next = 0, 0, 0
 
-        base = (row["init_Level"] or 0) + rank
+        # 109c: InitLevel is NOT merely the retail +10 specialization bonus on this shard, and
+        # reading it as one double-counts the overcap. Once a skill passes its dat table top,
+        # Player_Skills parks the overflow in that same field:
+        #
+        #     InitLevel = (specialized ? 10 : 0) + overflowRanks
+        #     Ranks     = min(computedRank, tableMaxRank)
+        #
+        # so CreatureSkill.Base == (specialized ? 10 : 0) + TRUE rank + formula: the two stored
+        # fields already sum to the true rank. Adding our own uncapped rank to the STORED
+        # init_Level therefore counts overflowRanks TWICE. That is exactly how Adramelech's
+        # Summoning read 528 here and 521 in his character tab: uncapped 233 - capped 226 = 7.
+        # His Melee Defense was out by 3 for the same reason, and those were the only two skills
+        # he owned that had passed the table top.
+        #
+        # Below the table top nothing changes - overflowRanks is 0, so init_Level IS the bare
+        # spec bonus and both readings agree (Black Breath's Melee Defense, 10 + 190, still 200).
+        # NOTE: a /god character is deliberately skipped by that server branch and keeps
+        # InitLevel = 5000; the sheet no longer echoes that inflation, which is the honest
+        # reading of an artificial state.
+        # The base value must use the CAPPED rank, because the overcap is ALREADY in init_Level.
+        # Once a skill passes its dat table top, Player_Skills splits the true rank across the two
+        # stored fields rather than letting either exceed the wire format:
+        #
+        #     InitLevel = (specialized ? 10 : 0) + overflowRanks
+        #     Ranks     = min(computedRank, tableMaxRank)
+        #
+        # and CreatureSkill.Base sums exactly those two. Adding our own UNCAPPED rank to the stored
+        # init_Level therefore counts overflowRanks twice - which is how Adramelech's Summoning
+        # read 528 here and 521 in his character tab (uncapped 233 - capped 226 = 7), and his Melee
+        # Defense was out by 3. Those were the only two skills he owned past the table top.
+        #
+        # Capping here rather than reconstructing the +10 spec bonus is deliberate: it reproduces
+        # InitLevel + Ranks for EVERY row, including a /god character parked at InitLevel = 5000,
+        # whose in-game base really is 5226. Verified against all 3,019 trained/specialized rows
+        # on the shard - zero disagreements with the server.
+        #
+        # trueRank below is still the uncapped figure. That is the number the sheet exists to show;
+        # it is just not the number the base value is built from.
+        _table = curves.get_skill_xp_table(sac)
+        _capped_rank = min(rank, len(_table) - 1) if _table else rank
+
+        base = (row["init_Level"] or 0) + _capped_rank
         buffed = base
 
         if meta.get("usableUntrained") or sac >= curves.SAC_TRAINED:
