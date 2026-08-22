@@ -119,6 +119,13 @@ SELECT CONCAT(
   -- is why Adramelech reported the site disagreeing with his in-game portal - @myskills reads
   -- TrueExperienceSpent and this read the shadow.
   '\"skillXp\":', COALESCE((SELECT SUM(COALESCE(o.value, s.p_p)) FROM biota_properties_skill s LEFT JOIN biota_properties_int64 o ON o.object_Id=s.object_Id AND o.type=9100+s.type WHERE s.object_Id=c.id),0), ',',
+  -- 196: totalXp is READ, never summed. Under unified progression TotalExperience (PropertyInt64 1) is
+  -- what drives level and what the player sees in game. Since 199 it EQUALS skill+attribute XP exactly,
+  -- but computing it here would still be wrong: an admin grant or a future migration reopens a gap, and
+  -- a builder-side sum would look right while drifting from the character panel. Read the stored total.
+  '\"totalXp\":', COALESCE((SELECT value FROM biota_properties_int64 WHERE object_Id=c.id AND type=1),0), ',',
+  -- Attribute XP is c_P_Spent - no overflow property, never pinned, so unlike skillXp this is a plain SUM.
+  '\"attributeXp\":', COALESCE((SELECT SUM(a.c_P_Spent) FROM biota_properties_attribute a WHERE a.object_Id=c.id),0), ',',
   '\"enlightenment\":', COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0), ',',
   '\"enlightenmentTitle\":\"', CASE COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=390),0)
     WHEN 1 THEN 'Awakened' WHEN 2 THEN 'Enlightened' WHEN 3 THEN 'Illuminated'
