@@ -86,9 +86,9 @@ namespace ACE.Server.Command.Handlers
                               + $"XP at max {xpTable[maxLevel]:N0}");
             Console.WriteLine($"players online: {online}");
             Console.WriteLine();
-            Console.WriteLine($"{"character",-22}{"now",6}{"skill XP",18}{"attr XP",16}{"new",6}{"delta",7}");
+            Console.WriteLine($"{"character",-22}{"now",6}{"new",6}{"delta",7}{"unassigned now",20}{"->",6}");
 
-            var rows = new List<(string Name, int Now, long Skill, long Attr, int New)>();
+            var rows = new List<(string Name, int Now, long Unassigned, long Attr, int New)>();
 
             foreach (var p in PlayerManager.GetAllPlayers())
             {
@@ -104,13 +104,16 @@ namespace ACE.Server.Command.Handlers
                 while (newLevel < maxLevel && (ulong)total >= xpTable[newLevel + 1])
                     newLevel++;
 
-                rows.Add((p.Name, p.Level ?? 1, skillXp, attrXp, newLevel));
+                var unassigned = (p as Player)?.AvailableExperience
+                                 ?? (p as OfflinePlayer)?.GetProperty(PropertyInt64.AvailableExperience) ?? 0;
+
+                rows.Add((p.Name, p.Level ?? 1, unassigned, attrXp, newLevel));
             }
 
             foreach (var r in rows.OrderByDescending(r => r.Now))
             {
                 var delta = r.New - r.Now;
-                Console.WriteLine($"{r.Name,-22}{r.Now,6}{r.Skill,18:N0}{r.Attr,16:N0}{r.New,6}{delta,7}");
+                Console.WriteLine($"{r.Name,-22}{r.Now,6}{r.New,6}{delta,7}{r.Unassigned,20:N0}{0,6}");
             }
 
             Console.WriteLine();
@@ -126,6 +129,18 @@ namespace ACE.Server.Command.Handlers
                 return;
             }
 
+            // AvailableExperience is ZEROED, and it has to be. It is the unassigned pool, which under
+            // the old rules accumulated every point of kill XP - Adramelech was carrying 190.4 BILLION
+            // against a recomputed total of 25.5B. Under unified progression that pool is fed by QUESTS
+            // only and buys augmentations, so a legacy balance is not "saved up", it is a leftover from
+            // a currency that no longer exists.
+            //
+            // The alternative considered was capping it at the new TotalExperience rather than zeroing.
+            // Rejected as arbitrary: it would preserve a number with no meaning under the new rules.
+            // Chris: "reset it, sync it with character skill xp, they're grossly inflated now."
+            //
+            // Consequence worth stating plainly: this removes existing augmentation purchasing power.
+            // Players re-earn it through quests, which is the design.
             var written = 0;
 
             foreach (var p in PlayerManager.GetAllPlayers())
@@ -148,12 +163,14 @@ namespace ACE.Server.Command.Handlers
                 {
                     onlinePlayer.SetProperty(PropertyInt.Level, newLevel);
                     onlinePlayer.SetProperty(PropertyInt64.TotalExperience, total);
+                    onlinePlayer.SetProperty(PropertyInt64.AvailableExperience, 0);
                     onlinePlayer.SaveBiotaToDatabase();
                 }
                 else if (p is OfflinePlayer offlinePlayer)
                 {
                     offlinePlayer.SetProperty(PropertyInt.Level, newLevel);
                     offlinePlayer.SetProperty(PropertyInt64.TotalExperience, total);
+                    offlinePlayer.SetProperty(PropertyInt64.AvailableExperience, 0);
                 }
                 else
                     continue;

@@ -93,7 +93,30 @@ namespace ACE.Server.WorldObjects
 
             if (granted <= 0) return;
 
-            GrantXP(granted, XpType.Proficiency, ShareType.None);
+            // NOT GrantXP, and this was a real bug for one build: GrantXP -> UpdateXpAndLevel does
+            // `AvailableExperience += addAmount` alongside TotalExperience, and also calls
+            // AwardLeadershipUse. So routing use-XP through it inflated the AUGMENTATION currency
+            // (AugmentationDevice spends AvailableExperience directly) and trained Leadership off
+            // skill swings - two side effects, neither intended, both invisible until Chris asked why
+            // the unassigned pool was grossly inflated.
+            //
+            // Skill XP is already SPENT by definition - it went into a skill. It must raise the level
+            // total and nothing else, so this does exactly that and then re-uses CheckForLevelup.
+            var maxLevelXp = (long)DatManager.PortalDat.XpTable.CharacterLevelXPList.Last();
+            var room = maxLevelXp - (TotalExperience ?? 0);
+
+            if (room <= 0) return;
+
+            if (granted > room)
+                granted = room;
+
+            TotalExperience += granted;
+
+            if (Session != null)
+                Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
+                    this, PropertyInt64.TotalExperience, TotalExperience ?? 0));
+
+            CheckForLevelup();
         }
 
         public void GrantXP(long amount, XpType xpType, ShareType shareType = ShareType.All)
@@ -145,6 +168,30 @@ namespace ACE.Server.WorldObjects
             // Do not move this to a path that also sees Fellowship or Allegiance XP.
             if (xpType == XpType.Quest)
                 AwardQuestAttributeXp(amount);
+
+            // Shadowgain 193 (step 3): QUEST XP BUYS AUGMENTATIONS, IT DOES NOT BUY LEVELS.
+            //
+            // This is the point of the change, not a side effect: high-tier quest XP is precisely how
+            // a character reaches the cap fast, and under unified progression level is supposed to
+            // mean accumulated USE. Letting quests feed it would reopen the exact gap 190 measured.
+            //
+            // NO NEW PROPERTY WAS NEEDED. AvailableExperience already IS this pool: it is retail's
+            // unassigned XP, AugmentationDevice.cs already spends it directly, and the level-up
+            // message already tells players it is 'spendable only on augmentation gems'. The reserve
+            // pool Chris wanted has existed all along - it just had kill XP pouring into it.
+            //
+            // Deliberately BEFORE the TotalExperience block, and returns, so quest XP never touches
+            // level, Leadership or the level-up path.
+            if (xpType == XpType.Quest && PropertyManager.GetBool("quest_xp_to_reserve_only").Item)
+            {
+                AvailableExperience += amount;
+
+                if (Session != null)
+                    Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
+                        this, PropertyInt64.AvailableExperience, AvailableExperience ?? 0));
+
+                return;
+            }
 
             // until we are max level we must make sure that we send
             var xpTable = DatManager.PortalDat.XpTable;
