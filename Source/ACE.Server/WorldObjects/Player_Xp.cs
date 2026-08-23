@@ -129,6 +129,27 @@ namespace ACE.Server.WorldObjects
 
             TotalExperience += granted;
 
+            // Shadowgain 208: equipped levelling gear feeds from USE now.
+            //
+            // GrantXP grants item xp only for XpType.Kill or Quest. Kill xp returns at the top of
+            // EarnXP under kill_xp_grants_level = 0, so from 194 the only surviving source was quest
+            // turn-ins - which is why Aetheria, cloaks and rare gear stopped moving and 15 of the 40
+            // levelling items on the shard sat at exactly zero. Third path found with this same shape,
+            // after attributes (199) and crafting (206).
+            //
+            // An ADDITIONAL pool, not a redirect: nothing is deducted from the player, and the quest
+            // path is untouched, so gear now levels from both. Vauxwell asked whether capes should
+            // level from skill usage or only quests; the honest answer is both.
+            var itemXpFraction = PropertyManager.GetDouble("item_xp_from_skill_use").Item;
+
+            if (!double.IsNaN(itemXpFraction) && itemXpFraction > 0)
+            {
+                var itemXp = (long)Math.Round(granted * itemXpFraction);
+
+                if (itemXp > 0)
+                    GrantItemXP(itemXp);
+            }
+
             if (Session != null)
                 Session.Network.EnqueueSend(new GameMessagePrivateUpdatePropertyInt64(
                     this, PropertyInt64.TotalExperience, TotalExperience ?? 0));
