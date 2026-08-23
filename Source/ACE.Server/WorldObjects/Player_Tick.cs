@@ -135,6 +135,12 @@ namespace ACE.Server.WorldObjects
             // this exists to rescue.
             AwardExertionEndurance();
 
+            // Shadowgain 204: recompute the cached fellowship skill-gain buff HERE rather than at the
+            // award site. The award site fires per swing/evade/cast and this walks every fellow doing
+            // distance checks - see the note on FellowshipGainMultiplier. Heartbeat cadence also means
+            // the buff naturally follows people wandering in and out of range with no extra plumbing.
+            RefreshFellowshipGainMultiplier();
+
             // Check if we're due for our periodic SavePlayer
             if (LastRequestedDatabaseSave == DateTime.MinValue)
                 LastRequestedDatabaseSave = DateTime.UtcNow;

@@ -1,3 +1,5 @@
+using System;
+
 using ACE.Entity.Enum;
 using ACE.Server.Entity;
 using ACE.Server.Managers;
@@ -14,6 +16,101 @@ namespace ACE.Server.WorldObjects
         public Fellowship Fellowship;
 
         public bool FellowVitalUpdate;
+
+        /// <summary>
+        /// Shadowgain 204: the fellowship skill-gain buff, CACHED.
+        ///
+        /// Unifying levels killed the reason to fellowship: the point of one was sharing KILL xp, and
+        /// kill xp no longer drives level. This restores an incentive to group WITHOUT restoring a
+        /// share - it multiplies the earner's OWN skill and attribute award and never pools or
+        /// transfers anything, so nobody levels off someone else's practice. That is the failure 193
+        /// Bug 6 and 201 both exist to prevent, and a share would have walked straight back into it.
+        ///
+        /// WHY THIS IS A CACHED FIELD AND NOT A FUNCTION CALL. The consumer is
+        /// Proficiency.OnSuccessUse, which fires per swing, per evade and per cast - 171 measured
+        /// 154,437 melee evades in NINE HOURS from one skill on one character. Fellowship.WithinRange
+        /// walks every fellow and does a distance calculation, which is fine once per kill in SplitXp
+        /// and is emphatically not fine at that frequency. So the scan runs on the heartbeat and the
+        /// hot path reads a double.
+        /// </summary>
+        public double FellowshipGainMultiplier { get; private set; } = 1.0;
+
+        /// <summary>
+        /// Shadowgain 204: recompute the cached buff. Called from Heartbeat - see the note above on
+        /// why it is not called from the award site.
+        /// </summary>
+        public void RefreshFellowshipGainMultiplier()
+        {
+            FellowshipGainMultiplier = ComputeFellowshipGainMultiplier();
+        }
+
+        private double ComputeFellowshipGainMultiplier()
+        {
+            if (!PropertyManager.GetBool("fellowship_gain_enabled").Item)
+                return 1.0;
+
+            var fellowship = Fellowship;
+
+            if (fellowship == null || Session == null)
+                return 1.0;
+
+            var requireDistinctAccount = PropertyManager.GetBool("fellowship_gain_require_distinct_account").Item;
+
+            // n = REAL co-located fellows besides me. All three guards must hold, and each kills a
+            // specific way of faking a group: WithinRange kills nominal membership from across the
+            // world, the account check kills a fellowship of your own mules, and the access-level
+            // check keeps admin characters from inflating anyone.
+            var n = 0;
+
+            foreach (var fellow in fellowship.WithinRange(this))
+            {
+                if (fellow == null || fellow == this || fellow.Session == null)
+                    continue;
+
+                if (fellow.Session.AccessLevel != AccessLevel.Player)
+                    continue;
+
+                if (requireDistinctAccount && fellow.Session.AccountId == Session.AccountId)
+                    continue;
+
+                n++;
+            }
+
+            if (n <= 0)
+                return 1.0;
+
+            var cap = PropertyManager.GetDouble("fellowship_gain_max_bonus").Item;
+
+            if (double.IsNaN(cap) || cap <= 0.0)
+                return 1.0;
+
+            // The curve is anchored on the game's own ceiling rather than a number of our choosing, so
+            // raising MaxFellows re-balances it automatically instead of leaving the top end unpriced.
+            var full = Fellowship.MaxFellows - 1;
+
+            if (n > full)
+                n = full;
+
+            var decay = PropertyManager.GetDouble("fellowship_gain_decay").Item;
+
+            double bonus;
+
+            if (double.IsNaN(decay) || decay <= 0.0 || decay >= 1.0 || full <= 0)
+            {
+                // Degenerate settings get a straight line rather than a divide-by-zero. decay >= 1
+                // would make the denominator zero; decay <= 0 would make every group size identical.
+                bonus = full > 0 ? cap * n / full : cap;
+            }
+            else
+            {
+                bonus = cap * (1.0 - Math.Pow(decay, n)) / (1.0 - Math.Pow(decay, full));
+            }
+
+            if (double.IsNaN(bonus) || bonus <= 0.0)
+                return 1.0;
+
+            return 1.0 + bonus;
+        }
 
         // todo: Figure out if this is the best place to do this, and whether there are concurrency issues associated with it.
         public void FellowshipCreate(string fellowshipName, bool shareXP)

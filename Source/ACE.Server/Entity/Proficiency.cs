@@ -163,6 +163,11 @@ namespace ACE.Server.Entity
             if (skill.Skill == Skill.WarMagic || skill.Skill == Skill.VoidMagic)
                 multiplier *= PropertyManager.GetDouble("war_void_gain_multiplier").Item;
 
+            // Shadowgain 204: the fellowship buff. A cached field, deliberately - computing it here
+            // would run a proximity scan per award. 1.0 whenever the dial is off, the player is solo,
+            // or the only fellows nearby are their own alts.
+            multiplier *= player.FellowshipGainMultiplier;
+
             // Shadowgain 175: Lockpick, whose difficulty input is CAPPED BY AUTHORED DATA rather
             // than by what the player chooses to face.
             //

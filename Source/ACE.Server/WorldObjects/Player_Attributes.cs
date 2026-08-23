@@ -176,6 +176,12 @@ namespace ACE.Server.WorldObjects
             // Shadowgain 021: progression lane - see Player_Progression.
             multiplier *= ProgressionSpeed;
 
+            // Shadowgain 204: the fellowship buff applies to the ATTRIBUTE award too. 199 wired
+            // attribute use into character level, so leaving it off here would make the buff quietly
+            // worth less than the dial claims - roughly a fifth less, which is the attribute share of
+            // use-XP measured in 199.
+            multiplier *= FellowshipGainMultiplier;
+
             // overlapping mapping: an action feeds a primary attribute fully and a related one partially.
             // weightOverride lets a caller set its own fraction (011 uses it so spell-aiming Coordination
             // can be tuned independently of the melee overlap - magic difficulty already runs about half
