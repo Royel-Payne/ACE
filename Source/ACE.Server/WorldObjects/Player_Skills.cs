@@ -1016,8 +1016,29 @@ namespace ACE.Server.WorldObjects
             if (grant == 0)
                 return false;
 
+            // Shadowgain 206: capture what LANDED, not what was asked for. AwardSkillUsageXP clamps
+            // against the skill's own ceiling, so the delta is the only honest figure to credit.
+            var beforeXp = creatureSkill.TrueExperienceSpent;
+
             if (!AwardSkillUsageXP(creatureSkill, grant))
                 return false;
+
+            // Shadowgain 206: THIS PATH, AND ONLY THIS PATH, HAS TO CREDIT LEVEL BY HAND.
+            //
+            // The two stock craft paths already do it and must not be touched: AwardSkillXP calls
+            // GrantXP(amount, XpType.Emote), which raises TotalExperience - and emote type 50
+            // (GrantLevelProportionalSkillXP) funnels into AwardSkillXP too. Adding a unified grant
+            // to either would credit level TWICE.
+            //
+            // This path is different: AwardSkillUsageXP writes TrueExperienceSpent straight onto the
+            // skill and grants nothing. So from 178, when the rank grant was enabled, the 44
+            // collectors it covers have paid MORE skill xp and NO level, while the 7 it missed paid
+            // less and did credit level. Under unified progression that is backwards - the better
+            // reward was worth less where it counts.
+            var applied = (long)(creatureSkill.TrueExperienceSpent - beforeXp);
+
+            if (applied > 0)
+                GrantUnifiedProgressXP(applied);
 
             // AwardSkillUsageXP announces the RANK change; this is the XP line the stock emote award
             // sends, kept so the player still sees that a turn-in paid even when it did not rank up.
@@ -1097,17 +1118,27 @@ namespace ACE.Server.WorldObjects
         /// <summary>
         /// Grants skill XP proportional to the player's skill level
         /// </summary>
-        public void GrantLevelProportionalSkillXP(Skill skill, double percent, long min, long max)
+        /// <summary>
+        /// Shadowgain 206: the amount GrantLevelProportionalSkillXP WOULD award, without awarding it.
+        ///
+        /// Split out so the craft-task rank grant can use it as its 'never worse than stock' floor.
+        /// Emote type 50 pays a percent of the next rank (0.1-0.3 on the seven collectors that use it),
+        /// which is already rank-denominated - it is simply stingier than the craft_quest_* grant, and
+        /// was never hooked because 174 scoped itself to the type 28 emote path.
+        /// </summary>
+        public bool TryGetLevelProportionalSkillXp(Skill skill, double percent, long min, long max, out uint amount)
         {
+            amount = 0;
+
             var creatureSkill = GetCreatureSkill(skill, false);
             if (creatureSkill == null || creatureSkill.IsMaxRank)
-                return;
+                return false;
 
             var nextLevelXP = GetXPBetweenSkillLevels(creatureSkill.AdvancementClass, creatureSkill.Ranks, creatureSkill.Ranks + 1);
             if (nextLevelXP == null)
-                return;
+                return false;
 
-            var amount = (uint)Math.Round(nextLevelXP.Value * percent);
+            amount = (uint)Math.Round(nextLevelXP.Value * percent);
 
             if (max > 0 && max <= uint.MaxValue)
                 amount = Math.Min(amount, (uint)max);
@@ -1116,6 +1147,14 @@ namespace ACE.Server.WorldObjects
 
             if (min > 0)
                 amount = Math.Max(amount, (uint)min);
+
+            return amount > 0;
+        }
+
+        public void GrantLevelProportionalSkillXP(Skill skill, double percent, long min, long max)
+        {
+            if (!TryGetLevelProportionalSkillXp(skill, percent, min, max, out var amount))
+                return;
 
             //Console.WriteLine($"{Name}.GrantLevelProportionalSkillXP({skill}, {percent}, {max:N0})");
             //Console.WriteLine($"Amount: {amount:N0}");

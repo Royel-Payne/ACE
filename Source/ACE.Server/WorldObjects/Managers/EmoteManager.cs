@@ -120,7 +120,25 @@ namespace ACE.Server.WorldObjects.Managers
                     var max = emote.Max64 ?? emote.Max ?? 0;
 
                     if (player != null)
-                        player.GrantLevelProportionalSkillXP((Skill)emote.Stat, emote.Percent ?? 0, min, max);
+                    {
+                        // Shadowgain 206: type 50 gets the same craft-task rank grant as type 28.
+                        //
+                        // 174 hooked only type 28 and said so deliberately - but its stated reason was
+                        // AwardSkillPoints asking for an exact rank's worth in a loop, which is not this
+                        // path, and it predated 178 turning the grant on. The result was that seven
+                        // collectors paid a flat percent of one rank while forty-four paid the full
+                        // grant: 8,113 against 45,382 on the same turn-in at Armor Tinkering rank 98.
+                        //
+                        // The proportional amount is computed first and passed in as the floor, so the
+                        // 'never worse than stock' guarantee still holds for these collectors.
+                        var propSkill = (Skill)emote.Stat;
+
+                        if (!player.TryGetLevelProportionalSkillXp(propSkill, emote.Percent ?? 0, min, max, out var propAmount)
+                            || !player.TryAwardCraftTaskSkillXp(propSkill, propAmount))
+                        {
+                            player.GrantLevelProportionalSkillXP(propSkill, emote.Percent ?? 0, min, max);
+                        }
+                    }
                     break;
 
                 case EmoteType.AwardLevelProportionalXP:
