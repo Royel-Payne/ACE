@@ -633,11 +633,37 @@ namespace ACE.Server.WorldObjects
             }
         }
 
+        /// <summary>
+        /// Shadowgain 207: the raw materials behind the crafting turn-in quests.
+        ///
+        /// NOT a name or item-type match, either of which would be wrong. Only 10 items in the world
+        /// database have 'Trophy' in the name and NONE of these are among them - they are named for
+        /// their source (Claw, Tooth) - and both a claw and the hairpin carved from it are ItemType 128
+        /// (Misc), shared with thousands. This list is DERIVED, and can be regenerated:
+        ///
+        ///   craft-collector Give emotes (category 6)
+        ///     -> recipes whose success_W_C_I_D is one of those accepted items
+        ///       -> those recipes' target_W_C_I_D          = the material you hunt
+        ///
+        /// The turn-in items themselves never drop; they are carved from these.
+        /// </summary>
+        private static readonly HashSet<uint> CraftQuestMaterials = new HashSet<uint>
+        {
+            3674,  3675,  3676,  3677,          // Ash / Ivory / Jade / Swamp Gromnie Tooth
+            28205, 28206, 28207, 28208,         // Azure / Brass / Copper / Ebon Gromnie Tooth
+            28209, 28210,                       // Rust / Sable Gromnie Tooth
+            11366, 11367, 11368, 11369, 11370,  // Littoral / Marsh / Strand / Tidal / Timber Siraluun Claw
+            29905, 29906, 29907,                // Badlands / Kithless / Untamed Siraluun Claw
+            22578,                              // Bunch of Nanners (cooking; note its 76 sources)
+        };
+
         public static List<PropertiesCreateList> CreateListSelect(List<PropertiesCreateList> createList)
         {
             var trophy_drop_rate = PropertyManager.GetDouble("trophy_drop_rate").Item;
-            if (trophy_drop_rate != 1.0)
-                return CreateListSelect(createList, (float)trophy_drop_rate);
+            var craft_drop_rate = PropertyManager.GetDouble("craft_material_drop_rate").Item;
+
+            if (trophy_drop_rate != 1.0 || craft_drop_rate != 1.0)
+                return CreateListSelect(createList, (float)trophy_drop_rate, (float)craft_drop_rate);
 
             var rng = ThreadSafeRandom.Next(0.0f, 1.0f);
             var totalProbability = 0.0f;
@@ -679,6 +705,9 @@ namespace ACE.Server.WorldObjects
         }
 
         public static List<PropertiesCreateList> CreateListSelect(List<PropertiesCreateList> _createList, float dropRateMod)
+            => CreateListSelect(_createList, dropRateMod, dropRateMod);
+
+        public static List<PropertiesCreateList> CreateListSelect(List<PropertiesCreateList> _createList, float dropRateMod, float craftRateMod)
         {
             var createList = new CreateList(_createList);
             CreateListSetModifier modifier = null;
@@ -707,7 +736,14 @@ namespace ACE.Server.WorldObjects
                         rng = ThreadSafeRandom.Next(0.0f, 1.0f);
                         rngSelected = false;
 
-                        modifier = createList.GetSetModifier(i, dropRateMod);
+                        // Shadowgain 207: choose the rate PER SET. A Siraluun's list carries its claw,
+                        // a key and two letters, each in its own 0-1 set; the craft rate must reach the
+                        // claw and nothing else. Falls back to the global trophy rate for every other set,
+                        // so stock behaviour is unchanged wherever the allowlist does not apply.
+                        var setIsCraftMaterial = createList.GetSet(i).Trophies
+                            .Any(t => CraftQuestMaterials.Contains(t.WeenieClassId));
+
+                        modifier = createList.GetSetModifier(i, setIsCraftMaterial ? craftRateMod : dropRateMod);
                     }
 
                     var probability = shadeOrProbability * (item.WeenieClassId != 0 ? modifier.TrophyMod : modifier.NoneMod);

@@ -61,6 +61,13 @@ namespace ACE.Server.Entity
             }
         }
 
+        /// <summary>
+        /// Shadowgain 207: the SET an entry belongs to, so a caller can decide the drop-rate modifier
+        /// per set rather than per creature. A Siraluun's list holds its claw AND a key AND two letters,
+        /// each in its own 0-1 set - boosting the claw must not boost the rest.
+        /// </summary>
+        public CreateListSet GetSet(int idx) => Sets[ItemSets[idx]];
+
         public CreateListSetModifier GetSetModifier(int idx, float modifier)
         {
             var set = Sets[ItemSets[idx]];
