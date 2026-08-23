@@ -64,6 +64,12 @@ namespace ACE.Server.Managers
                 return;
             }
 
+            // Shadowgain 209 [EXPERIMENTAL, dial OFF]: armour set transfer. Sits AHEAD of the cook_book
+            // lookup because cook_book keys recipes by explicit (source, target) wcid pairs and this is
+            // any-armour-onto-any-armour. Returns false and falls through for every other combination.
+            if (ArmorSetTransfer.TryHandle(player, source, target))
+                return;
+
             var recipe = GetRecipe(player, source, target);
 
             if (recipe == null)
