@@ -54,13 +54,13 @@ namespace ACE.Server.Entity
         private const int SkillDifficulty = 224;
         private const float SkillFactor = 0.019f;
 
-        public static bool TryHandle(Player player, WorldObject source, WorldObject target)
+        public static bool TryHandle(Player player, WorldObject source, WorldObject target, bool confirmed = false)
         {
             if (!PropertyManager.GetBool("armor_set_transfer_enabled").Item)
                 return false;
 
             if (source.WeenieClassId == ExtractionToolWcid && target.EquipmentSetId != null)
-                return Extract(player, target);
+                return Extract(player, target, confirmed);
 
             // An applicator is any Tailoring armour applicator we have stamped with a set. A genuine
             // tailoring applicator never carries EquipmentSetId, so the two cannot be confused.
@@ -71,7 +71,7 @@ namespace ACE.Server.Entity
             return false;
         }
 
-        private static bool Extract(Player player, WorldObject donor)
+        private static bool Extract(Player player, WorldObject donor, bool confirmed)
         {
             if (donor.ValidLocations == null || donor.ValidLocations == 0)
                 return Fail(player, "That has no armour coverage to match against.");
@@ -83,6 +83,29 @@ namespace ACE.Server.Entity
 
             // Current, not Base - buffs and gear count, which is what makes the number reachable.
             var chance = SkillCheck.GetSkillChance((int)skill.Current, SkillDifficulty, SkillFactor);
+
+            // Shadowgain 209c: honour the stock 'Use Crafting Chance of Success Dialog' option.
+            //
+            // This matters more here than it does for ordinary crafting. A normal failed recipe wastes
+            // a component; a failed extraction destroys the DONOR, which is a piece of set armour the
+            // player went and earned. Seeing the number before committing is the difference between a
+            // gamble and an ambush.
+            //
+            // Reuses Confirmation_CraftInteration rather than a new confirmation type, which is why the
+            // handler is also hooked into RecipeManager.UseObjectOnTarget - that is where the callback
+            // lands when the player accepts.
+            if (!confirmed && player.GetCharacterOption(CharacterOption.UseCraftingChanceOfSuccessDialog))
+            {
+                var msg = "You determine that you have a " + (int)System.Math.Round(chance * 100)
+                    + " percent chance to succeed.\n\nOn failure the " + donor.Name + " is DESTROYED.";
+
+                if (player.ConfirmationManager.EnqueueSend(
+                        new Confirmation_CraftInteration(player.Guid, donor.Guid, donor.Guid), msg))
+                {
+                    player.SendUseDoneEvent();
+                    return true;
+                }
+            }
 
             if (ThreadSafeRandom.Next(0.0f, 1.0f) > chance)
             {
