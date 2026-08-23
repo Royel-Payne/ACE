@@ -66,7 +66,7 @@ namespace ACE.Server.Entity
             // ValidLocations; a genuine tailoring applicator never has EquipmentSetId. Nothing else
             // can satisfy both halves, so this cannot collide with either.
             if (source.EquipmentSetId != null && source.ValidLocations == null)
-                return Apply(player, source, target);
+                return Apply(player, source, target, confirmed);
 
             return false;
         }
@@ -99,15 +99,18 @@ namespace ACE.Server.Entity
                 var msg = "You determine that you have a " + (int)System.Math.Round(chance * 100)
                     + " percent chance to succeed.\n\nOn failure the " + donor.Name + " is DESTROYED.";
 
-                if (player.ConfirmationManager.EnqueueSend(
-                        // The TOOL is the source and the donor the target. Passing the donor as BOTH -
-                        // which the first build did - re-entered with source == target, was rejected as
-                        // 'cannot be combined with itself', and left the client stuck on the hourglass.
+                // Stock ACE sends UseDone only when the enqueue FAILS - on success it stays silent so
+                // the client waits on the dialog. The first build sent it on success, which left the
+                // client's use-state machine hanging: the hourglass never cleared and nothing else
+                // could be activated until relog.
+                if (!player.ConfirmationManager.EnqueueSend(
                         new Confirmation_CraftInteration(player.Guid, tool.Guid, donor.Guid), msg))
                 {
-                    player.SendUseDoneEvent();
+                    player.SendUseDoneEvent(WeenieError.ConfirmationInProgress);
                     return true;
                 }
+
+                return true;
             }
 
             if (ThreadSafeRandom.Next(0.0f, 1.0f) > chance)
@@ -160,7 +163,7 @@ namespace ACE.Server.Entity
             return true;
         }
 
-        private static bool Apply(Player player, WorldObject applicator, WorldObject target)
+        private static bool Apply(Player player, WorldObject applicator, WorldObject target, bool confirmed)
         {
             // Every guard below rejects rather than gambles - the player already paid the risk on
             // extraction, so nothing here may destroy anything.
@@ -182,6 +185,24 @@ namespace ACE.Server.Entity
 
             if (targetReq < sourceReq)
                 return Fail(player, "That is easier to wield than the armour this set came from.");
+
+            // Shadowgain 209f: confirm on APPLY too (Chris). This step cannot fail, but it does
+            // overwrite the target's existing set irreversibly - and the applicator is spent either
+            // way. Naming both sets is the point: a player who mixed up two similar gauntlets should
+            // find out here, not afterwards.
+            if (!confirmed && player.GetCharacterOption(CharacterOption.UseCraftingChanceOfSuccessDialog))
+            {
+                var applyMsg = "Replace the " + target.EquipmentSetId + " set on this armour with "
+                    + applicator.EquipmentSetId + "? This cannot be undone, and the applicator is consumed.";
+
+                if (!player.ConfirmationManager.EnqueueSend(
+                        new Confirmation_CraftInteration(player.Guid, applicator.Guid, target.Guid), applyMsg))
+                {
+                    player.SendUseDoneEvent(WeenieError.ConfirmationInProgress);
+                }
+
+                return true;
+            }
 
             var previous = target.EquipmentSetId;
 
