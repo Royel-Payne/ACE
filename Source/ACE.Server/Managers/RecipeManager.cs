@@ -64,6 +64,15 @@ namespace ACE.Server.Managers
                 return;
             }
 
+            // Shadowgain 209c: the confirmed half of the set-transfer flow.
+            //
+            // The FIRST attempt is intercepted in Player_Use, ahead of the client-mirror TargetType
+            // gate. But Confirmation_CraftInteration's callback comes back through HERE, so the handler
+            // needs a second hook to receive the accepted dialog. Passing `confirmed` through is what
+            // stops it showing the dialog again in a loop.
+            if (ArmorSetTransfer.TryHandle(player, source, target, confirmed))
+                return;
+
             var recipe = GetRecipe(player, source, target);
 
             if (recipe == null)

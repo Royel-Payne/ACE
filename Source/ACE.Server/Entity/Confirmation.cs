@@ -137,6 +137,59 @@ namespace ACE.Server.Entity
         }
     }
 
+    /// <summary>
+    /// Shadowgain 209g: the armour set-transfer confirmation.
+    ///
+    /// A subclass rather than a reuse of Confirmation_CraftInteration, for one reason: that one's
+    /// DECLINE branch sends YouChickenOut and nothing else. Stock crafting survives that because it
+    /// reaches the dialog through RecipeManager's action chain; this feature is dispatched from
+    /// Player_Use, so a bare decline left the client waiting on a UseDone that never came - the cursor
+    /// stayed an hourglass and nothing could be activated until relog.
+    ///
+    /// It keeps ConfirmationType.CraftInteraction so the client renders the familiar crafting dialog;
+    /// only the server-side handling differs. Accepting calls the handler directly, which also means
+    /// this path no longer depends on the RecipeManager hook.
+    /// </summary>
+    public class Confirmation_ArmorSetTransfer : Confirmation
+    {
+        public ObjectGuid SourceGuid;
+        public ObjectGuid TargetGuid;
+
+        public Confirmation_ArmorSetTransfer(ObjectGuid playerGuid, ObjectGuid sourceGuid, ObjectGuid targetGuid)
+            : base(playerGuid, ConfirmationType.CraftInteraction)
+        {
+            SourceGuid = sourceGuid;
+            TargetGuid = targetGuid;
+        }
+
+        public override void ProcessConfirmation(bool response, bool timeout = false)
+        {
+            var player = Player;
+            if (player == null) return;
+
+            if (!response)
+            {
+                // BOTH are required. The error tells the player they backed out; the UseDone is what
+                // actually releases the client.
+                player.SendWeenieError(WeenieError.YouChickenOut);
+                player.SendUseDoneEvent();
+                return;
+            }
+
+            var source = player.FindObject(SourceGuid.Full, Player.SearchLocations.LocationsICanMove);
+            var target = player.FindObject(TargetGuid.Full, Player.SearchLocations.LocationsICanMove);
+
+            if (source == null || target == null)
+            {
+                player.SendUseDoneEvent();
+                return;
+            }
+
+            if (!ArmorSetTransfer.TryHandle(player, source, target, true))
+                player.SendUseDoneEvent();
+        }
+    }
+
     public class Confirmation_Fellowship : Confirmation
     {
         public ObjectGuid InviterGuid;
