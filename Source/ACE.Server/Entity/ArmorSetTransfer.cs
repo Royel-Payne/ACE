@@ -31,12 +31,21 @@ namespace ACE.Server.Entity
     /// </summary>
     public static class ArmorSetTransfer
     {
-        // Intricate Carving Tool - the armour-tinkering carving tool Tailoring already uses.
-        private const uint ExtractionToolWcid = 9295;
+        // Shadowgain 209b: a DEDICATED tool, not the shared Intricate Carving Tool.
+        //
+        // The first TEST build used 9295 and could not be invoked at all: the retail client runs
+        // ItemHolder::TargetCompatibleWithObject before it will even SEND a use request, ANDing the
+        // tool's TargetType against the target's ItemType. 9295 carries TargetType 128 (Misc) for its
+        // claw and tooth recipes; armour is ItemType.Armor (2); 128 & 2 == 0, so the server never saw
+        // the attempt and no server-side hook could ever have fixed it.
+        //
+        // Widening 9295 in the world database worked but was wrong: shared item, and the change
+        // persists whether the dial is on or off. A dedicated weenie keeps the whole feature behind
+        // its dial. Priced at 50 to match the Armor Reduction Tools, which is the existing precedent
+        // for a tailoring-counter tool.
+        private const uint ExtractionToolWcid = 900209;
 
-        // Armor Tailoring Kit, restamped as the applicator. Tailoring builds its applicators dynamically
-        // too; there is no static applicator weenie to borrow.
-        private const uint ApplicatorWcid = 41956;
+
 
         // Fitted to the target curve against ACE's logistic 1/(1+exp(-factor*(skill-difficulty))).
         // 224/0.019 lands within 2.4 points at every stated point. A symmetric logistic CANNOT give both
@@ -53,7 +62,10 @@ namespace ACE.Server.Entity
             if (source.WeenieClassId == ExtractionToolWcid && target.EquipmentSetId != null)
                 return Extract(player, target);
 
-            if (source.WeenieClassId == ApplicatorWcid && source.EquipmentSetId != null)
+            // An applicator is any Tailoring armour applicator we have stamped with a set. A genuine
+            // tailoring applicator never carries EquipmentSetId, so the two cannot be confused.
+            if (source.EquipmentSetId != null && source.GetProperty(PropertyInt.ValidLocations) != null
+                && Tailoring.GetArmorWCID((EquipMask)(source.GetProperty(PropertyInt.ValidLocations) ?? 0)) == source.WeenieClassId)
                 return Apply(player, source, target);
 
             return false;
@@ -80,17 +92,32 @@ namespace ACE.Server.Entity
                 return true;
             }
 
-            var applicator = WorldObjectFactory.CreateNewWorldObject(ApplicatorWcid);
+            // Reuse TAILORING'S OWN per-coverage applicator weenie. Those already carry the green arrow
+            // overlay, and SetArmorProperties copies the donor's icon, palette and setup onto it - so it
+            // reads exactly like a tailoring applicator, which is the look Chris asked for. It also sets
+            // TargetType = Armor|Clothing IN CODE, which is what lets the client send step 2 at all.
+            var applicatorWcid = Tailoring.GetArmorWCID(donor.ValidLocations.Value);
+
+            if (applicatorWcid == null)
+                return Fail(player, "That armour covers an area no applicator exists for.");
+
+            var applicator = WorldObjectFactory.CreateNewWorldObject(applicatorWcid.Value);
 
             if (applicator == null)
                 return Fail(player, "Something went wrong creating the applicator.");
 
-            // The applicator carries BOTH halves of the contract: which set, and what coverage it may be
-            // applied to. Keeping the coverage on the item is what lets the second step be a pure check.
+            Tailoring.SetArmorProperties(donor, applicator);
+
+            // Then stamp OUR payload over it. The applicator carries both halves of the contract - which
+            // set, and what coverage it may be applied to - so step 2 is a pure check with nothing to
+            // look up. EquipmentSetId is also what distinguishes this from a real tailoring applicator.
             applicator.EquipmentSetId = donor.EquipmentSetId;
             applicator.SetProperty(PropertyInt.ValidLocations, (int)donor.ValidLocations.Value);
             applicator.SetProperty(PropertyInt.WieldDifficulty, donor.GetProperty(PropertyInt.WieldDifficulty) ?? 0);
-            applicator.Name = "Set Applicator (" + donor.EquipmentSetId + ")";
+            applicator.Name = donor.EquipmentSetId + " Set Applicator";
+            applicator.LongDesc = "Drawn from " + donor.Name + ". Apply this to another piece of armour "
+                + "covering the same area to replace its attribute set with " + donor.EquipmentSetId
+                + ". The target is never destroyed.";
 
             player.TryConsumeFromInventoryWithNetworking(donor, 1);
 
