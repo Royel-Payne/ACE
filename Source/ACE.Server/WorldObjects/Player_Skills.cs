@@ -932,7 +932,14 @@ namespace ACE.Server.WorldObjects
         ///
         /// Returns true if it handled the award; false means 'not mine, use the stock path'.
         /// </summary>
-        public bool TryAwardCraftTaskSkillXp(Skill skill, uint flatAmount)
+        /// <param name="tierScale">
+        /// Shadowgain 206b: relative worth of THIS task, for lines whose tiers differ by task rather
+        /// than by the crafter's rank. 1.0 for the flat type-28 trophies, whose tier is already
+        /// expressed in flatAmount. The percent trophies pass percent/craft_quest_percent_base, because
+        /// the grant below is computed from RANK and would otherwise pay a 30% trophy exactly what it
+        /// pays a 10% one.
+        /// </param>
+        public bool TryAwardCraftTaskSkillXp(Skill skill, uint flatAmount, double tierScale = 1.0)
         {
             if (!PropertyManager.GetBool("craft_quest_rank_xp_enabled").Item)
                 return false;
@@ -984,7 +991,10 @@ namespace ACE.Server.WorldObjects
             if (double.IsNaN(ceiling) || ceiling <= 0)
                 ceiling = 1.0;
 
-            var step = baseFraction * Math.Pow(headroom, decay) * GetCraftTaskTierMultiplier(flatAmount);
+            if (double.IsNaN(tierScale) || tierScale <= 0)
+                tierScale = 1.0;
+
+            var step = baseFraction * Math.Pow(headroom, decay) * GetCraftTaskTierMultiplier(flatAmount) * tierScale;
 
             step = Math.Min(step, ceiling);
 

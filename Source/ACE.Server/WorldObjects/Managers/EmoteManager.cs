@@ -133,10 +133,19 @@ namespace ACE.Server.WorldObjects.Managers
                         // 'never worse than stock' guarantee still holds for these collectors.
                         var propSkill = (Skill)emote.Stat;
 
-                        if (!player.TryGetLevelProportionalSkillXp(propSkill, emote.Percent ?? 0, min, max, out var propAmount)
-                            || !player.TryAwardCraftTaskSkillXp(propSkill, propAmount))
+                        // 206b: carry the trophy's OWN percent through as a tier scale. Kithless 10%,
+                        // Untamed 20%, Badlands 30% are a deliberate ladder on the wiki; the rank grant
+                        // is computed from the crafter's rank and knows nothing about which trophy was
+                        // handed in, so without this all three pay identically and the rarer two are
+                        // worth nothing extra.
+                        var propPercent = emote.Percent ?? 0;
+                        var percentBase = PropertyManager.GetDouble("craft_quest_percent_base").Item;
+                        var tierScale = (double.IsNaN(percentBase) || percentBase <= 0) ? 1.0 : propPercent / percentBase;
+
+                        if (!player.TryGetLevelProportionalSkillXp(propSkill, propPercent, min, max, out var propAmount)
+                            || !player.TryAwardCraftTaskSkillXp(propSkill, propAmount, tierScale))
                         {
-                            player.GrantLevelProportionalSkillXP(propSkill, emote.Percent ?? 0, min, max);
+                            player.GrantLevelProportionalSkillXP(propSkill, propPercent, min, max);
                         }
                     }
                     break;
