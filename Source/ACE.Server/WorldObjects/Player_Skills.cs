@@ -1036,7 +1036,7 @@ namespace ACE.Server.WorldObjects
             // Only the ONE grant is scaled: the stock AwardSkillXP paths route through GrantXP, which is
             // documented "without the XP modifier" and is deliberately left alone. Scaling here and
             // there would double-pay a single turn-in - the same trap 206 caught on the level side.
-            var trinketMod = GetTrinketUseXpMultiplier();
+            var trinketMod = GetCraftXpBonusMultiplier();
 
             if (trinketMod > 1.0)
             {

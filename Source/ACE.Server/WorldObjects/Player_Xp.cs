@@ -842,17 +842,67 @@ namespace ACE.Server.WorldObjects
         /// GetXPBonus takes only the HIGHEST power level in the category, so the tiers do NOT stack: a
         /// trinket imbued with I, II and III pays 6%, not 12%.
         /// </summary>
-        public double GetTrinketUseXpMultiplier()
+        public double GetTrinketXpBonus()
         {
             if (!PropertyManager.GetBool("trinket_xp_bonus_applies_to_use").Item)
-                return 1.0;
+                return 0.0;
 
             var bonus = EnchantmentManager.GetXPBonus();
 
-            if (double.IsNaN(bonus) || bonus <= 0)
-                return 1.0;
+            return double.IsNaN(bonus) || bonus <= 0 ? 0.0 : bonus;
+        }
 
-            return 1.0 + bonus;
+        /// <summary>
+        /// Shadowgain 212: Quick Learner (the BonusXP augmentation), same treatment as 211's trinket and
+        /// for the same reason - only this one was dead OUTRIGHT rather than half.
+        ///
+        /// Stock reads it as `xpType == XpType.Kill &amp;&amp; AugmentationBonusXp > 0`, inside the function
+        /// EarnXP returns before ever calling once kill_xp_grants_level is 0. The trinket at least kept
+        /// quest XP; this kept nothing. It has been worth exactly 0% since 194, and it costs FOUR BILLION
+        /// unassigned experience - a one-time, unrepeatable purchase. Nobody on LIVE had bought it when
+        /// this was written, and Adramelech was about to make it his first augmentation.
+        ///
+        /// NO DIAL, at Chris's direction: "it's a player choice and that's the dial." Spending 4bn on an
+        /// unrepeatable gem IS the opt-in, and a server switch on top of it would let the purchase be
+        /// silently voided after the fact - which is the exact failure being fixed here.
+        ///
+        /// Additive with the trinket, matching how stock EarnXP composes them (1 + enchantment + aug)
+        /// rather than compounding, so a wearer with both gets 4% + 5% = 9%, not 9.2%.
+        ///
+        /// Kept OUT of the crafting turn-in path on purpose - see GetCraftXpBonusMultiplier.
+        /// </summary>
+        public double GetQuickLearnerBonus()
+        {
+            var levels = AugmentationBonusXp;
+
+            return levels > 0 ? levels * 0.05 : 0.0;
+        }
+
+        /// <summary>
+        /// Shadowgain 211/212: the full USE-XP bonus - skill and attribute gain, the lane that replaced
+        /// kills. Both bonuses apply here because both were written to reward killing things, and under
+        /// unified progression killing IS skill use.
+        /// </summary>
+        public double GetUseXpBonusMultiplier()
+        {
+            return 1.0 + GetTrinketXpBonus() + GetQuickLearnerBonus();
+        }
+
+        /// <summary>
+        /// Shadowgain 212: crafting turn-ins get the TRINKET bonus but NOT Quick Learner.
+        ///
+        /// Augmented Understanding claims a general experience increase, so 211 applied it everywhere.
+        /// Quick Learner's own text is explicit in the other direction - "5% extra experience for each
+        /// creature you kill ... does not affect experience received from quests", and the wiki adds
+        /// "does not affect quest reward xp or trophy turn ins". A crafting turn-in is a trophy turn-in.
+        ///
+        /// So this honours the two items' own descriptions rather than flattening them: the heir of kill
+        /// XP is skill use, and that is where Quick Learner pays. Flip it to GetUseXpBonusMultiplier if
+        /// uniformity is preferred over fidelity - one line, no other consequence.
+        /// </summary>
+        public double GetCraftXpBonusMultiplier()
+        {
+            return 1.0 + GetTrinketXpBonus();
         }
     }
 }

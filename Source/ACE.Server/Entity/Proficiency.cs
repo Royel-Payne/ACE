@@ -178,7 +178,7 @@ namespace ACE.Server.Entity
             // every other multiplier here: on a floor-dominated award (trivial targets, Loyalty) the
             // bonus is absorbed rather than added. That is deliberate - it behaves exactly like
             // spec_gain_multiplier, ProgressionSpeed and the fellowship buff above.
-            multiplier *= player.GetTrinketUseXpMultiplier();
+            multiplier *= player.GetUseXpBonusMultiplier();
 
             // Shadowgain 175: Lockpick, whose difficulty input is CAPPED BY AUTHORED DATA rather
             // than by what the player chooses to face.

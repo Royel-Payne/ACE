@@ -187,7 +187,7 @@ namespace ACE.Server.WorldObjects
             // ~20% of all use-XP when that was measured. Leaving them out would make the trinket worth
             // a fifth less than the tooltip claims, and would reintroduce exactly the skill-only gap
             // 199 existed to close.
-            multiplier *= GetTrinketUseXpMultiplier();
+            multiplier *= GetUseXpBonusMultiplier();
 
             // overlapping mapping: an action feeds a primary attribute fully and a related one partially.
             // weightOverride lets a caller set its own fraction (011 uses it so spell-aiming Coordination
