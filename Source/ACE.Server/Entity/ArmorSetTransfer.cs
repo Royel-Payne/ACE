@@ -91,9 +91,10 @@ namespace ACE.Server.Entity
             // player went and earned. Seeing the number before committing is the difference between a
             // gamble and an ambush.
             //
-            // Reuses Confirmation_CraftInteration rather than a new confirmation type, which is why the
-            // handler is also hooked into RecipeManager.UseObjectOnTarget - that is where the callback
-            // lands when the player accepts.
+            // Uses Confirmation_ArmorSetTransfer, NOT the stock Confirmation_ArmorSetTransfer: that
+            // one's decline branch sends YouChickenOut and no UseDone, which left the client stuck on
+            // the hourglass whenever this feature was cancelled. Ours releases the client on BOTH
+            // branches, and calls the handler directly on accept.
             if (!confirmed && player.GetCharacterOption(CharacterOption.UseCraftingChanceOfSuccessDialog))
             {
                 var msg = "You determine that you have a " + (int)System.Math.Round(chance * 100)
@@ -104,7 +105,7 @@ namespace ACE.Server.Entity
                 // client's use-state machine hanging: the hourglass never cleared and nothing else
                 // could be activated until relog.
                 if (!player.ConfirmationManager.EnqueueSend(
-                        new Confirmation_CraftInteration(player.Guid, tool.Guid, donor.Guid), msg))
+                        new Confirmation_ArmorSetTransfer(player.Guid, tool.Guid, donor.Guid), msg))
                 {
                     player.SendUseDoneEvent(WeenieError.ConfirmationInProgress);
                     return true;
@@ -196,7 +197,7 @@ namespace ACE.Server.Entity
                     + applicator.EquipmentSetId + "? This cannot be undone, and the applicator is consumed.";
 
                 if (!player.ConfirmationManager.EnqueueSend(
-                        new Confirmation_CraftInteration(player.Guid, applicator.Guid, target.Guid), applyMsg))
+                        new Confirmation_ArmorSetTransfer(player.Guid, applicator.Guid, target.Guid), applyMsg))
                 {
                     player.SendUseDoneEvent(WeenieError.ConfirmationInProgress);
                 }
