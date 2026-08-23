@@ -49,6 +49,12 @@ HOST="${SG_HOST:-root@137.184.1.44}"
 CONTAINER="${SG_CONTAINER:-ace-server}"          # docker ps / docker logs
 SERVICE="${SG_SERVICE:-ace-server}"              # docker compose <service>
 COMPOSE_DIR="${SG_COMPOSE_DIR:-/opt/ACE}"
+
+# 204: the staging path used to hardcode /opt/ACE and docker-compose.fast.yml, which made --stage
+# LIVE-only - so 'rehearse on TEST' could not actually be done with this script, and the only way to
+# test a change to it was to run it against production. TEST has no fast.yml and lives in
+# /home/chris/shadowgain, so both are now parameters. Default is unchanged LIVE behaviour.
+BUILD_COMPOSE_FILES="${SG_BUILD_COMPOSE_FILES:--f docker-compose.yml -f docker-compose.fast.yml}"
 COMPOSE_FILES="${SG_COMPOSE_FILES:--f docker-compose.yml -f docker-compose.fast.yml}"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
@@ -102,7 +108,9 @@ if [ "$RESTART_ONLY" = "1" ]; then
 else
 
 echo "==> droplet: pull branch (keeps Dockerfile.fast / compose files in sync)"
-$SSH "$HOST" 'cd /opt/ACE && git fetch -q origin && git merge --ff-only origin/shadowgain-usage-leveling >/dev/null && git log --oneline -1'
+# Conditional because TEST is not a git checkout at all - the DLL is shipped straight in. Asserting a
+# repo here is what made --stage LIVE-only.
+$SSH "$HOST" "cd $COMPOSE_DIR && if [ -d .git ]; then git fetch -q origin && git merge --ff-only origin/shadowgain-usage-leveling >/dev/null && git log --oneline -1; else echo '(no git checkout here - shipping the built DLL only)'; fi"
 
 if [ "$GIT_ONLY" = "1" ]; then echo "==> --git-only: done (no rebuild, no restart)"; exit 0; fi
 
@@ -114,10 +122,19 @@ fi
 
 echo "==> ship publish-linux ($(du -sh publish-linux | cut -f1)) over ssh"
 # no rsync on this machine; tar+gzip the 51 files and unpack remotely
-tar -czf - -C publish-linux . | $SSH "$HOST" 'mkdir -p /opt/ACE/publish-linux && tar -xzf - -C /opt/ACE/publish-linux'
+tar -czf - -C publish-linux . | $SSH "$HOST" "mkdir -p $COMPOSE_DIR/publish-linux && tar -xzf - -C $COMPOSE_DIR/publish-linux"
 
 echo "==> droplet: build image (server still running - Dockerfile.fast only COPYs)"
-$SSH "$HOST" 'cd /opt/ACE && docker compose -f docker-compose.yml -f docker-compose.fast.yml build ace-server 2>&1 | tail -2'
+# 204: `... | tail -2` returns TAIL's exit status, so a failed image build used to print its error and
+# then be followed by "==> STAGED." - i.e. a broken build reported success and the next --restart-only
+# would have shipped the PREVIOUS image while everyone believed the new code was live. Capture the
+# build status explicitly and abort on it.
+if ! $SSH "$HOST" "cd $COMPOSE_DIR && docker compose $BUILD_COMPOSE_FILES build $SERVICE" > /tmp/sg-build.log 2>&1; then
+  echo "!! IMAGE BUILD FAILED - nothing has been staged. Last lines:" >&2
+  tail -15 /tmp/sg-build.log >&2
+  exit 1
+fi
+tail -2 /tmp/sg-build.log
 
 if [ "$STAGE_ONLY" = "1" ]; then
   echo "==> STAGED. Server untouched and still running."
