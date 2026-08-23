@@ -60,18 +60,18 @@ namespace ACE.Server.Entity
                 return false;
 
             if (source.WeenieClassId == ExtractionToolWcid && target.EquipmentSetId != null)
-                return Extract(player, target, confirmed);
+                return Extract(player, source, target, confirmed);
 
-            // An applicator is any Tailoring armour applicator we have stamped with a set. A genuine
-            // tailoring applicator never carries EquipmentSetId, so the two cannot be confused.
-            if (source.EquipmentSetId != null && source.GetProperty(PropertyInt.ValidLocations) != null
-                && Tailoring.GetArmorWCID((EquipMask)(source.GetProperty(PropertyInt.ValidLocations) ?? 0)) == source.WeenieClassId)
+            // An applicator is a set-carrying item with NO coverage of its own. Armour always has
+            // ValidLocations; a genuine tailoring applicator never has EquipmentSetId. Nothing else
+            // can satisfy both halves, so this cannot collide with either.
+            if (source.EquipmentSetId != null && source.ValidLocations == null)
                 return Apply(player, source, target);
 
             return false;
         }
 
-        private static bool Extract(Player player, WorldObject donor, bool confirmed)
+        private static bool Extract(Player player, WorldObject tool, WorldObject donor, bool confirmed)
         {
             if (donor.ValidLocations == null || donor.ValidLocations == 0)
                 return Fail(player, "That has no armour coverage to match against.");
@@ -100,7 +100,10 @@ namespace ACE.Server.Entity
                     + " percent chance to succeed.\n\nOn failure the " + donor.Name + " is DESTROYED.";
 
                 if (player.ConfirmationManager.EnqueueSend(
-                        new Confirmation_CraftInteration(player.Guid, donor.Guid, donor.Guid), msg))
+                        // The TOOL is the source and the donor the target. Passing the donor as BOTH -
+                        // which the first build did - re-entered with source == target, was rejected as
+                        // 'cannot be combined with itself', and left the client stuck on the hourglass.
+                        new Confirmation_CraftInteration(player.Guid, tool.Guid, donor.Guid), msg))
                 {
                     player.SendUseDoneEvent();
                     return true;
@@ -135,7 +138,12 @@ namespace ACE.Server.Entity
             // set, and what coverage it may be applied to - so step 2 is a pure check with nothing to
             // look up. EquipmentSetId is also what distinguishes this from a real tailoring applicator.
             applicator.EquipmentSetId = donor.EquipmentSetId;
-            applicator.SetProperty(PropertyInt.ValidLocations, (int)donor.ValidLocations.Value);
+            // NO ValidLocations. The first build stamped the donor's coverage here to carry it to step
+            // 2, which made the applicator WEARABLE - it equipped as gloves instead of acting as a
+            // crafting step. The coverage never needed storing: GetArmorWCID chose this applicator's
+            // weenie FROM the coverage, so the wcid already encodes it and step 2 recovers it by asking
+            // the same question of the target.
+            applicator.RemoveProperty(PropertyInt.ValidLocations);
             applicator.SetProperty(PropertyInt.WieldDifficulty, donor.GetProperty(PropertyInt.WieldDifficulty) ?? 0);
             applicator.Name = donor.EquipmentSetId + " Set Applicator";
             applicator.LongDesc = "Drawn from " + donor.Name + ". Apply this to another piece of armour "
@@ -159,8 +167,13 @@ namespace ACE.Server.Entity
             if (target.EquipmentSetId == null)
                 return Fail(player, "That has no set to replace. A set can only be moved onto armour that already has one.");
 
-            if (target.ValidLocations == null || applicator.ValidLocations == null || target.ValidLocations != applicator.ValidLocations)
+            // Coverage match, DERIVED not stored: the applicator's weenie was chosen BY the donor's
+            // coverage, so asking the same question of the target must return the same weenie.
+            if (target.ValidLocations == null
+                || Tailoring.GetArmorWCID(target.ValidLocations.Value) != applicator.WeenieClassId)
+            {
                 return Fail(player, "That does not cover the same area as the armour this set came from.");
+            }
 
             // Direction guard: a set may move to equally- or harder-to-wield armour, never down onto an
             // easier piece.
