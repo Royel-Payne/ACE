@@ -182,6 +182,13 @@ namespace ACE.Server.WorldObjects
             // use-XP measured in 199.
             multiplier *= FellowshipGainMultiplier;
 
+            // Shadowgain 211: the trinket XP bonus applies to the ATTRIBUTE award too, for the same
+            // reason 204 above does - 199 wired attribute use into character level, and attributes were
+            // ~20% of all use-XP when that was measured. Leaving them out would make the trinket worth
+            // a fifth less than the tooltip claims, and would reintroduce exactly the skill-only gap
+            // 199 existed to close.
+            multiplier *= GetTrinketUseXpMultiplier();
+
             // overlapping mapping: an action feeds a primary attribute fully and a related one partially.
             // weightOverride lets a caller set its own fraction (011 uses it so spell-aiming Coordination
             // can be tuned independently of the melee overlap - magic difficulty already runs about half

@@ -168,6 +168,18 @@ namespace ACE.Server.Entity
             // or the only fellows nearby are their own alts.
             multiplier *= player.FellowshipGainMultiplier;
 
+            // Shadowgain 211: the trinket XP bonus (Augmented Understanding), placed AFTER the
+            // fellowship multiplier at Chris's direction. Worth being honest about what that ordering
+            // buys: this whole chain is multiplication, so position within it does not change the
+            // result - the placement is for reading order, and 6% x fellowship compounds either way.
+            //
+            // What DOES change the result is that it sits inside `multiplier` rather than being
+            // applied to `pp` afterwards, so it is bounded by the same skill_gain_min_award floor as
+            // every other multiplier here: on a floor-dominated award (trivial targets, Loyalty) the
+            // bonus is absorbed rather than added. That is deliberate - it behaves exactly like
+            // spec_gain_multiplier, ProgressionSpeed and the fellowship buff above.
+            multiplier *= player.GetTrinketUseXpMultiplier();
+
             // Shadowgain 175: Lockpick, whose difficulty input is CAPPED BY AUTHORED DATA rather
             // than by what the player chooses to face.
             //

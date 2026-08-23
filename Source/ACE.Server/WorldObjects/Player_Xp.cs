@@ -814,5 +814,45 @@ namespace ACE.Server.WorldObjects
 
             return modifier;
         }
+
+        /// <summary>
+        /// Shadowgain 211: the trinket XP bonus, extended to USE-based gain.
+        ///
+        /// Augmented Understanding (I/II/III = +2/4/6%, SpellCategory.TrinketXPRaising) was written as a
+        /// KILL-xp booster, and 194 removed the thing it boosted. EarnXP returns at the top for
+        /// XpType.Kill while kill_xp_grants_level is 0 - BEFORE GetXPAndLuminanceModifier is ever
+        /// reached - so from that restart the trinket only moved quest turn-ins, a small fraction of
+        /// progression. The item quietly stopped doing what it says on the tin.
+        ///
+        /// This restores the item's INTENT rather than adding a new buff: it does to the use lane what
+        /// it always did to the kill lane. Chris, 2026-08-23: "I think we need to allow it to exist as a
+        /// augment to skill/attribute gains too, along with quests as it currently still does."
+        ///
+        /// APPLIED AT THE SOURCE, NEVER IN GrantUnifiedProgressXP. Boosting the level side alone would
+        /// break the 199/200 invariant that TotalExperience == skill xp + attribute xp, and
+        /// sg-unify-levels recomputes `total = skillXp + attrXp` and WRITES it - at every DEPLOY.md
+        /// Phase 5. Every point of accumulated bonus would be silently erased by the next migration and
+        /// levels could drop: a data-loss bug that only surfaces a deploy later. Boosting the award
+        /// itself keeps the invariant true by construction - the skill absorbs more, and level follows
+        /// through the path that already exists.
+        ///
+        /// Cheap enough for the hot path - EnchantmentManagerWithCaching memoises GetXPBonus and clears
+        /// the cache when enchantments change, which matters because the caller fires per swing.
+        ///
+        /// GetXPBonus takes only the HIGHEST power level in the category, so the tiers do NOT stack: a
+        /// trinket imbued with I, II and III pays 6%, not 12%.
+        /// </summary>
+        public double GetTrinketUseXpMultiplier()
+        {
+            if (!PropertyManager.GetBool("trinket_xp_bonus_applies_to_use").Item)
+                return 1.0;
+
+            var bonus = EnchantmentManager.GetXPBonus();
+
+            if (double.IsNaN(bonus) || bonus <= 0)
+                return 1.0;
+
+            return 1.0 + bonus;
+        }
     }
 }

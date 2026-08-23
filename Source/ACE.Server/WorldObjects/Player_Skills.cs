@@ -1023,6 +1023,27 @@ namespace ACE.Server.WorldObjects
             if (grant < flatAmount)
                 grant = flatAmount;
 
+            // Shadowgain 211: the trinket bonus, applied AFTER the stock floor rather than folded into
+            // the step maths above. The two floors in this system mean different things and the bonus
+            // has to sit on opposite sides of them.
+            //
+            // skill_gain_min_award in Proficiency is an anti-zero guard for trivial actions, so a bonus
+            // absorbed by it costs nothing anyone would miss. `flatAmount` here is the collector's
+            // NORMAL authored reward, and 206 exists precisely because so many turn-ins land on it
+            // exactly - folding the bonus in before this floor would mean the trinket did nothing at all
+            // for most crafting turn-ins, which is the opposite of the decision to include them.
+            //
+            // Only the ONE grant is scaled: the stock AwardSkillXP paths route through GrantXP, which is
+            // documented "without the XP modifier" and is deliberately left alone. Scaling here and
+            // there would double-pay a single turn-in - the same trap 206 caught on the level side.
+            var trinketMod = GetTrinketUseXpMultiplier();
+
+            if (trinketMod > 1.0)
+            {
+                var boosted = grant * trinketMod;
+                grant = boosted >= uint.MaxValue ? uint.MaxValue : (uint)Math.Round(boosted);
+            }
+
             if (grant == 0)
                 return false;
 
