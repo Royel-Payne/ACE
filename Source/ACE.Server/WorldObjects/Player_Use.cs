@@ -135,6 +135,23 @@ namespace ACE.Server.WorldObjects
                 }
             }
 
+            // Shadowgain 209 [EXPERIMENTAL, dial OFF]: armour set transfer runs BEFORE the TargetType
+            // gate below, and it has to.
+            //
+            // That gate mirrors the client's ItemHolder::TargetCompatibleWithObject: it ANDs the tool's
+            // TargetType against the target's ItemType. The Intricate Carving Tool carries TargetType
+            // 128 (Misc) because its stock recipes carve Siraluun claws and Gromnie teeth, and armour is
+            // ItemType.Armor (2). 128 & 2 == 0, so the pairing is rejected here and RecipeManager never
+            // sees it - which is exactly what happened on the first TEST attempt, with the tool refusing
+            // a perfectly valid donor.
+            //
+            // Widening the tool's TargetType in the world database was the alternative and is worse: it
+            // is a shared item, and the change would persist regardless of the dial. The handler
+            // validates its own pairing anyway and returns false for everything else, so the stock gate
+            // is simply redundant for this one path.
+            if (ArmorSetTransfer.TryHandle(this, sourceItem, target))
+                return;
+
             // re-verify client checks
             if (((sourceItem.TargetType ?? ItemType.None) & target.ItemType) == ItemType.None)
             {
