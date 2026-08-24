@@ -1,32 +1,36 @@
 /* Mag-SuitBuilder web UI — palette and metrics lifted from the approved Pro-tool mockups */
 
+/* Shadowgain scheme: tokens lifted from my.shadowgain.com / shadowgain.com
+   (deep blue-slate ground, teal "arcane" accent #4fd6c6, gold #d8ac52, Palatino serif brand). */
 :root {
-  --bg: #18181b;
-  --surface-1: #202024;
-  --surface-2: #26262b;
-  --bar: #1c1c20;
-  --input: #232328;
-  --border-1: #2a2a31;
-  --border-2: #33333a;
-  --border-3: #45454e;
-  --text-1: #e7e7ea;
-  --text-2: #c9c9d1;
-  --text-3: #9c9ca6;
-  --text-4: #6f6f7a;
-  --text-5: #55555e;
-  --accent: #fb923c;
-  --accent-ink: #1c1206;
-  --accent-soft: #d18b53;
-  --accent-wash: rgba(251, 146, 60, 0.06);
-  --accent-chip-bg: rgba(251, 146, 60, 0.12);
-  --accent-chip-border: rgba(251, 146, 60, 0.45);
+  --bg: #090c12;
+  --surface-1: #121b27;
+  --surface-2: #16202e;
+  --bar: #0f151f;
+  --input: #0e1620;
+  --border-1: rgba(120, 180, 190, 0.14);
+  --border-2: rgba(120, 180, 190, 0.22);
+  --border-3: rgba(120, 180, 190, 0.38);
+  --text-1: #e7eef0;
+  --text-2: #c9d3df;
+  --text-3: #9aa6b6;
+  --text-4: #7f8b9c;
+  --text-5: #5c6878;
+  --accent: #4fd6c6;
+  --accent-ink: #06201d;
+  --accent-soft: #8be7db;
+  --accent-wash: rgba(79, 214, 198, 0.06);
+  --accent-chip-bg: rgba(79, 214, 198, 0.12);
+  --accent-chip-border: rgba(79, 214, 198, 0.45);
+  --gold: #d8ac52;
   --lvl-legendary: #b45309;
   --lvl-epic: #15803d;
   --lvl-major: #be185d;
   --lvl-minor: #1d4ed8;
-  --ok: #4ade80;
-  --err: #f87171;
-  --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --ok: #57d98a;
+  --err: #e0645f;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-mono: 'IBM Plex Mono', Consolas, monospace;
   --radius-chip: 999px;
   --radius-card: 8px;
@@ -39,17 +43,21 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(1100px 640px at 50% -10%, rgba(216, 172, 82, 0.08), transparent 60%),
+    radial-gradient(900px 600px at 85% 15%, rgba(79, 214, 198, 0.07), transparent 60%),
+    linear-gradient(180deg, var(--bg), #0f151f);
   color: var(--text-1);
   font-family: var(--font-sans);
   font-size: 13px;
+  letter-spacing: 0.2px;
   overflow: hidden;
 }
 
 #app { height: 100dvh; display: flex; flex-direction: column; }
 
 a { color: var(--accent); }
-a:hover { color: #fdba74; }
+a:hover { color: var(--accent-soft); }
 
 button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
 input, select { font: inherit; }
@@ -68,7 +76,7 @@ input, select { font: inherit; }
 }
 
 .topbar__brand { display: flex; align-items: center; gap: 10px; }
-.topbar__title { font-weight: 600; font-size: 14px; letter-spacing: 0.01em; }
+.topbar__title { font-family: var(--font-serif); font-weight: 600; font-size: 16px; letter-spacing: 0.5px; }
 .topbar__spacer { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; }
 .topbar__actions { display: flex; align-items: center; gap: 8px; }
 .topbar__status { display: flex; align-items: center; gap: 7px; color: var(--text-4); font-size: 12px; white-space: nowrap; }
@@ -89,7 +97,7 @@ input, select { font: inherit; }
 }
 
 .seg__btn { padding: 4px 12px; border-radius: 4px; color: var(--text-3); }
-.seg__btn.active { background: var(--border-2); color: var(--text-1); font-weight: 500; }
+.seg__btn.active { background: var(--border-2); color: var(--gold); font-weight: 500; }
 
 .searchbox {
   display: flex; align-items: center; gap: 8px;
@@ -137,7 +145,7 @@ input, select { font: inherit; }
   padding: 7px 14px;
 }
 
-.btn--primary:hover { background: #fca55b; }
+.btn--primary:hover { background: var(--accent-soft); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 
 .chip {
@@ -162,8 +170,8 @@ input, select { font: inherit; }
 }
 
 .chip--tink-dim {
-  background: rgba(251, 146, 60, 0.08);
-  border-color: rgba(251, 146, 60, 0.3);
+  background: rgba(79, 214, 198, 0.08);
+  border-color: rgba(79, 214, 198, 0.3);
   color: var(--accent-soft);
 }
 

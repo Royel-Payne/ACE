@@ -44,7 +44,7 @@ export function init() {
     }
   });
 
-  subscribe(['view', 'inventory', 'search-status'], render);
+  subscribe(['view', 'inventory', 'search-status', 'suits'], render);
   render();
 }
 

@@ -28,6 +28,10 @@ OUT="$PROJ/bin/Release/net10.0/publish/wwwroot"
 [ -d "$PROJ" ] || { echo "!! Mag-Plugins fork not found at $MAG - clone Royel-Payne/Mag-Plugins (branch shadowgain) first"; exit 1; }
 
 if [ "${1:-}" != "--sync" ]; then
+  # Clean first: dotnet publish never removes files from its own output, so superseded
+  # fingerprints (dotnet.native.<oldhash>.wasm) pile up and would get mirrored as stale
+  # duplicates the boot manifest no longer references.
+  rm -rf "$OUT"
   echo "==> dotnet publish (Release + AOT - this takes a few minutes)"
   dotnet publish "$PROJ" -c Release
 fi
