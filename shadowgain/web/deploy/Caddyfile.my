@@ -68,7 +68,7 @@ my.shadowgain.com {
 	@suitImmutable path_regexp ^/suit/_framework/.+\.[a-z0-9]{8,}\.(wasm|js)$
 	header @suitImmutable Cache-Control "public, max-age=31536000, immutable"
 
-	@suitStable path /suit/worker.js /suit/js/* /suit/css/* /suit/_framework/dotnet.js
+	@suitStable path /suit/ /suit /suit/worker.js /suit/js/* /suit/css/* /suit/_framework/dotnet.js
 	header @suitStable Cache-Control "no-cache"
 
 	# The session cookie is HttpOnly+Secure+SameSite=Lax and the API is same-origin, so no CORS
