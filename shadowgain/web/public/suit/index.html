@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shadowgain Suit Builder</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z' fill='none' stroke='%23fb923c' stroke-width='1.8'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar" class="topbar">
+      <div class="topbar__brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z"></path></svg>
+        <span class="topbar__title">Mag-SuitBuilder</span>
+        <span id="server-chip" class="chip chip--input" hidden></span>
+      </div>
+      <nav class="seg" id="view-seg">
+        <button class="seg__btn" data-nav="build">Build</button>
+        <button class="seg__btn" data-nav="results">Results</button>
+      </nav>
+      <div id="topbar-status" class="topbar__status"></div>
+      <div class="topbar__spacer">
+        <div id="search-box" class="searchbox" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+          <input id="text-filter" type="text" placeholder="Search items…" autocomplete="off">
+          <kbd>Ctrl K</kbd>
+        </div>
+      </div>
+      <div id="topbar-actions" class="topbar__actions"></div>
+    </header>
+
+    <main id="view-build" class="view view--build" hidden>
+      <aside id="sidebar" class="sidebar"></aside>
+      <section class="table-area">
+        <div id="inv-header" class="inv-header"></div>
+        <div id="inv-body" class="inv-body"></div>
+        <div id="inv-statusbar" class="statusbar"></div>
+      </section>
+      <aside class="rightpanel">
+        <div id="build-panel"></div>
+        <div id="cantrip-panel" class="card card--grow"></div>
+      </aside>
+    </main>
+
+    <main id="view-results" class="view view--results" hidden>
+      <aside class="suitlist-col">
+        <div class="suitlist-head">
+          <span class="label">SUITS</span>
+          <span id="suit-count" class="suitlist-count"></span>
+        </div>
+        <div id="new-suits-pill" class="new-pill" hidden></div>
+        <div id="suit-list" class="suitlist" tabindex="0" role="listbox" aria-label="Suits"></div>
+      </aside>
+      <section id="suit-detail" class="detail-col"></section>
+      <aside class="rightpanel rightpanel--results">
+        <div id="set-bonuses"></div>
+        <div id="tinker-plan" class="card card--grow"></div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="popover-root"></div>
+  <div id="toast-root" class="toast-root"></div>
+
+  <div class="credits">
+    Based on <a href="https://github.com/Mag-nus/Mag-Plugins" target="_blank" rel="noopener">Mag-Plugins</a> by Mag-nus
+    · <a href="https://github.com/Royel-Payne/Mag-Plugins/blob/master/license.md" target="_blank" rel="noopener">LGPL 2.1</a>
+    · <a href="https://github.com/Royel-Payne/Mag-Plugins/tree/shadowgain" target="_blank" rel="noopener">modified source</a>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

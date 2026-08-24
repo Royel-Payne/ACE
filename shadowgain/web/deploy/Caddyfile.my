@@ -28,6 +28,17 @@ my.shadowgain.com {
 		}
 	}
 
+	# Suit Builder (216): a static .NET-WebAssembly app under /suit/. Its own try_files
+	# fallback, so deep links land on ITS index.html, not the portal's. Precompressed .br/.gz
+	# siblings ship with the publish output — serve them as-is rather than re-encoding a 15 MB
+	# wasm on the fly.
+	handle /suit/* {
+		try_files {path} /suit/index.html
+		file_server {
+			precompressed br gzip
+		}
+	}
+
 	handle {
 		# A single-page front-end: unknown paths fall back to index.html so /characters and
 		# /character/Foo are routable without the server knowing about them. try_files, not a
@@ -50,6 +61,15 @@ my.shadowgain.com {
 
 	@html path *.html /
 	header @html Cache-Control "no-cache"
+
+	# Suit Builder assets: the .NET publish fingerprints its runtime files (dotnet.native.<hash>.wasm
+	# and friends) and the loader integrity-checks them, so those cache forever; the stable-named
+	# entry points must revalidate or players get a stale app after an update.
+	@suitImmutable path_regexp ^/suit/_framework/.+\.[a-z0-9]{8,}\.(wasm|js)$
+	header @suitImmutable Cache-Control "public, max-age=31536000, immutable"
+
+	@suitStable path /suit/worker.js /suit/js/* /suit/css/* /suit/_framework/dotnet.js
+	header @suitStable Cache-Control "no-cache"
 
 	# The session cookie is HttpOnly+Secure+SameSite=Lax and the API is same-origin, so no CORS
 	# block is needed or wanted here: adding one would be the only thing that could let another
