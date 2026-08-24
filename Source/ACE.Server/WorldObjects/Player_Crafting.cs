@@ -8,6 +8,7 @@ using ACE.Server.Entity;
 using ACE.Server.Factories;
 using ACE.Server.Managers;
 using ACE.Server.Network.GameEvent.Events;
+using ACE.Server.Network.GameMessages.Messages;
 using ACE.Server.WorldObjects.Entity;
 
 namespace ACE.Server.WorldObjects
@@ -181,10 +182,36 @@ namespace ACE.Server.WorldObjects
                 TryCreateInInventoryWithNetworking(salvageBag);
 
             // send network messages
+            //
+            // Shadowgain 215: server-composed text instead of GameEventSalvageOperationsResult. The
+            // stock event carries only (skill, [material, ws, units], augBonus) and the CLIENT assembles
+            // "You obtain N <material> (ws W) using your knowledge of <skill>." from a template baked
+            // into its binary - a sentence that sits next to the rank-up line and reads as if the named
+            // skill received the XP, when it only set the YIELD (the XP is split across Salvaging and
+            // the material's tinker skill regardless). No server string existed to reword, so the event
+            // is replaced with chat on the same Salvaging channel - which the squelch gate below already
+            // covers - using wording Chris picked ("it reads the cleanest") that makes the yield
+            // relationship grammatical instead of adjacent. Purely display: yield, XP split and skill
+            // choice all happened above and are untouched.
             if (!SquelchManager.Squelches.Contains(this, ChatMessageType.Salvaging))
             {
                 foreach (var kvp in salvageResults.GetMessages())
-                    Session.Network.EnqueueSend(new GameEventSalvageOperationsResult(Session, kvp.Key, kvp.Value));
+                {
+                    foreach (var msg in kvp.Value)
+                    {
+                        var ws = msg.NumItemsInMaterial > 0 ? msg.Workmanship / msg.NumItemsInMaterial : msg.Workmanship;
+
+                        Session.Network.EnqueueSend(new GameMessageSystemChat(
+                            $"Your {kvp.Key.ToSentence()} yields {msg.Amount} {RecipeManager.GetMaterialName(msg.MaterialType)} (ws {ws:F2}).",
+                            ChatMessageType.Salvaging));
+                    }
+                }
+
+                // The stock event's trailing int, from which the client composed its own aug line.
+                if (AugmentationBonusSalvage > 0)
+                    Session.Network.EnqueueSend(new GameMessageSystemChat(
+                        $"Your augmentation has given you a return bonus of {AugmentationBonusSalvage * 25}!",
+                        ChatMessageType.Salvaging));
             }
         }
 
