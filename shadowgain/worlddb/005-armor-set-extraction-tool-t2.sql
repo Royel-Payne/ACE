@@ -16,10 +16,12 @@
 -- clones its sibling the Weapon Tailoring Kit (51445, icon 100693217 - the yellow one). Same art family,
 -- so the two tiers read as a matched pair on the vendor panel instead of as unrelated items.
 --
--- PRICED AT 1 MMD (Chris). Both halves are still required and the reason is not obvious - it cost two
--- wrong diagnoses on TEST when 209 shipped. `Value` (int 19) is what a single unit is worth, but a vendor
--- prices a stack from `StackUnitValue` (int 15), and the clone source is stackable at 100 - so without
--- forcing MaxStackSize (11) to 1 AND setting StackUnitValue, the shop offers 100 tools for 1 trade note.
+-- PRICED AT 50 MMD, matching the tier-1 kit (Chris, 2026-08-24: "1 mmd just feels too low, let's keep
+-- them both at 50 mmd" - it shipped at 1 first). Both halves are still required and the reason is not
+-- obvious - it cost two wrong diagnoses on TEST when 209 shipped. `Value` (int 19) is what a single unit
+-- is worth, but a vendor prices a stack from `StackUnitValue` (int 15), and the clone source is stackable
+-- at 100 - so without forcing MaxStackSize (11) to 1 AND setting StackUnitValue, the shop offers 100
+-- kits for 1 trade note.
 --
 -- The kit cost is deliberately trivial next to the risk: it is CONSUMED on every attempt, a failed
 -- extraction destroys the DONOR, and the binding roll (a 33% ceiling, 38% with Charmed Smith) destroys
@@ -57,9 +59,9 @@ INSERT INTO ace_world.weenie_properties_int (object_Id, type, value) VALUES
   (900213, 11,      1),   -- MaxStackSize: 1. See the pricing note above.
   (900213, 12,      1),   -- StackSize
   (900213, 13,     10),   -- StackUnitEncumbrance
-  (900213, 15,      1),   -- StackUnitValue: what the vendor charges. 1 MMD.
+  (900213, 15,     50),   -- StackUnitValue: what the vendor charges. 50 MMD, same as the tier-1 kit.
   (900213, 16, 524296),   -- ItemUseable: useable on another object
-  (900213, 19,      1),   -- Value
+  (900213, 19,     50),   -- Value
   (900213, 93,   1044),   -- PhysicsState
   (900213, 94,   2054);   -- TargetType: Armor|Clothing|Gem - mandatory, see above.
 
