@@ -45,6 +45,12 @@ namespace ACE.Server.Entity
         // for a tailoring-counter tool.
         private const uint ExtractionToolWcid = 900209;
 
+        // Shadowgain 213: the TIER 2 extractor. A separate weenie, not a mode of the 209 tool, because the
+        // tool is the only thing that can carry the tier: by the time Extract runs, the donor and the
+        // player look identical either way. Ships via worlddb/005 from the first commit - 209's was typed
+        // in by hand on TEST and came within one step of deploying to LIVE as a dead feature.
+        private const uint Tier2ExtractionToolWcid = 900213;
+
 
 
         // Fitted to the target curve against ACE's logistic 1/(1+exp(-factor*(skill-difficulty))).
@@ -56,11 +62,18 @@ namespace ACE.Server.Entity
 
         public static bool TryHandle(Player player, WorldObject source, WorldObject target, bool confirmed = false)
         {
-            if (!PropertyManager.GetBool("armor_set_transfer_enabled").Item)
+            var tier1 = PropertyManager.GetBool("armor_set_transfer_enabled").Item;
+            var tier2 = PropertyManager.GetBool("armor_set_transfer_t2_enabled").Item;
+
+            if (!tier1 && !tier2)
                 return false;
 
-            if (source.WeenieClassId == ExtractionToolWcid && target.EquipmentSetId != null)
-                return Extract(player, source, target, confirmed);
+            if (tier1 && source.WeenieClassId == ExtractionToolWcid && target.EquipmentSetId != null)
+                return Extract(player, source, target, confirmed, false);
+
+            // Shadowgain 213: same handler, coverage guard relaxed. The TOOL decides the tier.
+            if (tier2 && source.WeenieClassId == Tier2ExtractionToolWcid && target.EquipmentSetId != null)
+                return Extract(player, source, target, confirmed, true);
 
             // An applicator is a set-carrying item with NO coverage of its own. Armour always has
             // ValidLocations; a genuine tailoring applicator never has EquipmentSetId. Nothing else
@@ -71,7 +84,7 @@ namespace ACE.Server.Entity
             return false;
         }
 
-        private static bool Extract(Player player, WorldObject tool, WorldObject donor, bool confirmed)
+        private static bool Extract(Player player, WorldObject tool, WorldObject donor, bool confirmed, bool anyCoverage)
         {
             if (donor.ValidLocations == null || donor.ValidLocations == 0)
                 return Fail(player, "That has no armour coverage to match against.");
@@ -82,7 +95,36 @@ namespace ACE.Server.Entity
                 return Fail(player, "You must be trained in Armor Tinkering to draw a set from armour.");
 
             // Current, not Base - buffs and gear count, which is what makes the number reachable.
-            var chance = SkillCheck.GetSkillChance((int)skill.Current, SkillDifficulty, SkillFactor);
+            //
+            // Shadowgain 213: tier 2 is priced as a REAL IMBUE rather than on 209's bespoke curve, so it
+            // inherits the imbue economics the game already has instead of inventing parallel ones. This
+            // reproduces RecipeManager.CheckRecipeSuccess exactly:
+            //
+            //     chance = GetSkillChance(skill.Current + LumAugSkilledCraft, difficulty) / 3
+            //     chance += AugmentationBonusImbueChance * 0.05      // Charmed Smith, flat, skill-independent
+            //
+            // The /3 is where the famous "33%" comes from - it is a CEILING reached when raw skill chance
+            // is ~100%, not a constant, so one difficulty produces both the qualifying wall and the roll.
+            // It is inlined rather than called because CheckRecipeSuccess is private and needs a Recipe;
+            // no recipe row can express "create an applicator carrying the donor's set" (see the header).
+            double chance;
+
+            if (anyCoverage)
+            {
+                var difficulty = (int)PropertyManager.GetLong("armor_set_transfer_t2_difficulty").Item;
+                var effective = (int)skill.Current + player.LumAugSkilledCraft;
+
+                chance = SkillCheck.GetSkillChance(effective, difficulty) / 3.0;
+
+                if (player.AugmentationBonusImbueChance > 0)
+                    chance += player.AugmentationBonusImbueChance * 0.05;
+
+                chance = System.Math.Min(1.0, System.Math.Max(0.0, chance));
+            }
+            else
+            {
+                chance = SkillCheck.GetSkillChance((int)skill.Current, SkillDifficulty, SkillFactor);
+            }
 
             // Shadowgain 209c: honour the stock 'Use Crafting Chance of Success Dialog' option.
             //
@@ -150,9 +192,23 @@ namespace ACE.Server.Entity
             applicator.RemoveProperty(PropertyInt.ValidLocations);
             applicator.SetProperty(PropertyInt.WieldDifficulty, donor.GetProperty(PropertyInt.WieldDifficulty) ?? 0);
             applicator.Name = donor.EquipmentSetId + " Set Applicator";
-            applicator.LongDesc = "Drawn from " + donor.Name + ". Apply this to another piece of armour "
-                + "covering the same area to replace its attribute set with " + donor.EquipmentSetId
-                + ". The target is never destroyed.";
+
+            if (anyCoverage)
+            {
+                // Shadowgain 213: the flag is the ONLY thing separating this from a tier-1 applicator -
+                // both are built from the same coverage-derived weenie. See PropertyBool 9103.
+                applicator.SetProperty(PropertyBool.ShadowgainAnyCoverageApplicator, true);
+
+                applicator.LongDesc = "Drawn from " + donor.Name + " with a tier 2 extractor. Apply this to "
+                    + "ANY piece of armour to replace its attribute set with " + donor.EquipmentSetId
+                    + ", regardless of what it covers. The target is never destroyed.";
+            }
+            else
+            {
+                applicator.LongDesc = "Drawn from " + donor.Name + ". Apply this to another piece of armour "
+                    + "covering the same area to replace its attribute set with " + donor.EquipmentSetId
+                    + ". The target is never destroyed.";
+            }
 
             player.TryConsumeFromInventoryWithNetworking(donor, 1);
 
@@ -171,13 +227,19 @@ namespace ACE.Server.Entity
             if (target.EquipmentSetId == null)
                 return Fail(player, "That has no set to replace. A set can only be moved onto armour that already has one.");
 
+            // Shadowgain 213: THE ONE GUARD TIER 2 DROPS. Everything else below still applies.
+            //
             // Coverage match, DERIVED not stored: the applicator's weenie was chosen BY the donor's
-            // coverage, so asking the same question of the target must return the same weenie.
-            if (target.ValidLocations == null
-                || Tailoring.GetArmorWCID(target.ValidLocations.Value) != applicator.WeenieClassId)
-            {
+            // coverage, so asking the same question of the target must return the same weenie. A tier-2
+            // applicator carries ShadowgainAnyCoverageApplicator and skips exactly this check - which is
+            // why the flag exists rather than the check simply being removed. 209 is untouched.
+            var anyCoverage = applicator.GetProperty(PropertyBool.ShadowgainAnyCoverageApplicator) ?? false;
+
+            if (target.ValidLocations == null)
+                return Fail(player, "That has no armour coverage.");
+
+            if (!anyCoverage && Tailoring.GetArmorWCID(target.ValidLocations.Value) != applicator.WeenieClassId)
                 return Fail(player, "That does not cover the same area as the armour this set came from.");
-            }
 
             // Direction guard: a set may move to equally- or harder-to-wield armour, never down onto an
             // easier piece.

@@ -194,5 +194,16 @@ namespace ACE.Entity.Enum.Properties
         //                             than "is not taking it right now".
         ShadowgainFastPath               = 9101,
         ShadowgainForfeitedMarker        = 9102,
+
+        // Shadowgain 213: marks an armour-set applicator produced by the TIER 2 extractor, which may be
+        // applied to ANY coverage rather than only the donor's own.
+        //
+        // It has to be a STORED flag rather than something derived. 209 encodes an applicator's coverage
+        // in its WEENIE - GetArmorWCID picks the applicator wcid FROM the donor's ValidLocations, and
+        // Apply re-derives it by asking the same question of the target. A tier-2 applicator is built the
+        // same way and is therefore indistinguishable from a tier-1 one by inspection. Without this flag
+        // the only way to let tier 2 cross coverage would be to drop the check for EVERY applicator,
+        // which would silently loosen 209 - the one thing 213 must not do.
+        ShadowgainAnyCoverageApplicator  = 9103,
     }
 }
