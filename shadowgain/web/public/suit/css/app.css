@@ -714,3 +714,38 @@ input, select { font: inherit; }
 /* ---------- Scrollbars ---------- */
 
 * { scrollbar-width: thin; scrollbar-color: var(--border-3) transparent; }
+
+/* ---------- Mobile: stack the columns into one scrolling page ----------
+   Below 760px the three-column workbench can't fit, so the page becomes a
+   vertical document: build target + cantrips first, filters, then the item
+   table, which keeps its full grid and pans sideways inside its own scroll. */
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  #app { height: auto; min-height: 100dvh; }
+
+  .topbar { height: auto; flex-wrap: wrap; padding: 10px 12px; gap: 10px 12px; }
+  .topbar__status { order: 9; flex-basis: 100%; }
+  .topbar__spacer { order: 10; flex-basis: 100%; }
+  .searchbox { width: 100%; }
+
+  .view { flex-direction: column; height: auto; }
+
+  .sidebar, .rightpanel, .rightpanel--results, .suitlist-col {
+    width: auto; flex: 0 0 auto;
+    border-right: none; border-left: none;
+    border-bottom: 1px solid var(--border-1);
+  }
+
+  .view--build .rightpanel { order: -1; overflow: visible; }
+  .card--grow { min-height: auto; overflow-y: visible; }
+
+  .table-area { overflow-x: auto; }
+  .inv-header, .inv-body, .statusbar { min-width: 640px; }
+  .inv-body { max-height: 60vh; }
+  .statusbar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 4px 14px; }
+
+  .suitlist { max-height: 45vh; }
+  .detail-col { padding: 14px 12px; overflow-y: visible; }
+
+  .credits { position: static; text-align: center; padding: 10px 12px 14px; }
+}
