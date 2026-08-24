@@ -1,0 +1,4 @@
+# 216: the Suit Builder publish output is generated, byte-exact content. The fingerprinted
+# _framework/*.js files are integrity-checked by the .NET loader and the .br/.gz siblings
+# were compressed from these exact bytes - a CRLF rewrite on checkout would break both.
+public/suit/** -text
