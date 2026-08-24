@@ -21,8 +21,9 @@
 -- prices a stack from `StackUnitValue` (int 15), and the clone source is stackable at 100 - so without
 -- forcing MaxStackSize (11) to 1 AND setting StackUnitValue, the shop offers 100 tools for 1 trade note.
 --
--- The tool cost is deliberately trivial next to the risk: each attempt is an imbue at a 33% ceiling
--- (38% with Charmed Smith) and a failure DESTROYS the donor armour. The gamble is the price.
+-- The kit cost is deliberately trivial next to the risk: it is CONSUMED on every attempt, a failed
+-- extraction destroys the DONOR, and the binding roll (a 33% ceiling, 38% with Charmed Smith) destroys
+-- the TARGET on failure. Destructive by design - the gamble is the price.
 --
 -- TargetType 2054 (Armor|Clothing|Gem) is mandatory, not cosmetic. The retail client runs
 -- ItemHolder::TargetCompatibleWithObject and refuses to SEND a use request whose tool TargetType does not
@@ -71,8 +72,8 @@ INSERT INTO ace_world.weenie_properties_bool (object_Id, type, value) VALUES
   (900213, 69, 0);
 
 INSERT INTO ace_world.weenie_properties_string (object_Id, type, value) VALUES
-  (900213,  1, 'Superior Armor Set Extraction Tool'),
-  (900213, 16, 'Draws the attribute set out of a piece of armor so it can be moved onto ANY other piece, whatever it covers. Requires a very high Armor Tinkering skill merely to attempt, and succeeds at best one time in three - on failure the armor it is used on is destroyed.');
+  (900213,  1, 'Superior Armor Set Extraction Kit'),
+  (900213, 16, 'Draws the attribute set out of a piece of armor so it can be bound onto ANY other piece, whatever it covers. Extraction demands a formidable Armor Tinkering skill, and failure destroys the armor. Binding the extracted set succeeds at best one time in three - failure destroys the armor it is being bound to. The kit is consumed in the attempt.');
 
 INSERT INTO ace_world.weenie_properties_d_i_d (object_Id, type, value) VALUES
   (900213,  1,  33555677),   -- Setup

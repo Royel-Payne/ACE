@@ -67,8 +67,8 @@ INSERT INTO ace_world.weenie_properties_bool (object_Id, type, value) VALUES
   (900209, 69, 0);        -- IsSellable handled by the vendor rows below
 
 INSERT INTO ace_world.weenie_properties_string (object_Id, type, value) VALUES
-  (900209,  1, 'Armor Set Extraction Tool'),
-  (900209, 16, 'Used on a piece of armor to draw out its attribute set, producing an applicator that can move that set onto another piece covering the same area. Requires Armor Tinkering skill - on failure the armor it is used on is destroyed.');
+  (900209,  1, 'Armor Set Extraction Kit'),
+  (900209, 16, 'Used on a piece of armor to draw out its attribute set, producing an applicator that can move that set onto another piece covering the same area. Requires Armor Tinkering skill - on failure the armor it is used on is destroyed. The kit is consumed in the attempt.');
 
 INSERT INTO ace_world.weenie_properties_d_i_d (object_Id, type, value) VALUES
   (900209,  1,  33555677),   -- Setup

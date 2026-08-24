@@ -96,17 +96,16 @@ namespace ACE.Server.Entity
 
             // Current, not Base - buffs and gear count, which is what makes the number reachable.
             //
-            // Shadowgain 213: tier 2 is priced as a REAL IMBUE rather than on 209's bespoke curve, so it
-            // inherits the imbue economics the game already has instead of inventing parallel ones. This
-            // reproduces RecipeManager.CheckRecipeSuccess exactly:
+            // Shadowgain 213g: EXTRACTION IS THE SKILL WALL; THE IMBUE ROLL LIVES ON APPLY. The first
+            // build rolled the imbue here, which Chris caught in play as backwards - his design was
+            // always "extraction requires armor tinkering (high skill)... the imbue chance happens on
+            // apply", and his earlier wording already said so: "they still only get 38% chance to APPLY
+            // it".
             //
-            //     chance = GetSkillChance(skill.Current + LumAugSkilledCraft, difficulty) / 3
-            //     chance += AugmentationBonusImbueChance * 0.05      // Charmed Smith, flat, skill-independent
-            //
-            // The /3 is where the famous "33%" comes from - it is a CEILING reached when raw skill chance
-            // is ~100%, not a constant, so one difficulty produces both the qualifying wall and the roll.
-            // It is inlined rather than called because CheckRecipeSuccess is private and needs a Recipe;
-            // no recipe row can express "create an applicator carrying the donor's set" (see the header).
+            // So tier 2 extraction is the RAW logistic against the dial - no /3, no Charmed Smith. At
+            // the measured ceilings that is ~0.7% with no rare, ~76% with one rare route (689 vs 650),
+            // and ~99.9% with everything - a wall that demands the rare, not a coin flip. Failure still
+            // destroys the donor, same as tier 1.
             double chance;
 
             if (anyCoverage)
@@ -114,12 +113,7 @@ namespace ACE.Server.Entity
                 var difficulty = (int)PropertyManager.GetLong("armor_set_transfer_t2_difficulty").Item;
                 var effective = (int)skill.Current + player.LumAugSkilledCraft;
 
-                chance = SkillCheck.GetSkillChance(effective, difficulty) / 3.0;
-
-                if (player.AugmentationBonusImbueChance > 0)
-                    chance += player.AugmentationBonusImbueChance * 0.05;
-
-                chance = System.Math.Min(1.0, System.Math.Max(0.0, chance));
+                chance = SkillCheck.GetSkillChance(effective, difficulty);
             }
             else
             {
@@ -155,6 +149,13 @@ namespace ACE.Server.Entity
 
                 return true;
             }
+
+            // Shadowgain 213h: the KIT is ALWAYS consumed once the attempt is committed - success or
+            // failure - matching the tailoring kits this is styled after (Tailoring consumes its
+            // source on every completed operation). One purchase, one attempt, BOTH tiers - Chris:
+            // "these are 1 time use items... we'll be fixing 209 too". Guard rejections above and a
+            // declined dialog do NOT consume it: no attempt was made.
+            player.TryConsumeFromInventoryWithNetworking(tool, 1);
 
             if (ThreadSafeRandom.Next(0.0f, 1.0f) > chance)
             {
@@ -249,14 +250,54 @@ namespace ACE.Server.Entity
             if (targetReq < sourceReq)
                 return Fail(player, "That is easier to wield than the armour this set came from.");
 
-            // Shadowgain 209f: confirm on APPLY too (Chris). This step cannot fail, but it does
-            // overwrite the target's existing set irreversibly - and the applicator is spent either
-            // way. Naming both sets is the point: a player who mixed up two similar gauntlets should
-            // find out here, not afterwards.
+            // Shadowgain 213g: THE IMBUE ROLL LIVES HERE for tier-2 applicators. Reproduces
+            // RecipeManager.CheckRecipeSuccess exactly:
+            //
+            //     chance = GetSkillChance(skill.Current + LumAugSkilledCraft, difficulty) / 3
+            //     chance += AugmentationBonusImbueChance * 0.05     // Charmed Smith, flat
+            //
+            // The /3 is where the famous "33%" comes from - a CEILING reached when raw chance is ~100%,
+            // not a constant. Inlined because CheckRecipeSuccess is private and needs a Recipe, and no
+            // recipe row can express this transfer (see the header).
+            //
+            // WHAT A FAILED ROLL COSTS: THE TARGET ARMOUR ITSELF, plus the applicator. Tier 2 is
+            // destructive by design - 209's target-is-never-at-risk rule belongs to 209, which served
+            // as a guide to what WORKED mechanically, not as scope for this feature. The tier-2 deal
+            // is: a rare-gated wall to extract (donor at stake), then a 33/38% bind (the piece being
+            // upgraded at stake). Tier 1's own behaviour is unchanged.
+            var imbueChance = 1.0;
+
+            if (anyCoverage)
+            {
+                var skill = player.GetCreatureSkill(Skill.ArmorTinkering);
+
+                if (skill == null || skill.AdvancementClass < SkillAdvancementClass.Trained)
+                    return Fail(player, "You must be trained in Armor Tinkering to bind a set across coverage.");
+
+                var difficulty = (int)PropertyManager.GetLong("armor_set_transfer_t2_difficulty").Item;
+                var effective = (int)skill.Current + player.LumAugSkilledCraft;
+
+                imbueChance = SkillCheck.GetSkillChance(effective, difficulty) / 3.0;
+
+                if (player.AugmentationBonusImbueChance > 0)
+                    imbueChance += player.AugmentationBonusImbueChance * 0.05;
+
+                imbueChance = System.Math.Min(1.0, System.Math.Max(0.0, imbueChance));
+            }
+
+            // Shadowgain 209f: confirm on APPLY too (Chris). Tier 1 cannot fail here but does overwrite
+            // the target's set irreversibly; tier 2 stakes the target itself on the roll.
+            // Naming both sets is the point: a player who mixed up two similar gauntlets should find out
+            // here, not afterwards.
             if (!confirmed && player.GetCharacterOption(CharacterOption.UseCraftingChanceOfSuccessDialog))
             {
-                var applyMsg = "Replace the " + target.EquipmentSetId + " set on this armour with "
-                    + applicator.EquipmentSetId + "? This cannot be undone, and the applicator is consumed.";
+                var applyMsg = anyCoverage
+                    ? "Replace the " + target.EquipmentSetId + " set on this armour with "
+                        + applicator.EquipmentSetId + "? You determine that you have a "
+                        + (int)System.Math.Round(imbueChance * 100)
+                        + " percent chance to succeed.\n\nOn failure the " + target.Name + " is DESTROYED, along with the applicator."
+                    : "Replace the " + target.EquipmentSetId + " set on this armour with "
+                        + applicator.EquipmentSetId + "? This cannot be undone, and the applicator is consumed.";
 
                 if (!player.ConfirmationManager.EnqueueSend(
                         new Confirmation_ArmorSetTransfer(player.Guid, applicator.Guid, target.Guid), applyMsg))
@@ -264,6 +305,17 @@ namespace ACE.Server.Entity
                     player.SendUseDoneEvent(WeenieError.ConfirmationInProgress);
                 }
 
+                return true;
+            }
+
+            if (anyCoverage && ThreadSafeRandom.Next(0.0f, 1.0f) > imbueChance)
+            {
+                Tell(player, "You fail to bind the " + applicator.EquipmentSetId + " set. The "
+                    + target.Name + " is destroyed, along with the applicator. ("
+                    + (imbueChance * 100).ToString("N1") + "% chance)");
+                player.TryConsumeFromInventoryWithNetworking(applicator, 1);
+                player.TryConsumeFromInventoryWithNetworking(target, 1);
+                player.SendUseDoneEvent();
                 return true;
             }
 
