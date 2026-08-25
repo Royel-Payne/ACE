@@ -77,6 +77,15 @@ input, select { font: inherit; }
 
 .topbar__brand { display: flex; align-items: center; gap: 10px; }
 .topbar__title { font-family: var(--font-serif); font-weight: 600; font-size: 16px; letter-spacing: 0.5px; }
+
+/* Back-link to my.shadowgain.com — same header family as the portal's nav links */
+.topbar__portal {
+  font-size: 12.5px; color: var(--text-3);
+  border-left: 1px solid var(--border-1);
+  padding-left: 10px;
+  white-space: nowrap;
+}
+.topbar__portal:hover { color: var(--accent); }
 .topbar__spacer { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; }
 .topbar__actions { display: flex; align-items: center; gap: 8px; }
 .topbar__status { display: flex; align-items: center; gap: 7px; color: var(--text-4); font-size: 12px; white-space: nowrap; }

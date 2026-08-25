@@ -81,14 +81,14 @@ function render() {
   // Memoized: the status line above ticks every second, but the buttons only change on
   // view/status transitions — rebuilding them each tick resets hover state and wastes work.
   const actionsEl = document.getElementById('topbar-actions');
-  const actionsKey = view + '|' + search.status;
+  const actionsKey = view + '|' + search.status + '|' + (servers.length > 0);
 
   if (actionsEl.dataset.key !== actionsKey) {
     actionsEl.dataset.key = actionsKey;
 
     if (view === 'build') {
       actionsEl.innerHTML =
-        `<button class="btn" data-load-inventory>${ICONS.reload}<span>Load inventory…</span></button>` +
+        `<button class="btn" data-load-inventory>${ICONS.reload}<span>${servers.length > 0 ? 'Re-sync inventory…' : 'Load inventory…'}</span></button>` +
         `<button class="btn btn--primary" data-action="calculate">${ICONS.play}<span>Calculate suits</span></button>`;
     } else if (search.status === 'running' || search.status === 'stopping') {
       actionsEl.innerHTML =

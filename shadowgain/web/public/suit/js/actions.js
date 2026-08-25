@@ -24,6 +24,10 @@ export async function loadAll() {
     const [inventory, cantrips] = await Promise.all([api.inventory(), api.cantrips()]);
     reconcile(inventory);
     patch({ inventory, cantrips }, 'inventory', 'cantrips');
+    if (inventory.restored) {
+      const count = inventory.servers.reduce((n, s) => n + s.characters.reduce((m, c) => m + c.items.length, 0), 0);
+      toast('Restored ' + count.toLocaleString() + ' items from your last visit');
+    }
   } catch (err) {
     toast('Failed to load inventory: ' + err.message, true);
   }

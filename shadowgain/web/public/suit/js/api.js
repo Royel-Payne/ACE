@@ -54,8 +54,61 @@ async function replayFlags() {
 
 const EMPTY_INVENTORY = { rootPath: '(browser)', loadedAtUtc: null, warnings: [], armorSets: [], servers: [] };
 
+// ---- IndexedDB persistence ----
+// The picked folder's XML strings are kept in the browser's own storage so a refresh comes
+// back with the inventory already loaded. Local to this machine and origin — nothing leaves
+// the browser. Every helper swallows failure (private windows, cleared site data): persistence
+// is a convenience, and the folder picker always works without it.
+
+const DB_NAME = 'sb-inventory';
+const STORE = 'files';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSave(files) {
+  try {
+    const db = await idbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put({ ...files, savedAt: Date.now() }, 'current');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch { /* persistence unavailable — fine */ }
+}
+
+async function idbLoad() {
+  try {
+    const db = await idbOpen();
+    const rec = await new Promise((resolve, reject) => {
+      const req = db.transaction(STORE).objectStore(STORE).get('current');
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return rec?.paths?.length ? rec : null;
+  } catch { return null; }
+}
+
 export const api = {
   async inventory() {
+    if (cachedInventory) return cachedInventory;
+
+    // Fresh page: bring back the last visit's files from browser storage
+    const stored = await idbLoad();
+    if (stored) {
+      cachedFiles = { paths: stored.paths, contents: stored.contents };
+      cachedInventory = await call('loadInventory', cachedFiles);
+      cachedInventory.restored = true;
+    }
     return cachedInventory ?? EMPTY_INVENTORY;
   },
 
@@ -67,6 +120,7 @@ export const api = {
     cachedFiles = { paths, contents };
     flagState.clear();
     cachedInventory = await call('loadInventory', cachedFiles);
+    idbSave(cachedFiles); // after the worker accepted them — a bad pick never overwrites a good cache
     return cachedInventory;
   },
 

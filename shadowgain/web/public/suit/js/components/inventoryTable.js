@@ -177,7 +177,7 @@ function render() {
       '<div class="empty-state" style="height: 100%;">' +
       '<span style="font-size: 15px;">No inventory loaded</span>' +
       '<button class="btn btn--primary" data-load-inventory>Load your Mag-Tools folder</button>' +
-      '<span>…or drag it anywhere onto this page. Files are parsed locally — nothing is uploaded.</span>' +
+      '<span>…or drag it anywhere onto this page. Files are parsed locally — nothing is uploaded. Loaded items are remembered by your browser between visits.</span>' +
       '</div>';
     document.getElementById('inv-statusbar').innerHTML =
       '<span>Waiting for inventory files (Documents\\Decal Plugins\\Mag-Tools)</span>';
