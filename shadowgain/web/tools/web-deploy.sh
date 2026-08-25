@@ -214,6 +214,12 @@ echo "==> shipping front-end + assets to $WWW_DIR"
 # public/ holds the front-end (Cowork's) and assets/ (the exporter's output). Both are static and
 # both belong to caddy.
 if [ -d "$WEB/public" ]; then
+  # 216: public/suit is a MIRRORED generated tree, not an accumulating one. The wasm publish
+  # fingerprints its runtime files with a fresh hash on every rebuild, and tar-over-existing
+  # never deletes, so without this the droplet gains an orphaned ~30MB generation per deploy.
+  # Removed just before the tar lands, so the gap where /suit/ 404s is a second or two.
+  $SSH "$HOST" "rm -rf $WWW_DIR/suit"
+
   tar -czf - -C "$WEB/public" . | $SSH "$HOST" "mkdir -p $WWW_DIR && tar -xzf - -C $WWW_DIR"
 
   $SSH "$HOST" "chown -R caddy:caddy $WWW_DIR && \
