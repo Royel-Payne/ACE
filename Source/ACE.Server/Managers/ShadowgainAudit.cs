@@ -115,11 +115,22 @@ namespace ACE.Server.Managers
         ///      users as it gives away our ability to use the tool in any sort of useful way",
         ///      and on the other two: "potentially tools I might use."
         ///
-        /// THE LINE FOR TEST 4 IS NOT "SELF-ONLY", and getting that wrong would gut this file.
-        /// `/god` is self-only too, and it stays audited forever - it rewrites the caller's every
-        /// skill and attribute, which is exactly the kind of thing a player is owed sight of. The
-        /// test is self-only AND unable to move an item, a rank, a level, or access - to anyone,
-        /// INCLUDING the caller. All four above pass; `/god` fails on the second half.
+        /// THE LINE FOR TEST 4 WAS ORIGINALLY NOT "SELF-ONLY" - 177 kept `/god` audited on the
+        /// reasoning that it rewrites the caller's every skill and attribute. SUPERSEDED (220,
+        /// Chris 2026-08-26): the audit exists for "transparency over actions players would
+        /// perceive as unfair - favoritism or a granted advantage", and `/god`/`/ungod` are
+        /// session-scoped mod utility - GodState is snapshotted and restored, nothing survives
+        /// the toggle, and no player is advantaged. Chris's examples of what should NOT post
+        /// were exactly "@cloak off / @attackable off / @god / @ungod". The durable version of
+        /// 177's concern is still covered: anything a god-mode session HANDS ANYONE - createitem,
+        /// grants, transfers - lands in the trail on its own line, which is the event a player
+        /// has a stake in.
+        ///
+        /// 220 ALSO SWEPT THE FULL COMMAND SET - all 324 above-Player commands enumerated from
+        /// source and categorized (classes 5-7 below). The criterion is Chris's one-line test:
+        /// "could a player call this favoritism toward someone?" Yes -> audited. No -> here.
+        /// Ambiguous -> AUDITED; this remains a denylist and the fail-safe direction still holds:
+        /// a new or forgotten command gets RECORDED.
         ///
         /// ONE HONEST CAVEAT, recorded rather than argued away. `@neversaydie` is the weakest of
         /// the four: invincibility lets staff survive content they could not otherwise clear, and
@@ -207,6 +218,135 @@ namespace ACE.Server.Managers
             "attackable",
             "neversaydie",
             "portal_bypass",
+            // 220: the rest of the self-state class, god/ungod included - see the superseded
+            // note above. All session-scoped, none can move an item, a rank, a level or access
+            // to any OTHER character, and god's state is snapshot-and-restore.
+            "god",
+            "ungod",
+            "adminvision",
+            "fast",
+            "slow",
+            "run",
+            "home",
+            "mrt",
+            "pk",
+            "faction",
+            "harmself",
+
+            // --- 5. reads and diagnostics (220 sweep) --------------------------------------
+            // Answers a question, changes nothing. Same class-1 criterion, now covering the
+            // whole Developer/Admin diagnostic surface so a debugging session on LIVE does not
+            // flood the channel the way sg-appraise once did (20 lines in one afternoon).
+            "accountget",
+            "auditobjectmaint",
+            "banlist",
+            "chatdump",
+            "damagehistory",
+            "database-shard-cache-npbrt",
+            "database-shard-cache-pbrt",
+            "databaseperftest",
+            "databasequeueinfo",
+            "destructionqueue",
+            "dist",
+            "dumpattackers",
+            "dungeonname",
+            "echo",
+            "echoflags",
+            "fellow-dist",
+            "fellow-info",
+            "gcstatus",
+            "generatordump",
+            "getallspellformula",
+            "getenchantments",
+            "getinfo",
+            "getproperty",
+            "getspellformula",
+            "gps",
+            "idlist",
+            "inv",
+            "knownobjs",
+            "knownplayers",
+            "landblockperformance",
+            "landblockstats",
+            "lbgroupstats",
+            "listcb",
+            "listpositions",
+            "location",
+            "myiid",
+            "myloc",
+            "myserver",
+            "netstats",
+            "propertydump",
+            "radar",
+            "resist-info",
+            "serverlist",
+            "show-allegiances",
+            "show-wielded-treasure",
+            "showprops",
+            "showsession",
+            "showstats",
+            "showtier",
+            "showvelocity",
+            "targetloc",
+            "time",
+            "vendordump",
+            "version",
+            "visibleobjs",
+            "visibleplayers",
+            "visibletargets",
+            "vloc2loc",
+            "whoami",
+            // read-only content exports - they copy world data OUT, they cannot put anything in
+            "cell-export",
+            "export-json",
+            "export-json-folders",
+            "export-sql",
+            "export-sql-folders",
+            "highres-export",
+            "image-export",
+            "language-export",
+            "portal-export",
+            "wave-export",
+
+            // --- 6. debug visuals, simulation and cache ops (220 sweep) ----------------------
+            // Renders, animates, measures or flushes; touches no character and no item. The
+            // import-* twins of the exports above are deliberately ABSENT: importing CREATES
+            // content, and stays audited.
+            "animation",
+            "barrier-test",
+            "bumpvelocity",
+            "check-collision",
+            "clearcache",
+            "clearphysicscaches",
+            "debugboard",
+            "debugchess",
+            "debugemote",
+            "debugmove",
+            "draw",
+            "effect",
+            "forcegc",
+            "forcegc2",
+            "lostest",
+            "movement",
+            "nudge",
+            "playsound",
+            "pscript",
+            "recordcast",
+            "reloadsysmsg",
+            "rotate",
+            "rotate-x",
+            "rotate-y",
+            "rotate-z",
+            "testaim",
+            "turnto",
+
+            // --- 7. broadcast speech (220 sweep) ---------------------------------------------
+            // A gamecast is its own announcement - every player on the shard sees the message
+            // the moment it is sent, so a second copy in #audit adds nothing.
+            "gamecast",
+            "gamecastemote",
+            "gamecastlocal",
+            "gamecastlocalemote",
         };
 
         /// <summary>

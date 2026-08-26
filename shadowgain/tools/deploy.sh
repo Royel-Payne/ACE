@@ -85,7 +85,13 @@ SSH="ssh -i $KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o 
 # countdown + 300 = 1200s. That is well past the 10-minute FOREGROUND kill in the Bash tool, so this
 # MUST be run in the background. See DEPLOY.md Phase 2.
 SHUTDOWN_SECS="${SG_SHUTDOWN_SECS:-900}"
-SHUTDOWN_MSG="${SG_SHUTDOWN_MSG:-Quick restart to apply skill and attribute fixes - back in under a minute.}"
+# 221: GENERIC, ALWAYS. The old default here described one specific update ("skill and attribute
+# fixes") and kept being broadcast verbatim on every later deploy. The standard (Chris, 2026-08-26):
+# restart broadcasts never say what is changing - the detail belongs in #info AFTER the world is
+# open (DEPLOY.md Phase 2: a specific reason spoils the announcement, and on an exploit fix it
+# hands everyone a countdown-long window to use the thing one last time). Override per-deploy with
+# SG_SHUTDOWN_MSG only if a deploy genuinely ships with no #info post - then drop the #info clause.
+SHUTDOWN_MSG="${SG_SHUTDOWN_MSG:-An update is being applied - full details will be posted in #info as soon as we are back. Back shortly.}"
 
 BUILD=1
 GIT_ONLY=0
