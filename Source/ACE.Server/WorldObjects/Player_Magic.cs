@@ -1144,6 +1144,13 @@ namespace ACE.Server.WorldObjects
                         }
                     }
 
+                    // Shadowgain 219b: captured BEFORE HandleCastSpell applies the effect. The
+                    // non-projectile damage spells - the Harm line (Boost, negative health) and
+                    // Drain Health (Transfer) - land their damage inside that call, and the award
+                    // below runs after it, so this is the only place the pre-cast health exists.
+                    var preCastHealth = targetCreature?.Health.Current ?? 0;
+                    var preCastMaxHealth = targetCreature?.Health.MaxValue ?? 0;
+
                     HandleCastSpell(spell, target, itemCaster, caster, isWeaponSpell);
 
                     if (!spell.IsProjectile)
@@ -1167,12 +1174,32 @@ namespace ACE.Server.WorldObjects
                             {
                                 var magicDifficulty = targetCreature.GetCreatureSkill(Skill.MagicDefense).Current;
 
-                                if (playerCast)
-                                    Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), magicDifficulty, opponent: targetCreature);
+                                // Shadowgain 219b: fold the non-projectile DAMAGE spells into the
+                                // damage-share rule - the "Life Mage" gap Chris flagged. No spell
+                                // list: the health delta across HandleCastSpell IS the test. HP
+                                // fell -> a damage spell (Harm, Drain Health, and any future
+                                // oddball), pays its share exactly like a swing or a bolt. HP
+                                // unchanged -> a debuff or stamina/mana drain, keeps its per-cast
+                                // award: utility casting is not damage-dealing and was never
+                                // underpaid. A fully-resisted cast never reaches here at all
+                                // (TryResistSpell breaks out above). No crits on this path.
+                                var xpWeight = 1.0;
+
+                                if (preCastMaxHealth > 0 && PropertyManager.GetBool("weapon_xp_damage_mode").Item)
+                                {
+                                    var healthDamage = (double)preCastHealth - targetCreature.Health.Current;
+
+                                    if (healthDamage > 0)
+                                        xpWeight = GetDamageShareXpFactor(healthDamage, preCastHealth, preCastMaxHealth, false);
+                                }
+
+                                if (playerCast && xpWeight > 0.0)
+                                    Proficiency.OnSuccessUse(this, GetCreatureSkill(spell.School), magicDifficulty, xpWeight, opponent: targetCreature);
 
                                 // Shadowgain 004: target-derived difficulty -> Focus/Self by school.
-                                if (playerCast && Proficiency.AllowsUsageGain(this, targetCreature))
-                                    AwardAttributesForMagicSkill(spell.School, magicDifficulty);
+                                // (219b: same weight as the skill award, as everywhere else.)
+                                if (playerCast && xpWeight > 0.0 && Proficiency.AllowsUsageGain(this, targetCreature))
+                                    AwardAttributesForMagicSkill(spell.School, magicDifficulty, xpWeight);
                             }
 
                             // handle target procs
