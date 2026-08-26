@@ -757,14 +757,17 @@ namespace ACE.Server.WorldObjects
         /// weapon mappings. It is that a general rule silently swallowed a deliberate exception, and
         /// the comment recording the exception was not enough to stop it.
         /// </summary>
-        public void AwardAttributesForMagicSkill(MagicSchool school, uint difficulty)
+        // Shadowgain 219: weight added so the spell-projectile path can pass its damage-share
+        // factor through - matching how melee attribute awards ride currentHitXpFactor. 1.0 for
+        // every existing caller.
+        public void AwardAttributesForMagicSkill(MagicSchool school, uint difficulty, double weight = 1.0)
         {
-            AwardAttributesForSkill(SchoolToSkill(school), difficulty);
+            AwardAttributesForSkill(SchoolToSkill(school), difficulty, weight);
         }
 
-        public void AwardAttributesForMagicSkill(Skill school, uint difficulty)
+        public void AwardAttributesForMagicSkill(Skill school, uint difficulty, double weight = 1.0)
         {
-            AwardAttributesForSkill(school, difficulty);
+            AwardAttributesForSkill(school, difficulty, weight);
         }
 
         private static Skill SchoolToSkill(MagicSchool school)

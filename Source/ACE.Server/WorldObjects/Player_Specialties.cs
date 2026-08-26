@@ -81,7 +81,9 @@ namespace ACE.Server.WorldObjects
                 // 195: reads the factor directly - AwardDirtyFightingUse is called from
                 // Creature_Combat.FightDirty during damage calculation, so the strike/cleave context
                 // set around DamageTarget is still current, but there is no parameter to receive it.
-                TryAwardSpecialty(Skill.DirtyFighting, difficulty, GetMultiHitXpFactor());
+                // 219: GetCurrentHitAwardFactor rather than GetMultiHitXpFactor, so under damage
+                // mode DF inherits the hit's damage share exactly as the other specialties do.
+                TryAwardSpecialty(Skill.DirtyFighting, difficulty, GetCurrentHitAwardFactor());
         }
 
         /// <summary>
@@ -194,13 +196,45 @@ namespace ACE.Server.WorldObjects
 
             var award = (uint)System.Math.Min(uint.MaxValue, System.Math.Round(difficulty));
 
+            // Shadowgain 219: THE TOP-END TAPER. Full growth through the knee rank, halving every
+            // halflife ranks past it - f(R) = 2^-(max(0, R-knee)/halflife). 218 measured this path
+            // at 37.8% of ALL server skill XP (52-63% of the top characters' own sheets), because
+            // kill-XP share is the only difficulty unit in the system that grows with content
+            // without bound - so the top end compounds forever while every other stream is
+            // ratio-clamped. The knee (220 = trained table top) preserves the entire climb; only
+            // overcap ranks taper. Rank derives from TrueExperienceSpent through the same 109b
+            // function the award path itself uses, so the taper follows the real rank, not the
+            // client-clamped Ranks field.
+            //
+            // SKILL AWARD ONLY: the attribute award below deliberately reads the UNTAPERED amount -
+            // it is 172's Endurance income, already clamped hard by attribute_gain_difficulty_bound
+            // (Adramelech's average 9,895 becomes 570), and was never the runaway.
+            // GATED ON weapon_xp_damage_mode, deliberately: the taper is one half of a sized pair -
+            // what Summoning loses, the damage-share reward gives back to active combat - and 218's
+            // rule is that neither piece ships alone. One master switch turns the whole coordinated
+            // pass on and off together, so weapon_xp_damage_mode OFF reproduces today's behaviour
+            // EXACTLY, taper included. Within the pass, knee 0 still disables the taper alone.
+            var taperedAward = award;
+
+            var taperKnee = PropertyManager.GetLong("summoning_taper_knee_rank").Item;
+            var taperHalflife = PropertyManager.GetDouble("summoning_taper_halflife").Item;
+
+            if (taperKnee > 0 && taperHalflife > 0 && PropertyManager.GetBool("weapon_xp_damage_mode").Item)
+            {
+                var rank = CalcSkillRankUncapped(skill.AdvancementClass, skill.TrueExperienceSpent);
+
+                if (rank > taperKnee)
+                    taperedAward = (uint)System.Math.Max(1, System.Math.Round(
+                        award * System.Math.Pow(2.0, -(rank - taperKnee) / taperHalflife)));
+            }
+
             // Shadowgain 119: NOT bounded against Summoning's Base. The 119 bound assumes difficulty
             // and Base are the same kind of number - a creature's skill value - and here it is a share
             // of kill XP divided by summoning_gain_xp_divisor, which the skill's Base says nothing
             // about. Bounding it would be an unrelated balance change smuggled in behind an exploit
             // fix. Measured on LIVE 2026-08-13: this path runs at ratio 12-45, entirely because of
             // that unit mismatch, and it is dial-limited already.
-            Proficiency.OnSuccessUse(this, skill, award, boundDifficulty: false);
+            Proficiency.OnSuccessUse(this, skill, taperedAward, boundDifficulty: false);
             // Shadowgain 172: Summoning is Endurance-primary / Self-secondary in the dat and paid
             // NO attribute at all - the same gap the defence skills had, because the attribute
             // hook lives only on the attack path. Chris asked for it directly: could Summoning be

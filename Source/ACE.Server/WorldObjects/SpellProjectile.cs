@@ -310,6 +310,11 @@ namespace ACE.Server.WorldObjects
 
             if (damage != null)
             {
+                // Shadowgain 219: captured BEFORE the damage lands - the award further down needs
+                // the pre-hit health for the overkill clamp, and by the time it runs DamageTarget
+                // has already reduced it.
+                var preHitHealth = creatureTarget?.Health.Current ?? 0;
+
                 if (Spell.MetaSpellType == ACE.Entity.Enum.SpellType.EnchantmentProjectile)
                 {
                     // handle EnchantmentProjectile successfully landing on target
@@ -352,13 +357,29 @@ namespace ACE.Server.WorldObjects
                     var playerCast = !IsWeaponSpell
                         || !PropertyManager.GetBool("magic_gain_requires_player_cast").Item;
 
-                    if (playerCast)
-                        Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty, opponent: creatureTarget);
+                    // Shadowgain 219: under damage mode a spell projectile pays by the SAME
+                    // damage-share rule as a swing - per hit, proportional to damage, overkill
+                    // clamped against the pre-hit health captured above. This is the caster
+                    // parallel: per-hit frequency stops mattering, one 400-damage nuke pays what
+                    // eight 50-damage swings pay. Enchantment projectiles carry no HP damage and
+                    // keep their per-cast award, as do the enchant schools in Player_Magic.
+                    // war_void_gain_multiplier still applies underneath, inside Proficiency.
+                    var xpWeight = 1.0;
+
+                    if (creatureTarget != null
+                            && Spell.MetaSpellType != ACE.Entity.Enum.SpellType.EnchantmentProjectile
+                            && PropertyManager.GetBool("weapon_xp_damage_mode").Item)
+                        xpWeight = Player.GetDamageShareXpFactor(damage.Value, preHitHealth, creatureTarget.Health.MaxValue, critical);
+
+                    if (playerCast && xpWeight > 0.0)
+                        Proficiency.OnSuccessUse(player, player.GetCreatureSkill(Spell.School), magicDifficulty, xpWeight, opponent: creatureTarget);
 
                     // Shadowgain 004: same external difficulty drives the mental attribute for this
                     // school - Focus for war/void/enchantment, Self for life magic.
-                    if (pvpAllowed && playerCast)
-                        player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty);
+                    // (219: same weight as the skill award, matching how melee attributes ride
+                    // currentHitXpFactor.)
+                    if (pvpAllowed && playerCast && xpWeight > 0.0)
+                        player.AwardAttributesForMagicSkill(Spell.School, magicDifficulty, xpWeight);
 
                     // Shadowgain 011: aiming a bolt trains Coordination, exactly as firing a bow does.
                     // This closes the last stranded-attribute hole - a pure caster had NO path to
@@ -374,8 +395,10 @@ namespace ACE.Server.WorldObjects
                     // Coordination itself.
                     var coordFactor = PropertyManager.GetDouble("coordination_spell_factor").Item;
 
-                    if (coordFactor > 0.0 && pvpAllowed)
-                        player.AwardAttributeUsageXP(PropertyAttribute.Coordination, magicDifficulty, false, coordFactor);
+                    // 219: xpWeight rides along here too, or under damage mode a caster's
+                    // Coordination would keep per-hit pay while their school is damage-scaled.
+                    if (coordFactor > 0.0 && pvpAllowed && xpWeight > 0.0)
+                        player.AwardAttributeUsageXP(PropertyAttribute.Coordination, magicDifficulty, false, coordFactor * xpWeight);
                 }
 
                 // handle target procs

@@ -75,6 +75,45 @@ namespace ACE.Server.WorldObjects
 
             return 1.0;
         }
+
+        /// <summary>
+        /// Shadowgain 219: the damage-share XP factor - how much of a full award THIS hit pays while
+        /// weapon_xp_damage_mode is on. (damage / max health), with damage clamped to the health
+        /// actually remaining so overkill teaches nothing, x weapon_xp_kill_norm, x
+        /// (1 + weapon_xp_crit_bonus) on a critical.
+        ///
+        /// Static and unit-based on purpose: the spell projectile path pays by exactly this rule
+        /// too, and its call site has already applied the damage by the time it awards, so it passes
+        /// the health it captured beforehand rather than reading it here.
+        /// </summary>
+        public static double GetDamageShareXpFactor(double damage, double preHitHealth, double maxHealth, bool critical)
+        {
+            if (damage <= 0 || maxHealth <= 0 || preHitHealth <= 0)
+                return 0.0;
+
+            var share = Math.Min(damage, preHitHealth) / maxHealth;
+
+            var factor = share * PropertyManager.GetDouble("weapon_xp_kill_norm").Item;
+
+            if (critical)
+                factor *= 1.0 + Math.Max(0.0, PropertyManager.GetDouble("weapon_xp_crit_bonus").Item);
+
+            return Math.Max(0.0, factor);
+        }
+
+        /// <summary>
+        /// Shadowgain 219: the factor for awards that fire LATER inside the same DamageTarget call -
+        /// Dirty Fighting, whose hook (Creature_Combat.FightDirty) has no parameter to receive it.
+        /// Under damage mode the strike-index factors no longer describe the hit; the damage share
+        /// computed at the top of DamageTarget does, and it is carried in currentHitXpFactor.
+        /// </summary>
+        public double GetCurrentHitAwardFactor()
+        {
+            if (PropertyManager.GetBool("weapon_xp_damage_mode").Item)
+                return currentHitXpFactor;
+
+            return GetMultiHitXpFactor();
+        }
         public bool Attacking;
         public bool AttackCancelled;
 
@@ -241,12 +280,23 @@ namespace ACE.Server.WorldObjects
                 //
                 // Damage, procs and target death all still run per hit. Only the two XP paths are
                 // collapsed to once per attack action.
-                var xpFactor = GetMultiHitXpFactor();
+                //
+                // Shadowgain 219: under weapon_xp_damage_mode the collapse is superseded - every hit
+                // pays its damage share instead, extra strikes and cleave included, and per-kill XP
+                // is bounded by the target's HP. Health is read here, BEFORE TakeDamage below, which
+                // is what makes the overkill clamp see the pre-hit value.
+                var damageMode = PropertyManager.GetBool("weapon_xp_damage_mode").Item;
+
+                var xpFactor = damageMode
+                    ? GetDamageShareXpFactor(damageEvent.Damage, target.Health.Current, target.Health.MaxValue, damageEvent.IsCritical)
+                    : GetMultiHitXpFactor();
+
+                // assigned OUTSIDE the gate below: Dirty Fighting reads this later in the same call
+                // (GetCurrentHitAwardFactor), so a zero-factor hit must not leave a stale value behind
+                currentHitXpFactor = xpFactor;
 
                 if (xpFactor > 0.0)
                 {
-                    currentHitXpFactor = xpFactor;
-
                     OnDamageTarget(target, damageEvent.CombatType, damageEvent.IsCritical);
 
                     // Shadowgain 007: the combat specialties had no usage path at all - they fire
