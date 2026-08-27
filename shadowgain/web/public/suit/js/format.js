@@ -56,11 +56,13 @@ export function levelName(level) {
   return level ? level[0].toUpperCase() + level.slice(1) : '';
 }
 
-// Rank comparator — must match SuitStore.Compare on the server: pieces, cantrips, FEWEST
-// set transfers, then AL. Transfers consume the donor piece, so they outrank AL polish —
-// a transfer has to buy pieces or cantrips to beat a transfer-free suit, never AL alone.
+// Rank comparator — must match SuitStore.Compare on the server: pieces, depth in the CHOSEN
+// sets (find the wanted sets first), cantrips, FEWEST set transfers (a transfer must buy set
+// depth or cantrips, never AL polish), then AL.
 export function compareSuits(a, b) {
   if (b.count !== a.count) return b.count - a.count;
+  if ((b.primarySetPieces ?? 0) !== (a.primarySetPieces ?? 0)) return (b.primarySetPieces ?? 0) - (a.primarySetPieces ?? 0);
+  if ((b.secondarySetPieces ?? 0) !== (a.secondarySetPieces ?? 0)) return (b.secondarySetPieces ?? 0) - (a.secondarySetPieces ?? 0);
   if (b.totalEffectiveLegendaries !== a.totalEffectiveLegendaries) return b.totalEffectiveLegendaries - a.totalEffectiveLegendaries;
   if (b.totalEffectiveEpics !== a.totalEffectiveEpics) return b.totalEffectiveEpics - a.totalEffectiveEpics;
   if (a.totalSetTinkers !== b.totalSetTinkers) return a.totalSetTinkers - b.totalSetTinkers;
