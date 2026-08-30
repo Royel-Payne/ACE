@@ -95,6 +95,7 @@ non-CP1252 glyph desyncs the packet rather than merely rendering wrong.
 | `/bug` | verified | file a bug from Discord (opens a modal) |
 | `/override <user> <account>` | admin | force a link past the activity gate; survives the sweep |
 | `/unlink <user>` | admin | drop a link and strip the role |
+| `/sweep` | admin | run the activity sweep now (same pass as the scheduled one; resets its timer) |
 
 `/say` existed until 034. It was removed once reading the channel directly became the
 intended UX — two ways to do the same thing, one of them worse.

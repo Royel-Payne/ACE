@@ -1017,6 +1017,124 @@ class ShadowgainBot(discord.Client):
 
             await asyncio.sleep(3600)
 
+    _sweep_lock: Optional[asyncio.Lock] = None
+
+    async def run_sweep(self) -> str:
+        """
+        One full pass over every link: the body of sweep_loop, callable on demand.
+
+        Lifted out of the loop for 223 so an admin can force a pass with /sweep instead
+        of the only alternative - stop the bot, zero last_sweep in the state file, start
+        it again. Serialised by a lock: the hourly tick and a /sweep landing together
+        would otherwise race on role changes and DMs. Raises on failure; the caller
+        decides what a failure means (the loop retries, /sweep reports it). Stamps
+        last_sweep on success, so a manual pass also resets the hourly schedule.
+        """
+        if self._sweep_lock is None:
+            self._sweep_lock = asyncio.Lock()
+        async with self._sweep_lock:
+            guild = self.get_guild(GUILD_ID)
+            g_owner_id = guild.owner_id if guild else None
+            role = guild.get_role(VERIFIED_ROLE_ID) if guild else None
+            if not role:
+                # Nothing was checked, so last_sweep is NOT stamped (the caller's except
+                # path): a transient lookup failure must not turn into a skipped period.
+                raise RuntimeError("Verified Player role not found in the guild")
+
+            print(f"sweep: checking {len(self.state.links)} link(s)", flush=True)
+            n = {"checked": 0, "granted": 0, "revoked": 0, "gone": 0, "unearned": 0}
+
+            for discord_id, link in list(self.state.links.items()):
+                # Links were plain account strings before 033; tolerate both shapes
+                # so an existing state file does not have to be thrown away.
+                account = link["account"] if isinstance(link, dict) else link
+
+                # An admin override outranks the activity gate, and must survive the
+                # sweep - otherwise the override silently undoes itself within 24 hours
+                # and looks like a bug rather than a policy.
+                if isinstance(link, dict) and link.get("exempt"):
+                    continue
+
+                ok, reason = await account_qualifies(account, self.state)
+                n["checked"] += 1
+
+                # Cache-then-API. A bare get_member() here made the sweep unreliable:
+                # anyone not in the local cache was skipped without a word, so the
+                # role was never revoked and "active players only" quietly stopped
+                # meaning anything. A None now really does mean "left the server".
+                member = await self.resolve_member(guild, discord_id)
+                if member is None:
+                    print(f"sweep: {discord_id} is no longer in the guild, skipping", flush=True)
+                    n["gone"] += 1
+                    continue
+                has = role in member.roles
+                if ok and not has:
+                    await member.add_roles(role, reason="Shadowgain sweep: active again")
+                    n["granted"] += 1
+                elif not ok and has:
+                    await member.remove_roles(role, reason=f"Shadowgain sweep: {reason}")
+                    n["revoked"] += 1
+                    # The old wording told them to run /link again. That was WRONG and
+                    # created work for no reason: the link survives a revoke, and the
+                    # branch directly above re-grants the role the moment the account
+                    # qualifies again. Re-linking was never required - only playing is.
+                    await self.dm(member, f"Your Shadowgain access has lapsed: {reason}. "
+                                          f"Just log back in and play - the role returns by itself, "
+                                          f"usually within the hour. You do not need to /link again.")
+
+                # Gold. Granted once and NEVER revoked - it is a ratchet like the
+                # dagger itself: an achievement, not a status that can lapse. That is
+                # also why it sits outside the qualifies/exempt logic above.
+                if ASCENDANT_ROLE_ID:
+                    gold = guild.get_role(ASCENDANT_ROLE_ID)
+                    if gold is not None and gold not in member.roles:
+                        try:
+                            if await account_is_ascendant(account):
+                                await member.add_roles(gold, reason="Shadowgain: reached the ceiling on the hard road")
+                                print(f"ASCENDANT: {member} ({account})", flush=True)
+                                ch = self.get_channel(RELAY_CHANNEL_ID)
+                                if ch is not None:
+                                    await ch.send(
+                                        f"**{member.display_name}** reached level {ASCENDANT_LEVEL} "
+                                        f"on the hard road. That is the whole climb.",
+                                        allowed_mentions=discord.AllowedMentions.none())
+                        except Exception as e:
+                            print(f"WARN: ascendant check failed for {account}: {e}", flush=True)
+
+            # Backstop for on_member_update: catch any Verified Player grant made while
+            # the bot was down, when the listener could not fire.
+            linked_ids = set(self.state.links.keys())
+            for member in list(role.members):
+                # Never strip the server owner or an admin: they hold the role as
+                # themselves, not as earned access, and Administrator already grants
+                # everything it would have given them. Revoking it would be noise that
+                # looks like a bug.
+                if member.id == g_owner_id or member.guild_permissions.administrator:
+                    continue
+                if str(member.id) not in linked_ids and not member.bot:
+                    try:
+                        await member.remove_roles(role, reason="Shadowgain sweep: Verified Player was never earned")
+                        print(f"sweep: removed unearned Verified Player from {member}", flush=True)
+                        n["unearned"] += 1
+                    except discord.HTTPException as e:
+                        print(f"WARN: could not remove unearned role from {member}: {e}", flush=True)
+
+            # Drop activity baselines for accounts nobody is linked to any more -
+            # /verify records one for every account it looks at, including the ones
+            # that failed, so without this the table only ever grows.
+            linked = {(l["account"] if isinstance(l, dict) else l)
+                      for l in self.state.links.values()}
+            for acct in [a for a in self.state.activity if a not in linked]:
+                self.state.activity.pop(acct, None)
+
+            self.state.last_sweep = time.time()
+            self.state.save(STATE_PATH)
+            summary = (f"{n['checked']} link(s) checked - {n['granted']} granted, "
+                       f"{n['revoked']} revoked, {n['gone']} left the server, "
+                       f"{n['unearned']} unearned role(s) removed")
+            print(f"sweep: done - {summary}", flush=True)
+            return summary
+
     async def sweep_loop(self):
         """
         Re-check every linked account and revoke the role when it goes quiet.
@@ -1048,98 +1166,7 @@ class ShadowgainBot(discord.Client):
                 await asyncio.sleep(min(wait, 900))
                 continue
             try:
-                guild = self.get_guild(GUILD_ID)
-                g_owner_id = guild.owner_id if guild else None
-                role = guild.get_role(VERIFIED_ROLE_ID) if guild else None
-                if not role:
-                    # Do NOT stamp last_sweep here - nothing was checked. Stamping would
-                    # turn a transient lookup failure into a skipped day.
-                    await asyncio.sleep(300)
-                    continue
-
-                print(f"sweep: checking {len(self.state.links)} link(s)", flush=True)
-
-                for discord_id, link in list(self.state.links.items()):
-                    # Links were plain account strings before 033; tolerate both shapes
-                    # so an existing state file does not have to be thrown away.
-                    account = link["account"] if isinstance(link, dict) else link
-
-                    # An admin override outranks the activity gate, and must survive the
-                    # sweep - otherwise the override silently undoes itself within 24 hours
-                    # and looks like a bug rather than a policy.
-                    if isinstance(link, dict) and link.get("exempt"):
-                        continue
-
-                    ok, reason = await account_qualifies(account, self.state)
-
-                    # Cache-then-API. A bare get_member() here made the sweep unreliable:
-                    # anyone not in the local cache was skipped without a word, so the
-                    # role was never revoked and "active players only" quietly stopped
-                    # meaning anything. A None now really does mean "left the server".
-                    member = await self.resolve_member(guild, discord_id)
-                    if member is None:
-                        print(f"sweep: {discord_id} is no longer in the guild, skipping", flush=True)
-                        continue
-                    has = role in member.roles
-                    if ok and not has:
-                        await member.add_roles(role, reason="Shadowgain sweep: active again")
-                    elif not ok and has:
-                        await member.remove_roles(role, reason=f"Shadowgain sweep: {reason}")
-                        # The old wording told them to run /link again. That was WRONG and
-                        # created work for no reason: the link survives a revoke, and the
-                        # branch directly above re-grants the role the moment the account
-                        # qualifies again. Re-linking was never required - only playing is.
-                        await self.dm(member, f"Your Shadowgain access has lapsed: {reason}. "
-                                              f"Just log back in and play - the role returns by itself, "
-                                              f"usually within the hour. You do not need to /link again.")
-
-                    # Gold. Granted once and NEVER revoked - it is a ratchet like the
-                    # dagger itself: an achievement, not a status that can lapse. That is
-                    # also why it sits outside the qualifies/exempt logic above.
-                    if ASCENDANT_ROLE_ID:
-                        gold = guild.get_role(ASCENDANT_ROLE_ID)
-                        if gold is not None and gold not in member.roles:
-                            try:
-                                if await account_is_ascendant(account):
-                                    await member.add_roles(gold, reason="Shadowgain: reached the ceiling on the hard road")
-                                    print(f"ASCENDANT: {member} ({account})", flush=True)
-                                    ch = self.get_channel(RELAY_CHANNEL_ID)
-                                    if ch is not None:
-                                        await ch.send(
-                                            f"**{member.display_name}** reached level {ASCENDANT_LEVEL} "
-                                            f"on the hard road. That is the whole climb.",
-                                            allowed_mentions=discord.AllowedMentions.none())
-                            except Exception as e:
-                                print(f"WARN: ascendant check failed for {account}: {e}", flush=True)
-
-                # Backstop for on_member_update: catch any Verified Player grant made while
-                # the bot was down, when the listener could not fire.
-                linked_ids = set(self.state.links.keys())
-                for member in list(role.members):
-                    # Never strip the server owner or an admin: they hold the role as
-                    # themselves, not as earned access, and Administrator already grants
-                    # everything it would have given them. Revoking it would be noise that
-                    # looks like a bug.
-                    if member.id == g_owner_id or member.guild_permissions.administrator:
-                        continue
-                    if str(member.id) not in linked_ids and not member.bot:
-                        try:
-                            await member.remove_roles(role, reason="Shadowgain sweep: Verified Player was never earned")
-                            print(f"sweep: removed unearned Verified Player from {member}", flush=True)
-                        except discord.HTTPException as e:
-                            print(f"WARN: could not remove unearned role from {member}: {e}", flush=True)
-
-                # Drop activity baselines for accounts nobody is linked to any more -
-                # /verify records one for every account it looks at, including the ones
-                # that failed, so without this the table only ever grows.
-                linked = {(l["account"] if isinstance(l, dict) else l)
-                          for l in self.state.links.values()}
-                for acct in [a for a in self.state.activity if a not in linked]:
-                    self.state.activity.pop(acct, None)
-
-                self.state.last_sweep = time.time()
-                self.state.save(STATE_PATH)
-                print("sweep: done", flush=True)
+                await self.run_sweep()
             except Exception as e:
                 # Deliberately does not stamp last_sweep: a failed pass should be retried
                 # on the next tick, not counted as this period's sweep.
@@ -1315,6 +1342,38 @@ async def unlink(interaction: discord.Interaction, member: discord.Member):
     await interaction.response.send_message(
         f"{member.mention} unlinked." if existed else f"{member.mention} had no link.",
         ephemeral=True)
+
+
+@client.tree.command(name="sweep", description="Admin: run the Verified Player activity sweep now.")
+async def sweep(interaction: discord.Interaction):
+    """
+    The hourly sweep, on demand.
+
+    Until 223 the only way to force a pass was to stop the bot, zero last_sweep in the
+    state file and start it again - editing the file while the bot runs is clobbered by
+    its next save. Same pass, same rules, same lock as the scheduled one; it also stamps
+    last_sweep, so the next automatic pass is a full period from now.
+    """
+    if not _is_admin(interaction):
+        await interaction.response.send_message(
+            "That command is for server admins.", ephemeral=True)
+        return
+    if client._sweep_lock is not None and client._sweep_lock.locked():
+        await interaction.response.send_message(
+            "A sweep is already running - it will finish on its own.", ephemeral=True)
+        return
+
+    # A full pass makes one DB query per link plus role edits; past three seconds Discord
+    # marks the interaction failed, so acknowledge first and report on the followup.
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    try:
+        summary = await client.run_sweep()
+    except Exception as e:
+        print(f"ERROR in /sweep by {interaction.user}: {e}", flush=True)
+        await interaction.followup.send(f"Sweep failed: {e}", ephemeral=True)
+        return
+    print(f"sweep: run by {interaction.user} via /sweep", flush=True)
+    await interaction.followup.send(f"Sweep done: {summary}.", ephemeral=True)
 
 
 @client.event
