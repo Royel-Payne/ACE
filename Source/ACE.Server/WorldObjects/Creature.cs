@@ -333,6 +333,15 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public override void ActOnUse(WorldObject worldObject)
         {
+            // Shadowgain 224: an NPC carrying the mule-trainer marker offers the permanent mule
+            // conversion behind a hard confirm instead of emote chatter. The marker lives on the
+            // NPC's weenie, so every other creature falls through unchanged.
+            if ((GetProperty(PropertyBool.ShadowgainMuleTrainer) ?? false) && worldObject is Player player)
+            {
+                player.HandleMuleTrainerUse(this);
+                return;
+            }
+
             // handled in base.OnActivate -> EmoteManager.OnUse()
         }
 

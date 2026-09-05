@@ -114,6 +114,15 @@ namespace ACE.Server.WorldObjects
         /// </summary>
         public List<WorldObject> GetBuyItems()
         {
+            // Shadowgain 224: free houses. This getter is the single funnel every consumer goes
+            // through - the purchase panel (GetHouseProfile), VerifyPurchase, GetConsumeItems and
+            // House.GetHouseData - so an empty list here makes the purchase cost nothing and
+            // consume nothing, whatever the client offers. Chosen over stripping the HouseBuy
+            // create-list rows, which NREs on a zero-row slumlord (WorldObject_Equipment reads
+            // Biota.PropertiesCreateList unguarded) and is silently reverted by world-DB updates.
+            if (PropertyManager.GetBool("house_purchase_free").Item)
+                return new List<WorldObject>();
+
             var buyList = GetCreateListForSlumLord(DestinationType.HouseBuy);
 
             buyList.ForEach(item => item.Destroy(false));

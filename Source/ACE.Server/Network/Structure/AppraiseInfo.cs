@@ -215,7 +215,10 @@ namespace ACE.Server.Network.Structure
                         PropertiesInt.Remove(key);
                 }
 
-                if (slumLord.HouseRequiresMonarch)
+                // Shadowgain 224: only claim the requirement while it is actually enforced. This
+                // string used to be unconditional, so a server that had waived the monarch gate
+                // (182's mansion_requires_monarch) still told players monarch was required.
+                if (slumLord.HouseRequiresMonarch && PropertyManager.GetBool("mansion_requires_monarch").Item)
                     longDesc += "You must be a monarch to purchase and maintain this dwelling.\n";
 
                 if (slumLord.AllegianceMinLevel.HasValue)
@@ -224,7 +227,11 @@ namespace ACE.Server.Network.Structure
                     if (allegianceMinLevel == -1)
                         allegianceMinLevel = slumLord.AllegianceMinLevel.Value;
 
-                    longDesc += $"Restricted to characters of allegiance rank {allegianceMinLevel} or greater.\n";
+                    // Shadowgain 224: same class of fix - mansion_min_rank 0 waives the rank gate
+                    // at purchase (Player_House), so "rank 0 or greater" is a non-restriction and
+                    // is no longer displayed.
+                    if (allegianceMinLevel > 0)
+                        longDesc += $"Restricted to characters of allegiance rank {allegianceMinLevel} or greater.\n";
                 }
 
                 PropertiesString.Add(PropertyString.LongDesc, longDesc);

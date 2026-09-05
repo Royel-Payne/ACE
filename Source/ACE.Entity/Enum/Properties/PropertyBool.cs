@@ -205,5 +205,17 @@ namespace ACE.Entity.Enum.Properties
         // the only way to let tier 2 cross coverage would be to drop the check for EVERY applicator,
         // which would silently loosen 209 - the one thing 213 must not do.
         ShadowgainAnyCoverageApplicator  = 9103,
+
+        // Shadowgain 224: mule mode - the one-way combat brick a character accepts at The
+        // Muleskinner. While set, attacking refuses (CanDamage) and the spellbook no longer
+        // channels War, Void or Life (CreatePlayerSpell); item casts, Creature/Item magic and
+        // defenses stay live. Set once, never cleared - the free max-mule package (Str 290,
+        // pack/burden augs) is the trade and the trade does not come back off.
+        ShadowgainMuleMode               = 9104,
+
+        // Shadowgain 224: weenie marker for the NPC offering the mule conversion. Lives on the
+        // NPC's weenie in the world DB, never on a player - Creature.ActOnUse routes a marked
+        // NPC to the hard-confirm dialog instead of emote chatter.
+        ShadowgainMuleTrainer            = 9105,
     }
 }

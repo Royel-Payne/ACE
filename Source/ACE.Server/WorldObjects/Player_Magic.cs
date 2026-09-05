@@ -1013,6 +1013,17 @@ namespace ACE.Server.WorldObjects
             if (spell == null)
                 return false;
 
+            // Shadowgain 224: mule mode - the spellbook no longer channels War, Void or Life.
+            // Item casts (casterItem != null) are deliberately left alone; the untargeted overload
+            // below is always a spellbook cast.
+            if (ShadowgainMuleMode && casterItem == null &&
+                (spell.School == MagicSchool.WarMagic || spell.School == MagicSchool.VoidMagic || spell.School == MagicSchool.LifeMagic))
+            {
+                var schoolName = spell.School == MagicSchool.WarMagic ? "War magic" : spell.School == MagicSchool.VoidMagic ? "Void magic" : "Life magic";
+                Session.Network.EnqueueSend(new GameMessageSystemChat($"You are a mule. Mules want no part of {schoolName}.", ChatMessageType.Magic));
+                return false;
+            }
+
             if (!VerifySpellTarget(spell, target))
                 return false;
 
@@ -1235,6 +1246,15 @@ namespace ACE.Server.WorldObjects
             var spell = ValidateSpell(spellId);
             if (spell == null)
                 return false;
+
+            // Shadowgain 224: see the targeted overload - untargeted casts are always spellbook
+            if (ShadowgainMuleMode &&
+                (spell.School == MagicSchool.WarMagic || spell.School == MagicSchool.VoidMagic || spell.School == MagicSchool.LifeMagic))
+            {
+                var schoolName = spell.School == MagicSchool.WarMagic ? "War magic" : spell.School == MagicSchool.VoidMagic ? "Void magic" : "Life magic";
+                Session.Network.EnqueueSend(new GameMessageSystemChat($"You are a mule. Mules want no part of {schoolName}.", ChatMessageType.Magic));
+                return false;
+            }
 
             // get player's current magic skill
             var magicSkill = GetCreatureSkill(spell.School).Current;

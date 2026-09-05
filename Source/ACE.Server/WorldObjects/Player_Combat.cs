@@ -1219,6 +1219,12 @@ namespace ACE.Server.WorldObjects
 
         public override bool CanDamage(Creature target)
         {
+            // Shadowgain 224: a mule never damages anything through any path - melee, missile,
+            // offensive spell targeting and spell projectile collisions (gem-launched included)
+            // all consult this override.
+            if (ShadowgainMuleMode)
+                return false;
+
             return target.Attackable && !target.Teleporting && !(target is CombatPet);
         }
 
