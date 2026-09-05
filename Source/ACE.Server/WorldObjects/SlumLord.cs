@@ -61,6 +61,29 @@ namespace ACE.Server.WorldObjects
             var player = worldObject as Player;
             if (player == null) return;
 
+            // Shadowgain 224: free houses. The retail purchase panel cannot complete a zero-cost
+            // buy - with an empty cost list the client refuses to accept offered items or enable
+            // the Buy button (verified on TEST 2026-09-05). So while the dial is on, an unowned,
+            // enabled house skips the panel entirely: using the slumlord asks a yes/no and, on
+            // accept, drives HandleActionBuyHouse with an empty offer - the same server path a
+            // normal purchase takes, so every real gate (per-account limit, MinLevel, mansion
+            // dials, cooldown) still runs and still reports its own error. Owners keep the normal
+            // panel for maintenance/abandon, and a Disabled house falls through to the panel's
+            // "not available" display.
+            if (PropertyManager.GetBool("house_purchase_free").Item && (HouseOwner ?? 0) == 0 &&
+                House != null && House.HouseStatus != HouseStatus.Disabled)
+            {
+                var houseType = House.HouseType != HouseType.Undef ? House.HouseType.ToString().ToLower() : "dwelling";
+                var slumlordGuid = Guid.Full;
+
+                if (!player.ConfirmationManager.EnqueueSend(new Confirmation_Custom(player.Guid,
+                        () => player.HandleActionBuyHouse(slumlordGuid, new List<uint>())),
+                    $"Claim this {houseType}? It is free, and it will become your character's home."))
+                    player.SendWeenieError(WeenieError.ConfirmationInProgress);
+
+                return;
+            }
+
             // sent house profile
             var houseProfile = GetHouseProfile();
 
