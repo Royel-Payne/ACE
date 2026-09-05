@@ -4,6 +4,6 @@
 
 **The Muleskinner has set up in Arwic.** He will turn a character into a true mule, free of charge: maximum Strength, an eighth pack slot, a much larger carry limit, fewer items dropped on death, and Creature and Item magic usable without foci. The price: that character can **never fight or cast War, Void or Life magic again**. Permanent means permanent — he will make sure you are sure.
 
-**Word is a fence has moved in somewhere beneath Arwic.** They say he deals in mansion portal devices, 2,000 MMDs apiece. The devices still work only in mansion basements.
+**Word is a fence has moved in somewhere beneath Arwic.** They say he deals in mansion portal devices, 2,000 MMDs apiece. The devices still work only in mansions.
 
 As always — #bugs for anything broken, or just tell me.
