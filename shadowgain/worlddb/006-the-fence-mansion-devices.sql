@@ -15,10 +15,11 @@
 --
 -- PRICING: with AlternateCurrency set, the vendor charges `Value` (int 19) in UNITS of the
 -- currency item - the 004 tool at Value 50 sells for 50 MMD. Chris priced the devices at
--- 250 MMD each (2026-09-05: "some effort, not a wall"; all 10 ~ 2,500 MMD). None of the 10 is
--- stackable (no MaxStackSize/StackUnitValue rows), so Value alone is the price - the 004
--- StackUnitValue trap does not apply. Original values, for the record: 29608-29612 were 10000,
--- 30261 was 100000, 26588/27932 were 120000, 29103 was 0, 30745 was 5000.
+-- 2000 MMD each (raised from the initial 250 after the TEST pass, 2026-09-05, before anything
+-- shipped to LIVE; all 10 = 20,000 MMD). None of the 10 is stackable (no
+-- MaxStackSize/StackUnitValue rows), so Value alone is the price - the 004 StackUnitValue trap
+-- does not apply. Original values, for the record: 29608-29612 were 10000, 30261 was 100000,
+-- 26588/27932 were 120000, 29103 was 0, 30745 was 5000.
 --
 -- SPAWN: landblock_instance guid 0x7C6A907B (first free tail slot in Arwic's 0x7C6A9xxx static
 -- range), cell 0xC6A9014D - the basement Chris picked, coords his.
@@ -87,10 +88,10 @@ VALUES
   (900220, 4, 29103, -1, 0, 0, 0),   -- K'nath Lair Portal
   (900220, 4, 30745, -1, 0, 0, 0);   -- Replica of a Tursh Totem
 
--- ---------------------------------------------------------------- 250 MMD each
+-- ---------------------------------------------------------------- 2000 MMD each
 
 UPDATE ace_world.weenie_properties_int
-   SET value = 250
+   SET value = 2000
  WHERE type = 19  -- Value
    AND object_Id IN (29608, 29609, 29610, 29611, 29612, 30261, 26588, 27932, 29103, 30745);
 
