@@ -17,6 +17,16 @@
 set -euo pipefail
 
 SRC="C:/Games/Claude AC/Shadowgain/landing/vitaeum.html"
+SRCDIR="$(dirname "$SRC")"
+
+# Files the page loads from its OWN web root, relative to SRCDIR. Everything else it references
+# lives on CrimsonMage's github.io and needs no deploy at all - which is exactly the trap 225b
+# walked into. The first version of this page hotlinked every image, so shipping one HTML file
+# was the whole job; the moment the emblem became `src="vitaeum-logo.png"` the page started
+# depending on a file this script did not carry. That failure is silent from here: the deploy is
+# green, the HTML hash matches, and the only symptom is a broken image in someone else's browser.
+# Hence the per-asset 200 check in the verify block - a hash of index.html cannot see it.
+ASSETS=(vitaeum-logo.png)
 BLOCK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/Caddyfile.vitaeum"
 KEY="C:/Users/Chris/.ssh/shadowgain_ed25519"
 HOST="root@137.184.1.44"
@@ -48,6 +58,12 @@ echo "==> $NAME resolves"
 echo "==> shipping the page to $DEST/index.html"
 $SSH "$HOST" "mkdir -p $DEST"
 $SSH "$HOST" "cat > $DEST/index.html" < "$SRC"
+
+for a in "${ASSETS[@]}"; do
+  [ -f "$SRCDIR/$a" ] || { echo "!! missing asset: $SRCDIR/$a"; exit 1; }
+  echo "==> shipping asset $a"
+  $SSH "$HOST" "cat > $DEST/$a" < "$SRCDIR/$a"
+done
 
 # Ownership by name; permissions by TYPE.
 $SSH "$HOST" "chown -R caddy:caddy $DEST && \
@@ -131,6 +147,21 @@ else
   local=$(sha256sum "$SRC" | cut -d' ' -f1)
   if [ "$remote" = "$local" ]; then echo "  content matches local"
   else echo "!! content mismatch between the served page and $SRC"; rc=1; fi
+
+  # Each asset by name. Byte count compared, not just the status code: Caddy serves this root with
+  # file_server and no SPA fallback, so a missing file is a real 404 rather than a 200 of index.html
+  # - but a truncated or half-written upload would still be a 200, and only the size catches that.
+  for a in "${ASSETS[@]}"; do
+    read -r ac asize <<<"$($SSH "$HOST" "curl -sS --max-time 20 --resolve $NAME:443:127.0.0.1       -o /dev/null -w '%{http_code} %{size_download}' https://$NAME/$a" 2>/dev/null)"
+    want=$(wc -c < "$SRCDIR/$a" | tr -d ' ')
+    if [ "$ac" = "200" ] && [ "$asize" = "$want" ]; then
+      printf "  asset OK   %-22s 200  %s bytes
+" "$a" "$asize"
+    else
+      printf "!! asset BAD %-22s http %s  %s bytes (local %s)
+" "$a" "$ac" "$asize" "$want"; rc=1
+    fi
+  done
 
   # A real certificate, not Caddy's internal fallback - which also answers 200 and would leave every
   # browser showing a warning. HSTS includeSubDomains from the apex makes this load-bearing.
