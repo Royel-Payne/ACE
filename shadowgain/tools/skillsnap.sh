@@ -24,7 +24,7 @@ remote_query() {
   ssh -i "$KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
       -o LogLevel=ERROR "$HOST" "cd /opt/ACE
 RP=\$(grep '^MYSQL_ROOT_PASSWORD=' docker.env | cut -d= -f2)
-docker exec ace-db mysql -uroot -p\"\$RP\" -N -B ace_shard -e \"$1\" 2>/dev/null"
+docker exec -e MYSQL_PWD=\"$RP\" ace-db mysql -uroot -N -B ace_shard -e \"$1\""
 }
 
 case "${1:-}" in

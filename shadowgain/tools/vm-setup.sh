@@ -77,9 +77,9 @@ echo "==> restoring dumps"
 for db in ace_auth ace_shard ace_world; do
   f=$(ls -t backups/"$db"-*.sql.gz | head -1)
   echo "    $db  <-  $(basename "$f")"
-  docker exec -i sg-db mysql -uroot -p"$DBPASS" \
+  docker exec -i -e MYSQL_PWD="$DBPASS" sg-db mysql -uroot \
     -e "DROP DATABASE IF EXISTS $db; CREATE DATABASE $db;" 2>/dev/null
-  zcat "$f" | docker exec -i sg-db mysql -uroot -p"$DBPASS" "$db" 2>/dev/null
+  zcat "$f" | docker exec -i -e MYSQL_PWD="$DBPASS" sg-db mysql -uroot "$db"
 done
 
 # DROP DATABASE takes the GRANTS with it. MySQL only grants the `ace` user on MYSQL_DATABASE
@@ -88,18 +88,18 @@ done
 # because its grants were made once and never destroyed - which is exactly the kind of state
 # a restore rehearsal exists to catch. Re-granting is part of restoring, not an extra step.
 echo "==> re-granting database access (DROP DATABASE removed it)"
-docker exec sg-db mysql -uroot -p"$DBPASS" -e "
+docker exec -e MYSQL_PWD="$DBPASS" sg-db mysql -uroot -e "
 GRANT ALL PRIVILEGES ON ace_auth.*  TO 'ace'@'%';
 GRANT ALL PRIVILEGES ON ace_shard.* TO 'ace'@'%';
 GRANT ALL PRIVILEGES ON ace_world.* TO 'ace'@'%';
 FLUSH PRIVILEGES;" 2>/dev/null
 
 echo "==> restore verification"
-docker exec sg-db mysql -uroot -p"$DBPASS" -N -B -e "
+docker exec -e MYSQL_PWD="$DBPASS" sg-db mysql -uroot -N -B -e "
 SELECT CONCAT('    ', RPAD(table_schema,11,' '), LPAD(COUNT(*),3,' '), ' tables')
 FROM information_schema.tables WHERE table_schema LIKE 'ace_%' GROUP BY table_schema;" 2>/dev/null
 
-docker exec sg-db mysql -uroot -p"$DBPASS" -N -B ace_shard -e "
+docker exec -e MYSQL_PWD="$DBPASS" sg-db mysql -uroot -N -B ace_shard -e "
 SELECT CONCAT('    ', RPAD(name,16,' '), 'level ',
   COALESCE((SELECT value FROM biota_properties_int WHERE object_Id=c.id AND type=25),1))
 FROM \`character\` c WHERE is_Deleted=0 ORDER BY name;" 2>/dev/null

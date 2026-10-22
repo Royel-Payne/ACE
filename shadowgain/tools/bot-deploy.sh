@@ -139,7 +139,7 @@ set -euo pipefail
 cd /opt/ACE
 RP=$(grep '^MYSQL_ROOT_PASSWORD=' docker.env | cut -d= -f2)
 BOTPW=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-sed "s/REPLACE_ME/$BOTPW/" /opt/ACE/bot/setup.sql | docker exec -i ace-db mysql -uroot -p"$RP" 2>/dev/null
+sed "s/REPLACE_ME/$BOTPW/" /opt/ACE/bot/setup.sql | docker exec -i -e MYSQL_PWD="$RP" ace-db mysql -uroot
 # Replace the line in place, keeping mode 600.
 if grep -q '^SG_DB_PASSWORD=' /opt/ACE/bot.env; then
   sed -i "s|^SG_DB_PASSWORD=.*|SG_DB_PASSWORD=$BOTPW|" /opt/ACE/bot.env

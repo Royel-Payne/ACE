@@ -88,7 +88,7 @@ mkdir -p "$OUT"
 # someone "corrects" the timer back to a number nobody chose.
 MODE="${1:-both}"
 
-q() { docker exec ace-db mysql -uroot -p"$RP" -N -B ace_shard -e "$1" 2>/dev/null; }
+q() { docker exec -e MYSQL_PWD="$RP" ace-db mysql -uroot -N -B ace_shard -e "$1"; }
 
 # --- honour roll: hard-path characters only ---------------------------------
 if [ "$MODE" = "roll" ] || [ "$MODE" = "both" ]; then
@@ -585,7 +585,7 @@ fi
 #
 # Caught only by decoding explicitly as UTF-8 - checking it in a terminal is useless,
 # because a CP1252 console decodes 0x86 back to a dagger and the file looks fine.
-PREFIX=$(docker exec ace-db mysql -uroot -p"$RP" -N -B --default-character-set=utf8mb4 ace_shard -e "SELECT value FROM config_properties_string WHERE \`key\`='progression_marker_prefix';" 2>/dev/null | head -1)
+PREFIX=$(docker exec -e MYSQL_PWD="$RP" ace-db mysql -uroot -N -B --default-character-set=utf8mb4 ace_shard -e "SELECT value FROM config_properties_string WHERE \`key\`='progression_marker_prefix';" | head -1)
 [ -z "$PREFIX" ] && PREFIX="† "
 
 NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
