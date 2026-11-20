@@ -1,0 +1,10 @@
+[Unit]
+Description=Shadowgain nightly database backup (Task 229)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ACE/backup-nightly.sh
+Nice=10
+IOSchedulingClass=idle
